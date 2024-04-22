@@ -25,9 +25,9 @@ def gep(pop_size, generations, func_set, term_set, x, y, fitness_func, max_depth
     - generations: int
         Number of generations
     - func_set: list of str
-        Function set (e.g., ['+', '-', '*', '/'])
+        Function set
     - term_set: list of str
-        Terminal set (e.g., ['x', 'y', '1', '2'])
+        Terminal set (e.g., [True, 'k', 1, 2])
     - x: array-like, shape (n_samples, 1)
         Independent variable
     - y: array-like, shape (n_samples, 1)
@@ -38,7 +38,7 @@ def gep(pop_size, generations, func_set, term_set, x, y, fitness_func, max_depth
         Maximum tree depth
 
     Returns:
-    - best_ind: str
+    - best_ind: Tree
         Best individual (expression) found
     - best_fit: float
         Best fitness value found
@@ -56,8 +56,8 @@ def gep(pop_size, generations, func_set, term_set, x, y, fitness_func, max_depth
 
 def main():
     # Example usage:
-    x = np.array([1, 2, 3, 4, 5])
-    y = np.array([2, 4, 6, 8, 10])
+    x = np.array([[1], [2], [3], [4], [5], [100]])
+    y = np.array([[2], [4], [6], [8], [10], [200]])
 
     # Example usage
     def add(x, y):
@@ -75,14 +75,23 @@ def main():
         return x / y
 
     func_set = [add, subtract, multiply, divide]
-    term_set = [1, 2, 3, 69]
+    term_set = [0, 1, 2, 3, 69]
     var_count = 2  # Number of input variables
     max_depth = 3  # Maximum depth of the tree
 
     # Generate a random tree
     pop_size = 50
     generations = 100
-    best_ind, best_fit = gep(pop_size, generations, func_set, term_set, x, y, fitness_mse, arity = 1)
+    best_ind, best_fit = gep(
+        pop_size,
+        generations,
+        func_set,
+        term_set,
+        x, y,
+        fitness_mse,
+        max_depth,
+        arity=1
+    )
     print(f"Best individual: {best_ind.to_python()}")
     print(f"Best fitness: {best_fit:.4f}")
 

@@ -1,4 +1,6 @@
 import numpy as np
+
+from src.pop import Pop
 from tree import Tree, generate_random, crossover as cross
 
 
@@ -26,6 +28,7 @@ def evaluate_population(pop, x, y, fitness_func):
         fitness.append(fit)
     return fitness
 
+
 def replace_worst(pop, fitness, offspring, offspring_fitness):
     # Find indices of worst individuals
     worst_idx = np.argsort(fitness)[-len(offspring):]
@@ -36,14 +39,23 @@ def replace_worst(pop, fitness, offspring, offspring_fitness):
 
     return pop
 
-def select_parents(pop, fitness, tournament_size=3):
+
+def select_parents(pop, fitness, tournament_size=4):
     # Select parents using tournament selection
+    # Shuffle the population indexes
+
+    indexes = np.random.permutation(len(pop))
+
     parents = []
-    for _ in range(len(pop)):
-        tournament = np.random.choice(len(pop), tournament_size, replace=False)
-        winner = np.argmin([fitness[i] for i in tournament])
-        parents.append(pop[tournament[winner]])
-    return parents
+    n = len(pop) - tournament_size
+    if n > 0:
+        for i in range(n):
+            tournament = indexes[i: i + tournament_size]  # Select tournament members from shuffled indexes
+            winner = np.argmin([fitness[i] for i in tournament])
+            parents.append(pop[tournament[winner]])
+        return parents
+    else:
+        return pop
 
 
 def crossover(parents, func_set, term_set, max_depth):
@@ -81,3 +93,43 @@ def find_best_individual(pop, fitness):
     # Find the best individual in the population
     best_idx = np.argmin(fitness)
     return pop[best_idx], fitness[best_idx]
+
+
+def grow_func(pop_size, generations, func_set, term_set, x, y, fitness_func, max_depth=5, arity=1):
+    """
+    Genetic Expression Programming (GEP)
+
+    Parameters:
+    - pop_size: int
+        Population size
+    - generations: int
+        Number of generations
+    - func_set: list of str
+        Function set
+    - term_set: list of str
+        Terminal set (e.g., [True, 'k', 1, 2])
+    - x: array-like, shape (n_samples, 1)
+        Independent variable
+    - y: array-like, shape (n_samples, 1)
+        Dependent variable
+    - fitness_func: callable
+        Fitness function (e.g., mean squared error)
+    - max_depth: int, default=5
+        Maximum tree depth
+
+    Returns:
+    - best_ind: Tree
+        Best individual (expression) found
+    - best_fit: float
+        Best fitness value found
+    """
+
+    pop = Pop(pop_size, func_set, term_set, max_depth, arity)
+    fitness = None
+    for _ in range(generations):
+        fitness = pop.evaluate_population(x, y, fitness_func)
+        parents = select_parents(pop, fitness)
+        offspring = crossover(parents, func_set, term_set, max_depth)
+        pop = mutate(offspring, func_set, term_set, max_depth)
+    best_ind, best_fit = pop.get_best_ind(fitness)
+    return best_ind, best_fit
