@@ -18,7 +18,7 @@ def evaluate_population(pop, x, y, fitness_func):
     fitness = []
     for tree in pop:
         try:
-            y_pred = tree.evaluate(x)
+            y_pred = tree.run(x)
             if y_pred is None:
                 fit = 0  # Return fitness of 0 for invalid trees
             else:
@@ -95,41 +95,4 @@ def find_best_individual(pop, fitness):
     return pop[best_idx], fitness[best_idx]
 
 
-def grow_func(pop_size, generations, func_set, term_set, x, y, fitness_func, max_depth=5, arity=1):
-    """
-    Genetic Expression Programming (GEP)
 
-    Parameters:
-    - pop_size: int
-        Population size
-    - generations: int
-        Number of generations
-    - func_set: list of str
-        Function set
-    - term_set: list of str
-        Terminal set (e.g., [True, 'k', 1, 2])
-    - x: array-like, shape (n_samples, 1)
-        Independent variable
-    - y: array-like, shape (n_samples, 1)
-        Dependent variable
-    - fitness_func: callable
-        Fitness function (e.g., mean squared error)
-    - max_depth: int, default=5
-        Maximum tree depth
-
-    Returns:
-    - best_ind: Tree
-        Best individual (expression) found
-    - best_fit: float
-        Best fitness value found
-    """
-
-    pop = Pop(pop_size, func_set, term_set, max_depth, arity)
-    fitness = None
-    for _ in range(generations):
-        fitness = pop.evaluate_population(x, y, fitness_func)
-        parents = select_parents(pop, fitness)
-        offspring = crossover(parents, func_set, term_set, max_depth)
-        pop = mutate(offspring, func_set, term_set, max_depth)
-    best_ind, best_fit = pop.get_best_ind(fitness)
-    return best_ind, best_fit

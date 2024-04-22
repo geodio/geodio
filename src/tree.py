@@ -1,6 +1,9 @@
+import sys
+
 import numpy as np
 import random
 import rnd
+
 
 class Node:
     def __init__(self, node_type, value=None, children=None):
@@ -15,13 +18,13 @@ class Node:
         i = self.children.index(old_child)
         self.children[i] = new_child
 
-    def evaluate(self, variables):
+    def run(self, variables):
         if self.node_type == "literal":
             return self.value
         elif self.node_type == "variable":
             return variables[self.value]
         elif self.node_type == "function":
-            args = [child.evaluate(variables) for child in self.children]
+            args = [child.run(variables) for child in self.children]
             return self.value(*args)
 
     def to_python(self):
@@ -42,12 +45,15 @@ class Tree:
         self.root = root
         self.arity = arity
         self.depth = max_depth
+        self.age = 0
+        self.fitness = None
+        self.marked = False
 
     def nodes(self):
         return self.root.children
 
-    def evaluate(self, variables):
-        return self.root.evaluate(variables)
+    def run(self, variables):
+        return self.root.run(variables)
 
     def replace(self, node_old, node_new):
         self.root.replace_child(node_old, node_new)
@@ -55,19 +61,48 @@ class Tree:
     def to_python(self):
         return self.root.to_python()
 
-    def mutate(self, func_set, term_set, max_depth=None):
+    def mutate(self, func_set, term_set, max_depth=None, mutation_rate=0.1):
         if not max_depth:
             max_depth = self.depth
-        if np.random.rand() < 0.5 and len(self.root.children) != 0:  # 50% chance of replacing a subtree
-
-            mutant_node = create_random_node(max_depth - 1, term_set, func_set,  self.arity)
+        if np.random.rand() < mutation_rate and len(self.root.children) != 0:
+            mutant_node = create_random_node(max_depth - 1, term_set, func_set, self.arity)
             self.depth = max_depth
-            self.randomly_replace(mutant_node)
+            self._randomly_replace(mutant_node)
+            self.fitness = None
         return self
 
-    def randomly_replace(self, mutant_node):
+    def _randomly_replace(self, mutant_node):
         i = rnd.from_range(0, len(self.root.children), True)
         self.root.children[i] = mutant_node
+
+    def get_age(self):
+        return self.age
+
+    def inc_age(self, age_benefit=0):
+        """
+        ages the tree if the fitness exists
+        :param age_benefit: contribution of age to the fitness
+        :return:
+        """
+        if self.fitness is not None:
+            self.age += 1
+            self.fitness *= (1 - age_benefit)
+
+    def mark(self):
+        self.marked = True
+
+    def get_fit(self):
+        return self.fitness if self.fitness is not None else sys.maxsize
+
+    def __repr__(self):
+        return f"root = {self.to_python()}, age = {self.age}, marked? = {self.marked}, fitness = {self.fitness}"
+
+    def __str__(self):
+        return (f"Individual: {self.to_python()} \n"
+                f"Fitness: {self.get_fit()} \n"
+                f"Age: {self.age} \n"
+                f"Marked? {self.marked}\n"
+                f"")
 
 
 def create_random_node(depth, term_set, func_set, var_count):
@@ -88,7 +123,7 @@ def create_random_node(depth, term_set, func_set, var_count):
         return node
 
 
-def generate_random(func_set, term_set, max_depth, var_count):
+def generate_random(func_set, term_set, max_depth, var_count) -> Tree:
     root = create_random_node(max_depth, term_set, func_set, var_count)
     return Tree(root, var_count, max_depth)
 
@@ -145,7 +180,7 @@ def main():
     print(random_tree.to_python())
     # Evaluate the random tree
     variables = [3, 4]  # Example input values
-    result = random_tree.evaluate(variables)
+    result = random_tree.run(variables)
     print("Evaluation Result:", result)
 
 
