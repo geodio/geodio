@@ -1,7 +1,6 @@
 import numpy as np
 
-from src.pop import Pop
-from tree import Tree, generate_random, crossover as cross
+from src.cell.cell import generate_random, crossover as cross
 
 
 def initialize_population(pop_size, func_set, term_set, max_depth, arity):
@@ -33,7 +32,7 @@ def replace_worst(pop, fitness, offspring, offspring_fitness):
     # Find indices of worst individuals
     worst_idx = np.argsort(fitness)[-len(offspring):]
 
-    # Replace worst individuals with offspring
+    # Replace the worst individuals with offspring
     for i, idx in enumerate(worst_idx):
         pop[idx] = offspring[i]
 
@@ -50,7 +49,8 @@ def select_parents(pop, fitness, tournament_size=4):
     n = len(pop) - tournament_size
     if n > 0:
         for i in range(n):
-            tournament = indexes[i: i + tournament_size]  # Select tournament members from shuffled indexes
+            # Select tournament members from shuffled indexes
+            tournament = indexes[i: i + tournament_size]
             winner = np.argmin([fitness[i] for i in tournament])
             parents.append(pop[tournament[winner]])
         return parents

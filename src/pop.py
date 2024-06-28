@@ -1,7 +1,8 @@
 import sys
 
 import numpy as np
-from tree import Tree, generate_random, crossover as cross
+
+from src.cell.cell import generate_random
 
 
 class Pop:
@@ -27,23 +28,26 @@ class Pop:
         return pop
 
     def _new_offspring(self, size):
-        return [generate_random(self.func_set, self.term_set, self.max_depth, self.arity) for _ in range(size)]
+        return [generate_random(self.func_set, self.term_set, self.max_depth,
+                                self.arity) for _ in range(size)]
 
     def evaluate_population(self, x, y, fitness_func):
         # Evaluate fitness of each individual in the population
-        for tree in self.population:
-            if tree.fitness is None:
+        for cell in self.population:
+            if cell.fitness is None:
                 try:
                     y_pred = []
                     for x_inst in x:
-                        y_pred.append(tree.run(x_inst))
+                        y_pred.append(cell(x_inst))
                     if None in y_pred:
-                        fit = sys.maxsize  # Return fitness of 0 for invalid trees
+                        # Invalid cell
+                        fit = sys.maxsize
                     else:
                         fit = np.abs(fitness_func(y, y_pred))
                 except SyntaxError:
-                    fit = sys.maxsize  # Return fitness of 0 for trees with syntax errors
-                tree.fitness = fit
+                    # Tree with syntax error
+                    fit = sys.maxsize
+                cell.fitness = fit
         sorted(self.population, key=lambda indi: indi.get_fit(), reverse=True)
 
     def age_all(self):
@@ -71,7 +75,8 @@ class Pop:
         return self.population[idx].fitness
 
     def kill_worst(self):
-        fitness = np.array(list(map(lambda xx: xx.fitness, self.population)), dtype=np.float_)
+        fitness = np.array(list(map(lambda xx: xx.fitness, self.population)),
+                           dtype=np.float_)
         max_fit = fitness[np.argmax(fitness)]
         min_fit = fitness[np.argmin(fitness)]
         t = (max_fit - min_fit) * self.kill_rate + min_fit
