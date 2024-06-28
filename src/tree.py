@@ -1,8 +1,9 @@
 import sys
 
+import tensorflow as tf
 import numpy as np
 import random
-import rnd
+import src.rnd as rnd
 
 
 class Node:
@@ -94,8 +95,33 @@ class Tree:
     def get_fit(self):
         return self.fitness if self.fitness is not None else sys.maxsize
 
+    def optimize_values(self, loss_function, optimizer, variables,
+                        desired_output):
+        # Calculate the output of the tree
+        output = self.run(variables)
+        # Calculate the loss
+        loss = loss_function(output, desired_output)
+        # Calculate the gradient of the loss with respect to the values of
+        # "value" nodes
+        gradient = self.calculate_gradient(loss, variables, desired_output)
+        # Update the values of "value" nodes using the optimizer
+        optimizer.update_values(gradient)
+
+    def calculate_gradient(self, loss, variables, desired_output):
+        with tf.GradientTape() as tape:
+            # Forward pass: calculate the output of the tree
+            output = self.run(variables)
+            # Calculate the loss
+            loss_value = loss(output, desired_output)
+        # Use the tape to compute the gradient of the loss with respect to the
+        # variables (values of "value" nodes)
+        gradient = tape.gradient(loss_value, variables)
+
+        return gradient
+
     def __repr__(self):
-        return f"root = {self.to_python()}, age = {self.age}, marked? = {self.marked}, fitness = {self.fitness}"
+        return (f"root = {self.to_python()}, age = {self.age}, marked? "
+                f"= {self.marked}, fitness = {self.fitness}")
 
     def __str__(self):
         return (f"Individual: {self.to_python()} \n"

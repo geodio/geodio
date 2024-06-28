@@ -1,4 +1,5 @@
 import numpy as np
+
 from genetic import (
     initialize_population,
     evaluate_population,
@@ -8,7 +9,6 @@ from genetic import (
     find_best_individual,
 )
 from src.pop import Pop
-from tree import Tree, generate_random
 
 
 def fitness_mse(y, y_pred):
@@ -16,7 +16,8 @@ def fitness_mse(y, y_pred):
     return np.mean((y - y_pred) ** 2)
 
 
-def gep(pop_size, generations, func_set, term_set, x, y, fitness_func, max_depth=5, arity=1):
+def gep(pop_size, generations, func_set, term_set, x, y, fitness_func,
+        max_depth=5, arity=1):
     """
     Genetic Expression Programming (GEP)
 
@@ -61,19 +62,19 @@ def main():
     y = np.array([2, 4, 6, 8, 10, 200])
 
     # Example usage
-    def add(x, y):
-        return x + y
+    def add(_x, _y):
+        return _x + _y
 
-    def subtract(x, y):
-        return x - y
+    def subtract(_x, _y):
+        return _x - _y
 
-    def multiply(x, y):
-        return x * y
+    def multiply(_x, _y):
+        return _x * _y
 
-    def divide(x, y):
-        if y == 0:
+    def divide(_x, _y):
+        if _y == 0:
             return 0  # Avoid division by zero
-        return x / y
+        return _x / _y
 
     func_set = [add, subtract, multiply, divide]
     term_set = [0, 1, 2, 3, -1]
@@ -83,16 +84,7 @@ def main():
     # Generate a random tree
     pop_size = 50
     generations = 100
-    # best_ind, best_fit = gep(
-    #     pop_size,
-    #     generations,
-    #     func_set,
-    #     term_set,
-    #     x, y,
-    #     fitness_mse,
-    #     max_depth,
-    #     arity=1
-    # )
+
     pop = Pop(pop_size,func_set,term_set,max_depth,var_count)
     best_ind, best_fit = pop.grow_func(generations,x,y,fitness_mse)
     print(f"Best individual: {best_ind.to_python()}")
