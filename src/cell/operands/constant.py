@@ -1,3 +1,5 @@
+import tensorflow as tf
+
 from src.cell.operands.weight import Weight
 
 
@@ -11,6 +13,12 @@ class Constant(Weight):
 
     def d(self, dx):
         return ZERO
+
+    def get_weights(self):
+        return tf.Variable([], dtype=tf.float32)
+
+    def set_weights(self, new_weights):
+        pass
 
     @staticmethod
     def from_weight(w: Weight):

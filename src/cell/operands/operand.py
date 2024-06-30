@@ -57,3 +57,9 @@ class Operand(ABC, Derivable):
     @abstractmethod
     def to_python(self) -> str:
         pass
+
+    def get_weights(self):
+        return np.array([])
+
+    def set_weights(self, new_weights):
+        pass

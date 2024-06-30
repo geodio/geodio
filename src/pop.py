@@ -1,19 +1,21 @@
 import sys
 
 import numpy as np
+import tensorflow as tf
 
 from src.cell.cell import generate_random
+from src.genetic.generator import RandomGenerator
+from src.genetic.pop_utils import PopulationProperties, ReproductionPolicy
 
 
 class Pop:
     def __init__(self, pop_size, func_set, term_set, max_depth, arity,
-                 kill_rate=0.1, crossover_rate=0.8, mutation_rate=0.2,
-                 age_benefit=1e-4):
-        self.pop_size = pop_size
-        self.func_set = func_set
-        self.term_set = term_set
-        self.max_depth = max_depth
-        self.arity = arity
+                 kill_rate=0.3, crossover_rate=0.8, mutation_rate=0.2,
+                 age_benefit=1e-8, generator=None):
+        self.pop_prop = PopulationProperties(pop_size, func_set, term_set,
+                                             max_depth, arity)
+        self.generator = generator or RandomGenerator()
+        self.generator.set_pop_prop(self.pop_prop)
         self.kill_rate = kill_rate
         self.crossover_rate = crossover_rate
         self.mutation_rate = mutation_rate
@@ -21,18 +23,30 @@ class Pop:
         # Tracks the number of generations individuals have survived
         self.survival_counts = np.zeros(pop_size, dtype=int)
         self.age_benefit = age_benefit
+        self.optimizer = tf.optimizers.Adam()
 
     def initialize_population(self):
         # Initialize population with random expressions
-        pop = self._new_offspring(self.pop_size)
+        pop = self.generator.new_offspring_list(self.pop_prop.population_size)
         return pop
 
     def _new_offspring(self, size):
-        return [generate_random(self.func_set, self.term_set, self.max_depth,
-                                self.arity) for _ in range(size)]
+        return [generate_random(self.pop_prop.func_set, self.pop_prop.term_set,
+                                self.pop_prop.max_depth,
+                                self.pop_prop.arity) for _ in range(size)]
+
+    def _crossover_offspring(self, size):
+        return [generate_random(self.pop_prop.func_set, self.pop_prop.term_set,
+                                self.pop_prop.max_depth,
+                                self.pop_prop.arity) for _ in range(size)]
+
+    def optimize_population(self, fitness_func, x, y):
+        for cell in self.population:
+            cell.optimize_values(fitness_func, self.optimizer, x, y)
 
     def evaluate_population(self, x, y, fitness_func):
         # Evaluate fitness of each individual in the population
+        self.optimize_population(fitness_func, x, y)
         for cell in self.population:
             if cell.fitness is None:
                 try:
@@ -54,10 +68,18 @@ class Pop:
         for individual in self.population:
             individual.inc_age(self.age_benefit)
 
-    def mark_best(self, threshold=1e-2):
-        to_be_marked = [a for a in self.population if a.fitness < threshold]
+    def mark_best(self):
+        mark_ratio = self.kill_rate / 100
+        to_mark = int(len(self.population) * mark_ratio)
+        to_be_marked = self.get_best_individuals(to_mark)
         for x in to_be_marked:
             x.mark()
+            x.reproduction_policy = ReproductionPolicy.CROSSOVER
+
+    def get_best_individuals(self, size):
+        return list(sorted(self.population,
+                           key=lambda indi: indi.fitness,
+                           reverse=False))[:size]
 
     def get_best_ind(self):
         # Find the best individual in the population
@@ -66,10 +88,12 @@ class Pop:
         return best, best.get_fit()
 
     def _min_fit_idx(self):
-        return min(range(len(self.population)), key=lambda i: self.population[i].get_fit())
+        return min(range(len(self.population)),
+                   key=lambda i: self.population[i].get_fit())
 
     def _max_fit_idx(self):
-        return max(range(len(self.population)), key=lambda i: self.population[i].fitness)
+        return max(range(len(self.population)),
+                   key=lambda i: self.population[i].fitness)
 
     def _fit_of_idx(self, idx):
         return self.population[idx].fitness
@@ -82,7 +106,10 @@ class Pop:
         t = (max_fit - min_fit) * self.kill_rate + min_fit
         to_be_killed = fitness > t
         population_array = np.array(self.population)
-        population_array[to_be_killed] = self._new_offspring(sum(to_be_killed))
+        population_array[to_be_killed] = self.generator.reproduce_cells(
+            self.get_marked_individuals(),
+            sum(to_be_killed)
+        )
         self.population = population_array.tolist()
 
     def mutate_middle(self):
@@ -93,10 +120,9 @@ class Pop:
         cond = lambda tree: not tree.marked and tree.fitness is not None
         middle_class = [a for a in self.population if cond(a)]
         for individual in middle_class:
-            individual.mutate(self.func_set,
-                              self.term_set,
-                              self.max_depth,
-                              self.mutation_rate)
+            individual.mutate(self.generator,
+                              self.pop_prop.max_depth)
+            individual.age = 0
 
     def grow_func(self, generations, x, y, fitness_func):
         """
@@ -132,3 +158,6 @@ class Pop:
 
         best_ind, best_fit = self.get_best_ind()
         return best_ind, best_fit
+
+    def get_marked_individuals(self):
+        return list(filter(lambda ind: ind.marked, self.population))

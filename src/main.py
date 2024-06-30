@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.genetic import (
+from src.genetic_util import (
     initialize_population,
     evaluate_population,
     select_parents,
@@ -8,7 +8,6 @@ from src.genetic import (
     mutate,
     find_best_individual,
 )
-from src.pop import Pop
 
 
 def fitness_mse(y, y_pred):

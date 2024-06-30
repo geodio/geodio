@@ -19,7 +19,7 @@ class Variable(Operand):
         return None  # Variables do not have an inverse
 
     def clone(self) -> "Variable":
-        return Variable(self.value, self.arity)
+        return Variable(self.value)
 
     def to_python(self) -> str:
         return f"x[{self.value}]"

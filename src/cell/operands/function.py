@@ -1,5 +1,7 @@
 from typing import Optional
 
+import numpy as np
+
 from src.cell.operands.operand import Operand
 
 
@@ -28,3 +30,18 @@ class Function(Operand):
     def to_python(self) -> str:
         args = [child.to_python() for child in self.children]
         return f"{self.value.__name__}({', '.join(args)})"
+
+    def get_weights(self):
+        weights = []
+        for child in self.children:
+            weights.extend(child.get_weights())
+        return weights
+
+    def set_weights(self, new_weights):
+        offset = 0
+        for child in self.children:
+            child_weights = child.get_weights()
+            num_weights = len(child_weights)
+            if num_weights > 0:
+                child.set_weights(new_weights[offset:offset + num_weights])
+                offset += num_weights

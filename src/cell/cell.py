@@ -13,16 +13,20 @@ import tensorflow as tf
 
 from src.cell.operands.variable import Variable
 from src.cell.operands.weight import Weight
+from src.genetic.pop_utils import ReproductionPolicy
 
 
 class Cell(Operand):
-    def __init__(self, root: Operand, arity: int, max_depth):
+    def __init__(self, root: Operand, arity: int, max_depth,
+                 reproduction_policy=ReproductionPolicy.DIVISION):
         super().__init__(arity)
         self.root = root
         self.depth = max_depth
         self.age = 0
         self.fitness = None
         self.marked = False
+        self.reproduction_policy = reproduction_policy
+        self.mutation_risk = 0.5
 
     def nodes(self):
         return self.root.children
@@ -36,11 +40,13 @@ class Cell(Operand):
     def to_python(self):
         return self.root.to_python()
 
-    def mutate(self, func_set, term_set, max_depth=None, mutation_rate=0.1):
+    def mutate(self, generator,
+               max_depth=None):
         if not max_depth:
             max_depth = self.depth
-        if np.random.rand() < mutation_rate and len(self.root.children) != 0:
-            mutant_node = create_random_node(max_depth - 1, term_set, func_set, self.arity)
+        r = np.random.rand()
+        if r < self.mutation_risk and len(self.root.children) != 0:
+            mutant_node = generator.generate_node(max_depth - 1)
             self.depth = max_depth
             self._randomly_replace(mutant_node)
             self.fitness = None
@@ -62,6 +68,7 @@ class Cell(Operand):
         if self.fitness is not None:
             self.age += 1
             self.fitness *= (1 - age_benefit)
+            self.mutation_risk *= (1 - age_benefit)
 
     def mark(self):
         self.marked = True
@@ -71,15 +78,21 @@ class Cell(Operand):
 
     def optimize_values(self, loss_function, optimizer, variables,
                         desired_output):
-        # Calculate the output of the tree
-        output = self(variables)
-        # Calculate the loss
-        loss = loss_function(output, desired_output)
-        # Calculate the gradient of the loss with respect to the values of
-        # "value" nodes
-        gradient = self.calculate_gradient(loss, variables, desired_output)
-        # Update the values of "value" nodes using the optimizer
-        optimizer.update_values(gradient)
+        with tf.GradientTape() as tape:
+            weights = self.get_weights()
+            tape.watch(weights)
+            output = self(variables)
+            loss_value = loss_function(output, desired_output)
+        print(weights)
+        gradient = tape.gradient(loss_value, weights)
+        optimizer.apply_gradients(zip(gradient, weights))
+        self.set_weights(weights)
+
+    def get_weights(self):
+        return self.root.get_weights()
+
+    def set_weights(self, new_weights):
+        self.root.set_weights(new_weights)
 
     def calculate_gradient(self, loss, variables, desired_output):
         with tf.GradientTape() as tape:
@@ -94,10 +107,10 @@ class Cell(Operand):
         return gradient
 
     def d(self, var_index) -> "Optional[Operand]":
-        pass
+        return self.root.d(var_index)
 
     def __invert__(self):
-        pass
+        return ~self.root
 
     def clone(self) -> "Cell":
         return Cell(self.root.clone(), self.arity, self.depth)
@@ -149,7 +162,6 @@ def generate_function_node(depth, func_set, term_set, var_count):
     return node
 
 
-
 def generate_random(func_set, term_set, max_depth, var_count) -> Cell:
     root = create_random_node(max_depth, term_set, func_set, var_count)
     return Cell(root, var_count, max_depth)
@@ -169,6 +181,8 @@ def crossover(left_cell: 'Cell', right_cell: 'Cell'):
         # Swap the chosen nodes
         new_child1 = node2.clone()
         new_child2 = node1.clone()
+        new_child2.age = 0
+        new_child1.age = 0
 
         # Replace the nodes in the children
         root1.children[index1] = new_child1

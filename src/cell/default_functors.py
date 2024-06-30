@@ -6,6 +6,12 @@ from src.cell.functors import Functor, CollectionBasedFunctors
 from src.cell.operands.constant import Constant
 
 
+def clean_number(x):
+    if x is None or str(x) == 'nan':
+        return 0
+    return x
+
+
 class DefaultFunctor(Functor):
     def __init__(self, children, func_id, arity):
         self.children = children
@@ -19,7 +25,7 @@ class Add(DefaultFunctor):
         super().__init__(children, f"add_{arity}", arity)
 
     def __call__(self, x):
-        return sum([child(x) for child in self.children])
+        return clean_number(sum([child(x) for child in self.children]))
 
     def d(self, dx):
         return Add([child.d(dx) for child in self.children], arity=self.arity)
@@ -33,7 +39,7 @@ class Prod(DefaultFunctor):
         super().__init__(children, "prod", 2)
 
     def __call__(self, x):
-        return self.children[0](x) * self.children[1](x)
+        return clean_number(self.children[0](x) * self.children[1](x))
 
     def d(self, dx):
         return Add(
@@ -72,7 +78,10 @@ class Power(DefaultFunctor):
         exponent = self.children[1](x)
         if exponent == 0:
             return 1.0
-        return np.power(0.0 + base_func(x), exponent)
+        try:
+            return clean_number(np.power(0.0 + base_func(x), exponent))
+        except:
+            return 0.0
 
     def d(self, dx):
         base = self.children[0]
@@ -103,7 +112,7 @@ class Sub(DefaultFunctor):
         super().__init__(children, "sub", 2)
 
     def __call__(self, x):
-        return self.children[0](x) - self.children[1](x)
+        return clean_number(self.children[0](x) - self.children[1](x))
 
     def d(self, dx):
         return Sub([self.children[0].d(dx), self.children[1].d(dx)])
@@ -123,7 +132,7 @@ class Div(DefaultFunctor):
             if up >= 0:
                 return sys.maxsize
             return -sys.maxsize
-        return up / down
+        return clean_number(up / down)
 
     def d(self, dx):
         # d/dx (a / b) = (b * d/dx(a) - a * d/dx(b)) / (b^2)
@@ -146,7 +155,7 @@ class Log(DefaultFunctor):
 
     def __call__(self, x):
         try:
-            return np.log(self.children[0](x))
+            return clean_number(np.log(self.children[0](x)))
         except:
             return 0
 
