@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 
 from src.genetic_util import (
@@ -12,7 +14,10 @@ from src.genetic_util import (
 
 def fitness_mse(y, y_pred):
     # Mean Squared Error (MSE) fitness function
-    return np.mean((y - y_pred) ** 2)
+    x = np.mean((y - y_pred) ** 2)
+    if str(x) == "nan" or str(x) == 'inf':
+        x = sys.maxsize
+    return x
 
 
 def gep(pop_size, generations, func_set, term_set, x, y, fitness_func,

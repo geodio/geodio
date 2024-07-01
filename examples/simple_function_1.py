@@ -34,7 +34,7 @@ def main():
     generations = 100
 
     pop = Pop(pop_size, func_set, term_set, max_depth, var_count)
-    best_ind, best_fit = pop.grow_func(generations, x, y, fitness_mse)
+    best_ind, best_fit = pop.evolve_population(generations, x, y, fitness_mse)
     print(f"Best individual: {best_ind.to_python()}")
     print(f"Best fitness: {best_fit:.4f}")
 

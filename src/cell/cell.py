@@ -1,15 +1,14 @@
 import pickle
 import random
 import sys
-from typing import Optional
 
 import numpy as np
 
 from src import rnd
+from src.cell.fitness import FitnessFunction
 from src.cell.functors import Functors
 from src.cell.operands.function import Function
 from src.cell.operands.operand import Operand
-import tensorflow as tf
 
 from src.cell.operands.variable import Variable
 from src.cell.operands.weight import Weight
@@ -20,6 +19,7 @@ class Cell(Operand):
     def __init__(self, root: Operand, arity: int, max_depth,
                  reproduction_policy=ReproductionPolicy.DIVISION):
         super().__init__(arity)
+        self.weight_cache = None
         self.root = root
         self.depth = max_depth
         self.age = 0
@@ -27,6 +27,8 @@ class Cell(Operand):
         self.marked = False
         self.reproduction_policy = reproduction_policy
         self.mutation_risk = 0.5
+        self.derivative_cache = {}
+        self.derivative_cell = None
 
     def nodes(self):
         return self.root.children
@@ -50,6 +52,8 @@ class Cell(Operand):
             self.depth = max_depth
             self._randomly_replace(mutant_node)
             self.fitness = None
+            self.weight_cache = None
+            self.derivative_cache = {}
         return self
 
     def _randomly_replace(self, mutant_node):
@@ -76,38 +80,55 @@ class Cell(Operand):
     def get_fit(self):
         return self.fitness if self.fitness is not None else sys.maxsize
 
-    def optimize_values(self, loss_function, optimizer, variables,
-                        desired_output):
-        with tf.GradientTape() as tape:
-            weights = self.get_weights()
-            tape.watch(weights)
-            output = self(variables)
-            loss_value = loss_function(output, desired_output)
-        print(weights)
-        gradient = tape.gradient(loss_value, weights)
-        optimizer.apply_gradients(zip(gradient, weights))
-        self.set_weights(weights)
+    def optimize_values(self, fit_fct: FitnessFunction, variables,
+                        desired_output,
+                        learning_rate=0.1, max_iterations=10, min_fitness=10):
+        y_pred = [self(x_inst) for x_inst in variables]
+        self.fitness = fit_fct(desired_output, y_pred)
+        if not self.fitness <= min_fitness:
+            return
+        decay_rate = 0.1
+        max_iterations *= (1 / (self.age + 1))
+        max_iterations = int(max_iterations)
+        weights = self.get_weights()
+        prev_weights = [weight.weight for weight in weights]
+        prev_fitness = self.fitness
+        for iteration in range(max_iterations):
+            gradients = [fit_fct.gradient(self, variables, desired_output, j)
+                         for j in range(len(weights))]
+            for i, weight in enumerate(weights):
+                weight.weight = weight.weight - learning_rate * gradients[i]
+                # Recalculate fitness
+                y_pred = [self(x_inst) for x_inst in variables]
+                self.fitness = fit_fct(desired_output, y_pred)
+                # Adjust learning rate based on age and mutation risk todo
+                learning_rate *= decay_rate
+                # Convergence check
+                if prev_fitness < self.fitness:
+                    self.fitness = prev_fitness
+                    weights[i].weight = prev_weights[i]
+        return self.get_weights()
 
     def get_weights(self):
-        return self.root.get_weights()
+        if self.weight_cache is None:
+            self.weight_cache = self.root.get_weights()
+        return self.weight_cache
 
     def set_weights(self, new_weights):
         self.root.set_weights(new_weights)
 
-    def calculate_gradient(self, loss, variables, desired_output):
-        with tf.GradientTape() as tape:
-            # Forward pass: calculate the output of the tree
-            output = self(variables)
-            # Calculate the loss
-            loss_value = loss(output, desired_output)
-        # Use the tape to compute the gradient of the loss with respect to the
-        # variables (values of "value" nodes)
-        gradient = tape.gradient(loss_value, variables)
+    def derive(self, var_index, by_weights=True):
+        derivative_id = 'X'
+        if by_weights:
+            derivative_id = 'W'
+        derivative_id += f'_{var_index}'
 
-        return gradient
-
-    def d(self, var_index) -> "Optional[Operand]":
-        return self.root.d(var_index)
+        if self.derivative_cache.get(derivative_id) is None:
+            derivative_root = self.root.derive(var_index, by_weights)
+            derivative = Cell(derivative_root, self.arity, 0)
+            self.derivative_cache[derivative_id] = derivative
+            return derivative
+        return self.derivative_cache[derivative_id]
 
     def __invert__(self):
         return ~self.root

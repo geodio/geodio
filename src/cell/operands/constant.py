@@ -1,9 +1,18 @@
-import tensorflow as tf
+import numpy as np
 
-from src.cell.operands.weight import Weight
+from src.cell.operands.operand import Operand
 
 
-class Constant(Weight):
+class Constant(Operand):
+    def __invert__(self):
+        return self
+
+    def clone(self) -> "Operand":
+        return self
+
+    def to_python(self) -> str:
+        return f"{self.__value}"
+
     def __init__(self, weight):
         super().__init__(weight)
         self.__value = weight
@@ -14,17 +23,21 @@ class Constant(Weight):
     def d(self, dx):
         return ZERO
 
-    def get_weights(self):
-        return tf.Variable([], dtype=tf.float32)
-
-    def set_weights(self, new_weights):
-        pass
+    def d_w(self, dw):
+        return ZERO
 
     @staticmethod
-    def from_weight(w: Weight):
+    def from_weight(w):
         return Constant(w.weight)
 
+    def derive(self, index, by_weights=True):
+        if by_weights:
+            return self.d_w(index)
+        return self.d(index)
 
-ZERO = Constant(0)
+
+ZERO = Constant(0.0)
 ONE = Constant(1)
 MINUS_ONE = Constant(-1)
+E = Constant(np.e)
+PI = Constant(np.pi)

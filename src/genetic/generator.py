@@ -82,3 +82,6 @@ class RandomGenerator(Generator):
             child = self.generate_node(depth - 1)
             node.add_child(child)
         return node
+
+    def derive(self, index, by_weight=True):
+        return None

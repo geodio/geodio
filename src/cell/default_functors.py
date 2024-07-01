@@ -14,9 +14,9 @@ def clean_number(x):
 
 class DefaultFunctor(Functor):
     def __init__(self, children, func_id, arity):
-        self.children = children
         self.__name__ = func_id
         super().__init__(func_id, None, arity)
+        self.children = children
         self.value = self
 
 
@@ -27,8 +27,9 @@ class Add(DefaultFunctor):
     def __call__(self, x):
         return clean_number(sum([child(x) for child in self.children]))
 
-    def d(self, dx):
-        return Add([child.d(dx) for child in self.children], arity=self.arity)
+    def derive(self, index, by_weights=True):
+        return Add([child.derive(index, by_weights) for child in self.children],
+                   arity=self.arity)
 
     def clone(self) -> "Add":
         return Add([child.clone() for child in self.children], self.arity)
@@ -41,11 +42,11 @@ class Prod(DefaultFunctor):
     def __call__(self, x):
         return clean_number(self.children[0](x) * self.children[1](x))
 
-    def d(self, dx):
+    def derive(self, index, by_weights=True):
         return Add(
             [
-                Prod([self.children[0](dx), self.children[1]]),
-                Prod([self.children[0], self.children[1](dx)])
+                Prod([self.children[0].derive(index, by_weights), self.children[1]]),
+                Prod([self.children[0], self.children[1].derive(index, by_weights)])
             ],
             2
         )
@@ -53,6 +54,30 @@ class Prod(DefaultFunctor):
     def clone(self) -> "Prod":
         return Prod([child.clone() for child in self.children])
 
+
+class Dot(DefaultFunctor):
+    def __init__(self, children):
+        super().__init__(children, "dot_prod", 2)
+
+    def __call__(self, x):
+        a = self.children[0](x)
+        b = self.children[1](x)
+        r = clean_number(np.dot(a, b))
+        return r
+
+    def derive(self, index, by_weights=True):
+        return Add(
+            [
+                Dot([self.children[0].derive(index, by_weights),
+                   self.children[1]]),
+                Dot([self.children[0], self.children[1].derive(index,
+                                                             by_weights)])
+            ],
+            2
+        )
+
+    def clone(self) -> "Prod":
+        return Prod([child.clone() for child in self.children])
 
 class Max(DefaultFunctor):
     def __init__(self, children, arity):
@@ -76,31 +101,40 @@ class Power(DefaultFunctor):
     def __call__(self, x):
         base_func = self.children[0]
         exponent = self.children[1](x)
-        if exponent == 0:
-            return 1.0
         try:
+            if exponent == 0:
+                return 1.0
             return clean_number(np.power(0.0 + base_func(x), exponent))
         except:
             return 0.0
 
-    def d(self, dx):
+    def derive(self, index, by_weights=True):
         base = self.children[0]
         exponent = self.children[1]
-        base_dx = base.d(dx)
-        exponent_dx = exponent.d(dx)
+        base_dx = base.derive(index, by_weights)
+        exponent_dx = exponent.derive(index, by_weights)
 
+        # d/dx (a^b) = b * a^(b-1) * d/dx(a) + a^b * ln(a) * d/dx(b)
+        return Power.actual_derivative(base, base_dx, exponent, exponent_dx)
+
+    @staticmethod
+    def actual_derivative(base, base_dx, exponent, exponent_dx):
         # d/dx (a^b) = b * a^(b-1) * d/dx(a) + a^b * ln(a) * d/dx(b)
         return Add([
             Prod([
-                exponent,
-                Power([base, Add([exponent, Constant(-1)], 2)]),
+                Prod([
+                    exponent,
+                    Power([base, Add([exponent, Constant(-1)], 2)])
+                ]),
                 base_dx
             ]),
             Prod([
-                Power([base, exponent]),
-                Log([base]),
-                exponent_dx
-            ])
+                Prod([
+                    Power([base, exponent]),
+                    Log([base])
+                ]),
+                exponent_dx]
+            )
         ], 2)
 
     def clone(self) -> "Power":
@@ -112,10 +146,14 @@ class Sub(DefaultFunctor):
         super().__init__(children, "sub", 2)
 
     def __call__(self, x):
-        return clean_number(self.children[0](x) - self.children[1](x))
+        try:
+            return clean_number(self.children[0](x) - self.children[1](x))
+        except IndexError:
+            return 0
 
-    def d(self, dx):
-        return Sub([self.children[0].d(dx), self.children[1].d(dx)])
+    def derive(self, index, by_weights=True):
+        return Sub([self.children[0].derive(index, by_weights),
+                    self.children[1].derive(index, by_weights)])
 
     def clone(self) -> "Sub":
         return Sub([child.clone() for child in self.children])
@@ -126,23 +164,31 @@ class Div(DefaultFunctor):
         super().__init__(children, "div", 2)
 
     def __call__(self, x):
-        up = self.children[0](x)
-        down = self.children[1](x)
+        try:
+            up = self.children[0](x)
+            down = self.children[1](x)
+        except IndexError:
+            return 0.0
         if down == 0:
             if up >= 0:
                 return sys.maxsize
             return -sys.maxsize
         return clean_number(up / down)
 
-    def d(self, dx):
+    def derive(self, index, by_weights=True):
         # d/dx (a / b) = (b * d/dx(a) - a * d/dx(b)) / (b^2)
         a, b = self.children[0], self.children[1]
+        return Div.actual_derivative(a, b, a.derive(index, by_weights),
+                                     b.derive(index, by_weights))
+
+    @staticmethod
+    def actual_derivative(a, b, a_d, b_d):
         return Div([
             Sub([
-                Prod([b, a.d(dx)]),
-                Prod([a, b.d(dx)])
+                Prod([b, a_d]),
+                Prod([a, b_d])
             ]),
-            Power([b, 2])
+            Power([b, Constant(2)])
         ])
 
     def clone(self) -> "Div":
@@ -159,11 +205,11 @@ class Log(DefaultFunctor):
         except:
             return 0
 
-    def d(self, dx):
+    def derive(self, index, by_weights=True):
         # d/dx (log(a)) = 1 / a * d/dx(a)
         a = self.children[0]
         return Div([
-            a.d(dx),
+            a.derive(index, by_weights),
             a
         ])
 

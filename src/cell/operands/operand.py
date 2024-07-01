@@ -3,10 +3,10 @@ from typing import Optional
 
 import numpy as np
 
-from src.cell.derivable import Derivable
+from src.cell.derivable import Derivable, WeightDerivable
 
 
-class Operand(ABC, Derivable):
+class Operand(ABC, Derivable, WeightDerivable):
 
     def __init__(self, arity):
         self.arity = arity
@@ -22,7 +22,6 @@ class Operand(ABC, Derivable):
         """
         pass
 
-    @abstractmethod
     def d(self, var_index) -> "Optional[Operand]":
         """
         Derivative of the operand.
@@ -32,7 +31,7 @@ class Operand(ABC, Derivable):
         :return: Operand representing the derivative of this operand, or None
         if the derivative could not be computed.
         """
-        pass
+        return self.derive(var_index, False)
 
     @abstractmethod
     def __invert__(self):
@@ -59,7 +58,14 @@ class Operand(ABC, Derivable):
         pass
 
     def get_weights(self):
-        return np.array([])
+        return []
 
     def set_weights(self, new_weights):
         pass
+
+    @abstractmethod
+    def derive(self, index, by_weights=True):
+        pass
+
+    def d_w(self, dw):
+        return self.derive(dw, True)

@@ -1,17 +1,46 @@
 import sys
+import threading
+import time
 
 import numpy as np
-import tensorflow as tf
-
-from src.cell.cell import generate_random
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from src.cell.cell import generate_random, Cell
+from src.cell.fitness import FitnessFunction
 from src.genetic.generator import RandomGenerator
 from src.genetic.pop_utils import PopulationProperties, ReproductionPolicy
+
+lock = threading.Lock()
+
+
+def evolve_individual(cell: Cell, x, y, fitness_func, age_benefit,
+                      optimize=True):
+    if cell is None:
+        print("ERROR")
+    try:
+        if optimize:
+            cell.optimize_values(fitness_func, x, y)
+    except SyntaxError:
+        cell.fitness = sys.maxsize
+    if cell.fitness is None:
+        try:
+            y_pred = [cell(x_inst) for x_inst in x]
+            if None in y_pred:
+                fit = sys.maxsize
+            else:
+                fit = np.abs(fitness_func(y, y_pred))
+        except SyntaxError:
+            fit = sys.maxsize
+    else:
+        fit = cell.fitness
+    cell.inc_age(age_benefit)
+    cell.fitness = fit
+    return cell
 
 
 class Pop:
     def __init__(self, pop_size, func_set, term_set, max_depth, arity,
                  kill_rate=0.3, crossover_rate=0.8, mutation_rate=0.2,
-                 age_benefit=1e-8, generator=None):
+                 age_benefit=1e-8, generator=None, optimize=False):
         self.pop_prop = PopulationProperties(pop_size, func_set, term_set,
                                              max_depth, arity)
         self.generator = generator or RandomGenerator()
@@ -20,13 +49,11 @@ class Pop:
         self.crossover_rate = crossover_rate
         self.mutation_rate = mutation_rate
         self.population = self.initialize_population()
-        # Tracks the number of generations individuals have survived
         self.survival_counts = np.zeros(pop_size, dtype=int)
         self.age_benefit = age_benefit
-        self.optimizer = tf.optimizers.Adam()
+        self.optimize = optimize
 
     def initialize_population(self):
-        # Initialize population with random expressions
         pop = self.generator.new_offspring_list(self.pop_prop.population_size)
         return pop
 
@@ -40,33 +67,16 @@ class Pop:
                                 self.pop_prop.max_depth,
                                 self.pop_prop.arity) for _ in range(size)]
 
-    def optimize_population(self, fitness_func, x, y):
-        for cell in self.population:
-            cell.optimize_values(fitness_func, self.optimizer, x, y)
-
     def evaluate_population(self, x, y, fitness_func):
-        # Evaluate fitness of each individual in the population
-        self.optimize_population(fitness_func, x, y)
-        for cell in self.population:
-            if cell.fitness is None:
-                try:
-                    y_pred = []
-                    for x_inst in x:
-                        y_pred.append(cell(x_inst))
-                    if None in y_pred:
-                        # Invalid cell
-                        fit = sys.maxsize
-                    else:
-                        fit = np.abs(fitness_func(y, y_pred))
-                except SyntaxError:
-                    # Tree with syntax error
-                    fit = sys.maxsize
-                cell.fitness = fit
-        sorted(self.population, key=lambda indi: indi.get_fit(), reverse=True)
-
-    def age_all(self):
-        for individual in self.population:
-            individual.inc_age(self.age_benefit)
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(evolve_individual, cell, x, y,
+                                       fitness_func,
+                                       self.age_benefit,
+                                       self.optimize): cell for cell in
+                       self.population}
+            for future in as_completed(futures):
+                future.result()
+        self.population.sort(key=lambda indi: indi.get_fit(), reverse=True)
 
     def mark_best(self):
         mark_ratio = self.kill_rate / 100
@@ -77,12 +87,13 @@ class Pop:
             x.reproduction_policy = ReproductionPolicy.CROSSOVER
 
     def get_best_individuals(self, size):
-        return list(sorted(self.population,
-                           key=lambda indi: indi.fitness,
-                           reverse=False))[:size]
+        sorted_population = sorted(self.population, key=lambda indi:
+        indi.fitness)[:size]
+        sorted_population.extend([ind for ind in self.population if
+                                  ind.fitness < 1e-2])
+        return sorted_population
 
     def get_best_ind(self):
-        # Find the best individual in the population
         best_idx = self._min_fit_idx()
         best = self.population[best_idx]
         return best, best.get_fit()
@@ -111,6 +122,8 @@ class Pop:
             sum(to_be_killed)
         )
         self.population = population_array.tolist()
+        self.population = list(filter(lambda cell: cell is not None,
+                                      self.population))
 
     def mutate_middle(self):
         """
@@ -124,38 +137,18 @@ class Pop:
                               self.pop_prop.max_depth)
             individual.age = 0
 
-    def grow_func(self, generations, x, y, fitness_func):
-        """
-        Genetic Expression Programming (GEP)
-
-        Parameters:
-        - generations: int
-            Number of generations
-        - x: array-like, shape (n_samples, 1)
-            Independent variable
-        - y: array-like, shape (n_samples, 1)
-            Dependent variable
-        - fitness_func: callable
-            Fitness function (e.g., mean squared error)
-
-        Returns:
-        - best_ind: Tree
-            Best individual (expression) found
-        - best_fit: float
-            Best fitness value found
-        """
+    def evolve_population(self, generations, x, y,
+                          fitness_func: FitnessFunction):
         self.evaluate_population(x, y, fitness_func)
         for gen in range(generations):
             self.mark_best()
             self.kill_worst()
-            self.age_all()
             self.mutate_middle()
             self.evaluate_population(x, y, fitness_func)
             if gen % 20 == 0:
                 print(f"====GENERATION {gen}====")
                 best_ind, best_fit = self.get_best_ind()
                 print(best_ind)
-
         best_ind, best_fit = self.get_best_ind()
         return best_ind, best_fit
 
