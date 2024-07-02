@@ -6,6 +6,17 @@ from src.cell.operands.operand import Operand
 class Optimization:
     def __init__(self, cell, fit_func, input_vars, desired_output, max_iter,
                  learning_rate, decay_rate=0.99999):
+        """
+        Initialize the Optimization object.
+
+        :param cell: The model or neural network cell to be optimized.
+        :param fit_func: The fitness function used to evaluate the model.
+        :param input_vars: The input variables for the model.
+        :param desired_output: The desired output for the input variables.
+        :param max_iter: The maximum number of iterations for optimization.
+        :param learning_rate: The initial learning rate for gradient descent.
+        :param decay_rate: The rate at which the learning rate decays per iteration.
+        """
         self.cell = cell
         self.fit_func = fit_func
         self.input = input_vars
@@ -16,13 +27,24 @@ class Optimization:
         self.prev_weights = [weight.weight for weight in self.weights]
         self.prev_fitness = cell.fitness
         self.learning_rate = learning_rate
+        self._initial_learning_rate = learning_rate
+        self._vanishing = set()
+        self._exploding = set()
 
     def optimize(self):
+        """
+        Perform optimization over the specified number of iterations.
+        """
         for iteration in range(self.max_iter):
             gradients = self.calculate_gradients()
             self.update_weights(gradients)
 
     def calculate_gradients(self):
+        """
+        Calculate the gradients of the fitness function with respect to the weights.
+
+        :return: A numpy array of gradients.
+        """
         gradients = np.array([
             self.fit_func.gradient(
                 self.cell, self.input, self.desired_output, j
@@ -32,39 +54,79 @@ class Optimization:
         return gradients
 
     def update_weights(self, gradients):
+        """
+        Update the weights based on the calculated gradients.
+
+        :param gradients: The calculated gradients for each weight.
+        """
         for i, weight in enumerate(self.weights):
             gradient = gradients[i]
+            gradient = self.__handle_exploding_vanishing(gradient, i)
             self.__update_weight(gradient, i, weight)
 
     def __update_weight(self, gradient, i, weight):
+        """
+        Update a single weight and handle fitness evaluation and convergence checks.
+
+        :param gradient: The gradient for the weight.
+        :param i: The index of the weight.
+        :param weight: The weight object.
+        :return: True if the update was successful, False otherwise.
+        """
         weight.weight = weight.weight - self.learning_rate * gradient
-        # Recalculate fitness
         y_pred = [self.cell(x_inst) for x_inst in self.input]
         self.cell.fitness = self.fit_func(self.desired_output, y_pred)
         self.learning_rate *= self.decay_rate
-        # Convergence check
+
         if self.prev_fitness < self.cell.fitness:
             self.cell.fitness = self.prev_fitness
             self.weights[i].weight = self.prev_weights[i]
-            self.__test_vanishing_exploding(gradient, i, weight)
-            return False
+            return self.__test_vanishing_exploding(gradient, i, weight)
         return True
 
     def __test_vanishing_exploding(self, gradient, i, weight):
-        if gradient > 1:
-            try_exploding = self.__update_weight(0.1, i + 1, weight)
-            if try_exploding:
-                self.__mark_exploding(i)
-        if gradient < 1:
-            try_vanishing = self.__update_weight(0.1, i + 1, weight)
-            if try_vanishing:
-                self.__mark_vanishing(i)
+        """
+        Test for vanishing or exploding gradients and take appropriate actions.
+
+        :param gradient: The gradient for the weight.
+        :param i: The index of the weight.
+        :param weight: The weight object.
+        """
+        if i in self._vanishing or i in self._exploding:
+            return False
+        if np.abs(gradient) > 1:
+            self.__mark_exploding(i)
+        elif np.abs(gradient) < 1e-5:
+            self.__mark_vanishing(i)
+        else:
+            return False
+        gradient = self.__handle_exploding_vanishing(gradient, i)
+        return self.__update_weight(gradient, i, weight)
 
     def __mark_exploding(self, i):
-        pass
+        """
+        Mark the weight as having an exploding gradient.
+
+        :param i: The index of the weight.
+        """
+        self._exploding.add(i)
 
     def __mark_vanishing(self, i):
-        pass
+        """
+        Mark the weight as having a vanishing gradient.
+
+        :param i: The index of the weight.
+        """
+        self._vanishing.add(i)
+
+    def __handle_exploding_vanishing(self, gradient, i):
+        if i in self._exploding:
+            self.learning_rate = self._initial_learning_rate
+            return np.clip(gradient, -1, 1)
+        if i in self._vanishing:
+            self.learning_rate = self._initial_learning_rate
+            return np.sign(gradient) * np.maximum(np.abs(gradient), 1e-4)
+        return gradient
 
 
 class Optimizer:
@@ -77,36 +139,32 @@ class Optimizer:
                  learning_rate,
                  max_iterations,
                  variables):
-        decay_rate = 0.99999
-        weights = cell.get_weights()
-        prev_weights = [weight.weight for weight in weights]
-        prev_fitness = cell.fitness
-        for iteration in range(max_iterations):
-            gradients = self.calculate_gradient(cell, desired_output, fit_fct,
-                                                variables, weights)
-            np.clip(gradients, -1, 1, out=gradients)
-            self.update_weights(cell, decay_rate, desired_output, fit_fct,
-                                gradients, learning_rate, prev_fitness,
-                                prev_weights, variables, weights)
+        optimizer = Optimization(cell,
+                                 fit_fct,
+                                 variables,
+                                 desired_output,
+                                 max_iterations,
+                                 learning_rate)
+        optimizer.optimize()
 
-    def calculate_gradient(self, cell, desired_output, fit_fct, variables,
-                           weights):
-        gradients = [fit_fct.gradient(cell, variables, desired_output, j)
-                     for j in range(len(weights))]
-        gradients = np.array(gradients)
-        return gradients
-
-    def update_weights(self, cell, decay_rate, desired_output, fit_fct,
-                       gradients, learning_rate, prev_fitness, prev_weights,
-                       variables, weights):
-        for i, weight in enumerate(weights):
-            weight.weight = weight.weight - learning_rate * gradients[i]
-            # Recalculate fitness
-            y_pred = [cell(x_inst) for x_inst in variables]
-            cell.fitness = fit_fct(desired_output, y_pred)
-            # Adjust learning rate based on age and mutation risk todo
-            learning_rate *= decay_rate
-            # Convergence check
-            if prev_fitness < cell.fitness:
-                cell.fitness = prev_fitness
-                weights[i].weight = prev_weights[i]
+    # def calculate_gradient(self, cell, desired_output, fit_fct, variables,
+    #                        weights):
+    #     gradients = [fit_fct.gradient(cell, variables, desired_output, j)
+    #                  for j in range(len(weights))]
+    #     gradients = np.array(gradients)
+    #     return gradients
+    #
+    # def update_weights(self, cell, decay_rate, desired_output, fit_fct,
+    #                    gradients, learning_rate, prev_fitness, prev_weights,
+    #                    variables, weights):
+    #     for i, weight in enumerate(weights):
+    #         weight.weight = weight.weight - learning_rate * gradients[i]
+    #         # Recalculate fitness
+    #         y_pred = [cell(x_inst) for x_inst in variables]
+    #         cell.fitness = fit_fct(desired_output, y_pred)
+    #         # Adjust learning rate based on age and mutation risk
+    #         learning_rate *= decay_rate
+    #         # Convergence check
+    #         if prev_fitness < cell.fitness:
+    #             cell.fitness = prev_fitness
+    #             weights[i].weight = prev_weights[i]
