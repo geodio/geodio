@@ -15,7 +15,7 @@ def main():
 
 
     func_set = DEFAULT_FUNCTORS
-    term_set = [0, 1, 2, 3, -1, 4, 6, 6.9]
+    term_set = [0, 1, 2, 3, -1, 4, 6, 6.8, 7]
     var_count = 1  # Number of input variables
     max_depth = 2  # Maximum depth of the tree
 
@@ -54,4 +54,4 @@ def main2():
 
 
 if __name__ == '__main__':
-    main2()
+    main()

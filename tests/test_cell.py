@@ -1,9 +1,12 @@
+import sys
 from unittest import TestCase
 
 from src.cell.cell import Cell
 from src.cell.default_functors import Power, Add, Prod
+from src.cell.fitness import MSE
 from src.cell.operands.constant import Constant
 from src.cell.operands.variable import Variable
+from src.cell.operands.weight import Weight
 
 
 class TestCell(TestCase):
@@ -42,4 +45,69 @@ class TestCell(TestCase):
         self.assertEqual(100, cell([-10]))
         self.assertEqual(-20, derivative_cell([-10]))
 
+    def test_simple_optimization(self):
+        w = Weight(1.0)
+        children = [w, Constant(2)]
+        root = Prod(children)
+        cell = Cell(root, 0, 1)
+        derivative_cell = cell.derive(0, True)
+        self.assertEqual(2.0, cell([7]))
+        self.assertEqual(2.0, derivative_cell([7]))
+
+        self.assertEqual(2.0, cell([-10]))
+        self.assertEqual(2.0, derivative_cell([-10]))
+
+        mse = MSE()
+        X = [[], []]
+        Y = [80, 80]
+        gradient = mse.gradient(cell, X, Y, 0)
+        self.assertAlmostEqual(- 312.0, gradient)
+        mse.evaluate(cell, X, Y)
+        self.assertNotEquals(0.0, cell.fitness)
+
+        cell.optimize_values(mse, X, Y, max_iterations=50,
+                             min_fitness=sys.maxsize)
+        gradient = mse.gradient(cell, X, Y, 0)
+        self.assertAlmostEqual(40.0, w.weight)
+        self.assertAlmostEqual(0.0, gradient)
+        self.assertAlmostEqual(0.0, cell.fitness)
+
+    def test_medium_optimization(self):
+        w = Weight(7.0)
+        children = [Variable(0), w]
+        root = Power(children)
+        cell = Cell(root, 1, 1)
+        derivative_cell = cell.derive(0, False)
+        self.assertEqual(3 ** 7, cell([3]))
+        print(derivative_cell)
+        self.assertEqual(7 * (2 ** 6), derivative_cell([2]))
+        # derivative_cell = cell.derive(0, True)
+        mse = MSE()
+        X = [[2], [3]]
+        Y = [2 ** 6.9, 3 ** 6.9]
+        gradient = mse.gradient(cell, X, Y, 0)
+        self.assertNotEqual(0, gradient)
+        mse.evaluate(cell, X, Y)
+        self.assertNotEquals(0.0, cell.fitness)
+
+        cell.optimize_values(mse, X, Y, max_iterations=50,
+                             min_fitness=sys.maxsize)
+        gradient = mse.gradient(cell, X, Y, 0)
+        self.assertAlmostEqual(6.9, w.weight)
+        self.assertAlmostEqual(0.0, gradient)
+        self.assertAlmostEqual(0.0, cell.fitness)
+
+"""
+add_2(
+    prod(
+        prod(
+            7.0, power(x[0], add_2(7.0, -1))
+        ), 
+        sub(x[0], x[0])
+    ), 
+    prod(
+        prod(power(x[0], 7.0), log(x[0])), 1
+    )
+) 
+"""
 

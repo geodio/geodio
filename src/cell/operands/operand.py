@@ -1,3 +1,4 @@
+import sys
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -11,6 +12,7 @@ class Operand(ABC, Derivable, WeightDerivable):
     def __init__(self, arity):
         self.arity = arity
         self.children = []
+        self.fitness = sys.maxsize
 
     @abstractmethod
     def __call__(self, args):

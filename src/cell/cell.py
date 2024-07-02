@@ -13,11 +13,13 @@ from src.cell.operands.operand import Operand
 from src.cell.operands.variable import Variable
 from src.cell.operands.weight import Weight
 from src.genetic.pop_utils import ReproductionPolicy
+from src.optimizer import Optimizer
 
 
 class Cell(Operand):
     def __init__(self, root: Operand, arity: int, max_depth,
-                 reproduction_policy=ReproductionPolicy.DIVISION):
+                 reproduction_policy=ReproductionPolicy.DIVISION,
+                 optimizer=None):
         super().__init__(arity)
         self.weight_cache = None
         self.root = root
@@ -29,6 +31,10 @@ class Cell(Operand):
         self.mutation_risk = 0.5
         self.derivative_cache = {}
         self.derivative_cell = None
+        if optimizer is None:
+            self.optimizer = Optimizer()
+        else:
+            self.optimizer = optimizer
 
     def nodes(self):
         return self.root.children
@@ -82,31 +88,23 @@ class Cell(Operand):
 
     def optimize_values(self, fit_fct: FitnessFunction, variables,
                         desired_output,
-                        learning_rate=0.1, max_iterations=10, min_fitness=10):
+                        learning_rate=0.1,
+                        max_iterations=100,
+                        min_fitness=10):
         y_pred = [self(x_inst) for x_inst in variables]
         self.fitness = fit_fct(desired_output, y_pred)
-        if not self.fitness <= min_fitness:
+        if not (self.fitness <= min_fitness or self.marked):
             return
-        decay_rate = 0.1
+
         max_iterations *= (1 / (self.age + 1))
         max_iterations = int(max_iterations)
-        weights = self.get_weights()
-        prev_weights = [weight.weight for weight in weights]
-        prev_fitness = self.fitness
-        for iteration in range(max_iterations):
-            gradients = [fit_fct.gradient(self, variables, desired_output, j)
-                         for j in range(len(weights))]
-            for i, weight in enumerate(weights):
-                weight.weight = weight.weight - learning_rate * gradients[i]
-                # Recalculate fitness
-                y_pred = [self(x_inst) for x_inst in variables]
-                self.fitness = fit_fct(desired_output, y_pred)
-                # Adjust learning rate based on age and mutation risk todo
-                learning_rate *= decay_rate
-                # Convergence check
-                if prev_fitness < self.fitness:
-                    self.fitness = prev_fitness
-                    weights[i].weight = prev_weights[i]
+
+        self.optimizer(self,
+                       desired_output,
+                       fit_fct,
+                       learning_rate,
+                       max_iterations,
+                       variables)
         return self.get_weights()
 
     def get_weights(self):

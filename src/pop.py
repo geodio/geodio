@@ -13,12 +13,13 @@ lock = threading.Lock()
 
 
 def evolve_individual(cell: Cell, x, y, fitness_func, age_benefit,
-                      optimize=True):
+                      optimize=True, max_iterations=100):
     if cell is None:
         print("ERROR")
     try:
         if optimize:
-            cell.optimize_values(fitness_func, x, y)
+            cell.optimize_values(fitness_func, x, y,
+                                 max_iterations=max_iterations)
     except SyntaxError:
         cell.fitness = sys.maxsize
     if cell.fitness is None:
@@ -41,6 +42,7 @@ class Pop:
     def __init__(self, pop_size, func_set, term_set, max_depth, arity,
                  kill_rate=0.3, crossover_rate=0.8, mutation_rate=0.2,
                  age_benefit=1e-8, generator=None, optimize=False):
+        self.generations = 0
         self.pop_prop = PopulationProperties(pop_size, func_set, term_set,
                                              max_depth, arity)
         self.generator = generator or RandomGenerator()
@@ -69,11 +71,15 @@ class Pop:
 
     def evaluate_population(self, x, y, fitness_func):
         with ThreadPoolExecutor() as executor:
-            futures = {executor.submit(evolve_individual, cell, x, y,
-                                       fitness_func,
-                                       self.age_benefit,
-                                       self.optimize): cell for cell in
-                       self.population}
+            futures = {
+                executor.submit(
+                    evolve_individual,
+                    cell, x, y,
+                    fitness_func,
+                    self.age_benefit,
+                    self.optimize, self.generations
+                ): cell for cell in self.population
+            }
             for future in as_completed(futures):
                 future.result()
         self.population.sort(key=lambda indi: indi.get_fit(), reverse=True)
@@ -140,6 +146,7 @@ class Pop:
     def evolve_population(self, generations, x, y,
                           fitness_func: FitnessFunction):
         self.evaluate_population(x, y, fitness_func)
+        self.generations = generations
         for gen in range(generations):
             self.mark_best()
             self.kill_worst()
@@ -149,6 +156,8 @@ class Pop:
                 print(f"====GENERATION {gen}====")
                 best_ind, best_fit = self.get_best_ind()
                 print(best_ind)
+                if best_fit < 1e-5:
+                    break
         best_ind, best_fit = self.get_best_ind()
         return best_ind, best_fit
 
