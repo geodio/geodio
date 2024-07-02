@@ -20,30 +20,21 @@ class Organism(Cell):
         self.cells: t_cells = []
         self.links: Dict[t_cell_id, t_cell_ids] = {}
 
-    def add_cell(self, layer: t_layer_id,
+    def add_cell(self, layer_id: t_layer_id,
                  cell: t_cell) -> t_cell_id:
-        self.cells.append(cell)
         cell_id = len(self.cells)
-        self.layers[layer].append(cell_id)
+        self.cells.append(cell)
+        self.layers[layer_id].append(cell_id)
         self.links[cell_id] = []
         return cell_id
 
-    def connect_cells(self, from_layer: t_layer_id,
-                      from_id: t_cell_id,
-                      to_layer: t_layer_id,
-                      to_id: t_cell_id):
-        if to_id < len(self.cells):
+    def connect_cells(self, from_id: t_cell_id, to_id: t_cell_id):
+        if to_id >= len(self.cells):
             raise ValueError(
                 f"Cell {to_id} does not exist.")
-        if from_id < len(self.cells):
+        if from_id >= len(self.cells):
             raise ValueError(
                 f"Cell {from_id} does not exist.")
-        if to_id not in self.layers[to_layer]:
-            raise ValueError(
-                f"Cell {to_id} does not exist in layer {to_layer}.")
-        if from_id not in self.links[from_layer]:
-            raise ValueError(
-                f"Cell {from_id} does not exist in layer {from_layer}.")
 
         self.links[from_id].append(to_id)
 
@@ -60,7 +51,7 @@ class Organism(Cell):
 
     def get_state_of_links_for_cell(self, cell_id: t_cell_id) -> t_states:
         links = self.links[cell_id]
-        return [cell.state for cell in links]
+        return [self.cells[cell_id].state for cell_id in links]
 
     def get_inputs_for_cell(self, layer: int, cell_id: int, inputs) -> List:
         """
@@ -85,7 +76,7 @@ class Organism(Cell):
             cell_id: self.cells[cell_id](
                 self.get_inputs_for_cell(layer_id, cell_id, inputs)
             )
-            for cell_id in self.cells
+            for cell_id in self.layers[layer_id]
         }
 
         for cell_id, new_state in new_states.items():
