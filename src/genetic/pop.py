@@ -1,11 +1,10 @@
 import sys
 import threading
-import time
 
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from src.cell.cell import generate_random, Cell
-from src.cell.fitness import FitnessFunction
+from src.cell.cell import Cell
+from src.cell.optim.fitness import FitnessFunction
 from src.genetic.generator import RandomGenerator
 from src.genetic.pop_utils import PopulationProperties, ReproductionPolicy
 
@@ -58,16 +57,6 @@ class Pop:
     def initialize_population(self):
         pop = self.generator.new_offspring_list(self.pop_prop.population_size)
         return pop
-
-    def _new_offspring(self, size):
-        return [generate_random(self.pop_prop.func_set, self.pop_prop.term_set,
-                                self.pop_prop.max_depth,
-                                self.pop_prop.arity) for _ in range(size)]
-
-    def _crossover_offspring(self, size):
-        return [generate_random(self.pop_prop.func_set, self.pop_prop.term_set,
-                                self.pop_prop.max_depth,
-                                self.pop_prop.arity) for _ in range(size)]
 
     def evaluate_population(self, x, y, fitness_func):
         with ThreadPoolExecutor() as executor:

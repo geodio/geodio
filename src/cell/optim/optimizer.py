@@ -130,8 +130,6 @@ class Optimization:
 
 
 class Optimizer:
-    def __init__(self):
-        pass
 
     def __call__(self, cell: Operand,
                  desired_output,
@@ -146,25 +144,3 @@ class Optimizer:
                                  max_iterations,
                                  learning_rate)
         optimizer.optimize()
-
-    # def calculate_gradient(self, cell, desired_output, fit_fct, variables,
-    #                        weights):
-    #     gradients = [fit_fct.gradient(cell, variables, desired_output, j)
-    #                  for j in range(len(weights))]
-    #     gradients = np.array(gradients)
-    #     return gradients
-    #
-    # def update_weights(self, cell, decay_rate, desired_output, fit_fct,
-    #                    gradients, learning_rate, prev_fitness, prev_weights,
-    #                    variables, weights):
-    #     for i, weight in enumerate(weights):
-    #         weight.weight = weight.weight - learning_rate * gradients[i]
-    #         # Recalculate fitness
-    #         y_pred = [cell(x_inst) for x_inst in variables]
-    #         cell.fitness = fit_fct(desired_output, y_pred)
-    #         # Adjust learning rate based on age and mutation risk
-    #         learning_rate *= decay_rate
-    #         # Convergence check
-    #         if prev_fitness < cell.fitness:
-    #             cell.fitness = prev_fitness
-    #             weights[i].weight = prev_weights[i]

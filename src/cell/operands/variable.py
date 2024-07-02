@@ -1,6 +1,6 @@
 from typing import Optional
 
-from src.cell.default_functors import Prod, Div, Sub
+from src.cell.collections.default_functors import Sub
 from src.cell.operands.operand import Operand
 from src.cell.operands.constant import ONE, ZERO
 

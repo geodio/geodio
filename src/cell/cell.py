@@ -1,19 +1,11 @@
-import pickle
-import random
-import sys
-
 import numpy as np
 
-from src import rnd
-from src.cell.fitness import FitnessFunction
-from src.cell.functors import Functors
-from src.cell.operands.function import Function
+from src.math import rnd
+from src.cell.optim.fitness import FitnessFunction
 from src.cell.operands.operand import Operand
 
-from src.cell.operands.variable import Variable
-from src.cell.operands.weight import Weight
 from src.genetic.pop_utils import ReproductionPolicy
-from src.optimizer import Optimizer
+from src.cell.optim.optimizer import Optimizer
 
 
 class Cell(Operand):
@@ -83,9 +75,6 @@ class Cell(Operand):
     def mark(self):
         self.marked = True
 
-    def get_fit(self):
-        return self.fitness if self.fitness is not None else sys.maxsize
-
     def optimize_values(self, fit_fct: FitnessFunction, variables,
                         desired_output,
                         learning_rate=0.1,
@@ -99,12 +88,8 @@ class Cell(Operand):
         max_iterations *= (1 / (self.age + 1))
         max_iterations = int(max_iterations)
 
-        self.optimizer(self,
-                       desired_output,
-                       fit_fct,
-                       learning_rate,
-                       max_iterations,
-                       variables)
+        self.optimizer(self, desired_output, fit_fct, learning_rate,
+                       max_iterations, variables)
         return self.get_weights()
 
     def get_weights(self):
@@ -134,13 +119,6 @@ class Cell(Operand):
     def clone(self) -> "Cell":
         return Cell(self.root.clone(), self.arity, self.depth)
 
-    def to_bytes(self):
-        return pickle.dumps(self)
-
-    @staticmethod
-    def from_bytes(data):
-        return pickle.loads(data)
-
     def __repr__(self):
         return (f"root = {self.to_python()}, age = {self.age}, marked? "
                 f"= {self.marked}, fitness = {self.fitness}")
@@ -151,39 +129,6 @@ class Cell(Operand):
                 f"Age: {self.age} \n"
                 f"Marked? {self.marked}\n"
                 f"")
-
-
-def create_random_node(depth, term_set, func_set, var_count):
-    if depth == 0 or random.random() < 0.3:  # Terminal node
-        operand_type = "weight" if random.random() < 0.5 else "variable"
-        if operand_type == "weight":
-            value = random.choice(term_set)
-            return Weight(value)
-        value = random.randint(0, var_count - 1)
-        return Variable(value)
-    else:  # Function node
-        node = generate_function_node(depth, func_set, term_set, var_count)
-        return node
-
-
-def generate_function_node(depth, func_set, term_set, var_count):
-    if not isinstance(func_set, Functors):
-        func = rnd.choice(func_set)
-        # Number of arguments of the function
-        arity = len(func.__code__.co_varnames)
-        node = Function(arity=arity, value=func)
-    else:
-        node = func_set.get_random_clone()
-        arity = node.arity
-    for _ in range(arity):
-        child = create_random_node(depth - 1, term_set, func_set, var_count)
-        node.add_child(child)
-    return node
-
-
-def generate_random(func_set, term_set, max_depth, var_count) -> Cell:
-    root = create_random_node(max_depth, term_set, func_set, var_count)
-    return Cell(root, var_count, max_depth)
 
 
 def crossover(left_cell: 'Cell', right_cell: 'Cell'):

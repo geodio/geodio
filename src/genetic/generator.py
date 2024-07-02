@@ -2,9 +2,9 @@ import random
 from abc import ABC, abstractmethod
 from typing import Optional, List
 
-from src import rnd
+from src.math import rnd
 from src.cell.cell import Cell, crossover
-from src.cell.functors import Functors
+from src.cell.collections.functors import Functors
 from src.cell.operands.function import Function
 from src.cell.operands.operand import Operand
 from src.cell.operands.variable import Variable

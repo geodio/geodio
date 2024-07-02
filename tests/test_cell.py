@@ -2,8 +2,8 @@ import sys
 from unittest import TestCase
 
 from src.cell.cell import Cell
-from src.cell.default_functors import Power, Add, Prod
-from src.cell.fitness import MSE
+from src.cell.collections.default_functors import Power, Add, Prod
+from src.cell.optim.fitness import MSE
 from src.cell.operands.constant import Constant
 from src.cell.operands.variable import Variable
 from src.cell.operands.weight import Weight

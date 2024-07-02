@@ -1,9 +1,7 @@
-from abc import ABC
-
 import numpy as np
 
 from src.cell.cell import Cell
-from src.cell.default_functors import Div, Add, Power, Prod, Dot
+from src.cell.collections.default_functors import Div, Add, Power, Prod, Dot
 from src.cell.operands.constant import ONE, E, MINUS_ONE
 from src.cell.operands.variable import Variable
 from src.cell.operands.weight import Weight

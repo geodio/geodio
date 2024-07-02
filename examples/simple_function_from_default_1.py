@@ -1,8 +1,8 @@
 import numpy as np
 
-from src.cell.default_functors import DEFAULT_FUNCTORS
-from src.cell.fitness import MSE
-from src.pop import Pop
+from src.cell.collections.default_functors import DEFAULT_FUNCTORS
+from src.cell.optim.fitness import MSE
+from src.genetic.pop import Pop
 
 
 def main():

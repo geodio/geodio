@@ -2,7 +2,6 @@ import random
 from abc import ABC
 from typing import Dict
 
-from src.cell.derivable import Derivable
 from src.cell.operands.function import Function
 
 

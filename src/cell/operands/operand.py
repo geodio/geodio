@@ -1,10 +1,9 @@
+import pickle
 import sys
 from abc import ABC, abstractmethod
 from typing import Optional
 
-import numpy as np
-
-from src.cell.derivable import Derivable, WeightDerivable
+from src.math.derivable import Derivable, WeightDerivable
 
 
 class Operand(ABC, Derivable, WeightDerivable):
@@ -12,7 +11,7 @@ class Operand(ABC, Derivable, WeightDerivable):
     def __init__(self, arity):
         self.arity = arity
         self.children = []
-        self.fitness = sys.maxsize
+        self.fitness = None
 
     @abstractmethod
     def __call__(self, args):
@@ -71,3 +70,13 @@ class Operand(ABC, Derivable, WeightDerivable):
 
     def d_w(self, dw):
         return self.derive(dw, True)
+
+    def to_bytes(self):
+        return pickle.dumps(self)
+
+    @staticmethod
+    def from_bytes(data):
+        return pickle.loads(data)
+
+    def get_fit(self):
+        return self.fitness if self.fitness is not None else sys.maxsize

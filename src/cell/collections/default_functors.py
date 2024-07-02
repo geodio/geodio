@@ -2,7 +2,7 @@ import sys
 
 import numpy as np
 
-from src.cell.functors import Functor, CollectionBasedFunctors
+from src.cell.collections.functors import Functor, CollectionBasedFunctors
 from src.cell.operands.constant import Constant
 
 

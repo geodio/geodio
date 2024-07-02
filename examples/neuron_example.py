@@ -2,8 +2,8 @@ import sys
 
 import numpy as np
 
-from src.cell.fitness import MSE, get_predicted
-from src.cell.neurons import Sigmoid
+from src.cell.optim.fitness import MSE, get_predicted
+from src.cell.collections.neurons import Sigmoid
 
 
 def main():
