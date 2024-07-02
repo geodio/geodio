@@ -1,3 +1,5 @@
+from typing import TypeVar
+
 import numpy as np
 
 from src.math import rnd
@@ -22,7 +24,8 @@ class Cell(Operand):
         self.reproduction_policy = reproduction_policy
         self.mutation_risk = 0.5
         self.derivative_cache = {}
-        self.derivative_cell = None
+        self.state = 0.0
+        self.frozen = None
         if optimizer is None:
             self.optimizer = Optimizer()
         else:
@@ -129,6 +132,9 @@ class Cell(Operand):
                 f"Age: {self.age} \n"
                 f"Marked? {self.marked}\n"
                 f"")
+
+
+t_cell = TypeVar('cell', bound=Cell)
 
 
 def crossover(left_cell: 'Cell', right_cell: 'Cell'):

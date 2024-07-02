@@ -5,7 +5,7 @@ import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from src.cell.cell import Cell
 from src.cell.optim.fitness import FitnessFunction
-from src.genetic.generator import RandomGenerator
+from src.genetic.generator import RandomCellGenerator
 from src.genetic.pop_utils import PopulationProperties, ReproductionPolicy
 
 lock = threading.Lock()
@@ -44,7 +44,7 @@ class Pop:
         self.generations = 0
         self.pop_prop = PopulationProperties(pop_size, func_set, term_set,
                                              max_depth, arity)
-        self.generator = generator or RandomGenerator()
+        self.generator = generator or RandomCellGenerator()
         self.generator.set_pop_prop(self.pop_prop)
         self.kill_rate = kill_rate
         self.crossover_rate = crossover_rate

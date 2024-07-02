@@ -2,6 +2,7 @@ import random
 from abc import ABC
 from typing import Dict
 
+from src.cell.collections.bank import Bank
 from src.cell.operands.function import Function
 
 
@@ -12,39 +13,12 @@ class Functor(Function):
         self.func = func
 
 
-class Functors(ABC):
+class Functors(ABC, Bank[Functor]):
     def __init__(self):
-        self._functors: Dict[str, Functor] = {}
+        super().__init__()
 
     def add_functor(self, functor: Functor):
-        self._functors[functor.func_id] = functor
-
-    def get_functor(self, func_id: str) -> Functor:
-        return self._functors.get(func_id)
-
-    def __getitem__(self, func_id: str) -> Functor:
-        return self.get_functor(func_id)
-
-    def __setitem__(self, func_id: str, functor: Functor):
-        self.add_functor(functor)
-
-    def __contains__(self, func_id: str) -> bool:
-        return func_id in self._functors
-
-    def __iter__(self):
-        return iter(self._functors.values())
-
-    def __len__(self):
-        return len(self._functors)
-
-    def __repr__(self):
-        return f"Functors({list(self._functors.keys())})"
-
-    def get_random_clone(self) -> Functor:
-        if not self._functors:
-            raise ValueError("No functors available to clone.")
-        random_functor = random.choice(list(self._functors.values()))
-        return random_functor.clone()
+        self[functor.func_id] = functor
 
 
 class CollectionBasedFunctors(Functors):

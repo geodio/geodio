@@ -43,6 +43,12 @@ class Weight(Operand):
         else:
             self.weight = new_weight
 
+    def set_to_zero(self):
+        if isinstance(self.weight, np.ndarray):
+            self.weight = np.zeros_like(self.weight)
+        else:
+            self.weight = 0
+
     def clone(self):
         w_clone = Weight(self.weight)
         w_clone.w_index = self.w_index
