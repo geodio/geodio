@@ -7,7 +7,10 @@ from src.cell.operands.constant import Constant
 
 
 def clean_number(x):
-    if x is None or str(x) == 'nan':
+    try:
+        if x is None or str(x) == 'nan' or str(x) == 'inf' or np.isinf(x):
+            return 0
+    except Exception:
         return 0
     return x
 
