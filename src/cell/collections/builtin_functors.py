@@ -15,7 +15,7 @@ def clean_number(x):
     return x
 
 
-class DefaultFunctor(Functor):
+class BuiltinFunctor(Functor):
     def __init__(self, children, func_id, arity):
         self.__name__ = func_id
         super().__init__(func_id, None, arity)
@@ -23,7 +23,7 @@ class DefaultFunctor(Functor):
         self.value = self
 
 
-class Add(DefaultFunctor):
+class Add(BuiltinFunctor):
     def __init__(self, children, arity):
         super().__init__(children, f"add_{arity}", arity)
 
@@ -38,7 +38,7 @@ class Add(DefaultFunctor):
         return Add([child.clone() for child in self.children], self.arity)
 
 
-class Prod(DefaultFunctor):
+class Prod(BuiltinFunctor):
     def __init__(self, children):
         super().__init__(children, "prod", 2)
 
@@ -58,7 +58,7 @@ class Prod(DefaultFunctor):
         return Prod([child.clone() for child in self.children])
 
 
-class Dot(DefaultFunctor):
+class Dot(BuiltinFunctor):
     def __init__(self, children):
         super().__init__(children, "dot_prod", 2)
 
@@ -82,7 +82,7 @@ class Dot(DefaultFunctor):
     def clone(self) -> "Prod":
         return Prod([child.clone() for child in self.children])
 
-class Max(DefaultFunctor):
+class Max(BuiltinFunctor):
     def __init__(self, children, arity):
         super().__init__(children, f"max_{arity}", arity)
 
@@ -97,7 +97,7 @@ class Max(DefaultFunctor):
         return Max([child.clone() for child in self.children], self.arity)
 
 
-class Power(DefaultFunctor):
+class Power(BuiltinFunctor):
     def __init__(self, children):
         super().__init__(children, "power", 2)
 
@@ -144,7 +144,7 @@ class Power(DefaultFunctor):
         return Power([child.clone() for child in self.children])
 
 
-class Sub(DefaultFunctor):
+class Sub(BuiltinFunctor):
     def __init__(self, children):
         super().__init__(children, "sub", 2)
 
@@ -162,7 +162,7 @@ class Sub(DefaultFunctor):
         return Sub([child.clone() for child in self.children])
 
 
-class Div(DefaultFunctor):
+class Div(BuiltinFunctor):
     def __init__(self, children):
         super().__init__(children, "div", 2)
 
@@ -198,7 +198,7 @@ class Div(DefaultFunctor):
         return Div([child.clone() for child in self.children])
 
 
-class Log(DefaultFunctor):
+class Log(BuiltinFunctor):
     def __init__(self, children):
         super().__init__(children, "log", 1)
 

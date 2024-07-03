@@ -1,4 +1,4 @@
-from typing import TypeVar
+from typing import TypeVar, List
 
 import numpy as np
 
@@ -134,7 +134,8 @@ class Cell(Operand):
                 f"")
 
 
-t_cell = TypeVar('cell', bound=Cell)
+t_cell = TypeVar('t_cell', bound=Cell)
+t_cell_list = TypeVar('t_cell_list', bound=List[Cell])
 
 
 def crossover(left_cell: 'Cell', right_cell: 'Cell'):

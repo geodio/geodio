@@ -13,7 +13,7 @@ lock = threading.Lock()
 
 def evolve_individual(cell: Cell, x, y, fitness_func, age_benefit,
                       optimize=True, max_iterations=100):
-    if cell is None:
+    if cell is None or cell.root is None:
         print("ERROR")
     try:
         if optimize:
@@ -53,6 +53,8 @@ class Pop:
         self.survival_counts = np.zeros(pop_size, dtype=int)
         self.age_benefit = age_benefit
         self.optimize = optimize
+        self.mark_ratio = self.kill_rate / np.sqrt(
+            self.pop_prop.population_size)
 
     def initialize_population(self):
         pop = self.generator.new_offspring_list(self.pop_prop.population_size)
@@ -74,8 +76,7 @@ class Pop:
         self.population.sort(key=lambda indi: indi.get_fit(), reverse=True)
 
     def mark_best(self):
-        mark_ratio = self.kill_rate / 100
-        to_mark = int(len(self.population) * mark_ratio)
+        to_mark = int(len(self.population) * self.mark_ratio)
         to_be_marked = self.get_best_individuals(to_mark)
         for x in to_be_marked:
             x.mark()
@@ -85,7 +86,7 @@ class Pop:
         sorted_population = sorted(self.population, key=lambda indi:
         indi.fitness)[:size]
         sorted_population.extend([ind for ind in self.population if
-                                  ind.fitness < 1e-2])
+                                  ind.fitness < 1])
         return sorted_population
 
     def get_best_ind(self):

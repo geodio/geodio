@@ -1,17 +1,23 @@
+import sys
+
 import numpy as np
 
-from src.cell.collections.default_functors import DEFAULT_FUNCTORS
+from src.cell.collections.builtin_functors import DEFAULT_FUNCTORS
+from src.cell.optim.fitness import MSE
 from src.genetic.generator import RandomOrganismGenerator, RandomCellGenerator
 from src.genetic.pop_utils import PopulationProperties
 
 
 def main():
     x = np.array([[1], [2], [3], [4], [5], [10]])
-    y = np.array(
-        [1 + 3.01, 2 ** 6.9 + 3.01, 3 ** 6.9 + 3, 4 ** 6.9 + 3.01, 5 ** 6.9
-         + 3.01,
-         10 ** 6.9 +
-         3.01])
+    y = np.array([
+        [1 + 3.01],
+        [2 ** 6.9 + 3.01],
+        [3 ** 6.9 + 3],
+        [4 ** 6.9 + 3.01],
+        [5 ** 6.9 + 3.01],
+        [10 ** 6.9 + 3.01]
+    ])
 
     func_set = DEFAULT_FUNCTORS
     term_set = [0, 1, 2, 3, -1, 4, 6, 7]
@@ -31,9 +37,15 @@ def main():
                                   30,
                                   output_arity)
     org = rog.generate_organism()
-    tests = [7, 7, 8, 9, 10, 11]
-    for x in tests:
-        print("Input =", x, "Output =", org([x]))
+    org.optimize_values(
+        MSE(),
+        x,
+        y,
+        max_iterations=100,
+        min_fitness=sys.maxsize
+    )
+    print(org.fitness)
+
 
 if __name__ == '__main__':
     main()

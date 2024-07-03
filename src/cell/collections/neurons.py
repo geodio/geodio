@@ -1,7 +1,9 @@
 import numpy as np
 
 from src.cell.cell import Cell
-from src.cell.collections.default_functors import Div, Add, Power, Prod, Dot
+from src.cell.collections.bank import CellBank
+from src.cell.collections.builtin_functors import Div, Add, Power, Prod, Dot
+from src.cell.collections.functors import CollectionBasedFunctors
 from src.cell.operands.constant import ONE, E, MINUS_ONE
 from src.cell.operands.variable import Variable
 from src.cell.operands.weight import Weight
@@ -45,3 +47,8 @@ class Sigmoid(Neuron):
             ]
         )
         super().__init__(self.activation_function, 1, 7)
+        self.frozen = "SIGMOID"
+
+
+NEURONS = CellBank()
+NEURONS.add_cell(Sigmoid(0.0))

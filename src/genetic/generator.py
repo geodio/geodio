@@ -2,7 +2,7 @@ import random
 from abc import ABC, abstractmethod
 from typing import Optional, List, Dict
 
-from src.genetic.organism import Organism, t_layer_id, t_cell_ids
+from src.genetic.organism import Organism
 from src.math import rnd
 from src.cell.cell import Cell, crossover
 from src.cell.collections.functors import Functors
@@ -62,7 +62,7 @@ class RandomCellGenerator(CellGenerator):
     def generate_node(self, depth=None) -> Operand:
         if depth is None:
             depth = self.pop_prop.max_depth
-        if depth == 0 or random.random() < 0.3:  # Terminal node
+        if depth == 0 or random.random() < 0.33:  # Terminal node
             operand_type = "weight" if random.random() < 0.5 else "variable"
             if operand_type == "weight":
                 value = random.choice(self.pop_prop.term_set)
@@ -118,68 +118,62 @@ def add_connection(cell_id, connections, layers, to_layer):
         connections[cell_id].append(to_id)
 
 
-class RandomOrganismGenerator(OrganismGenerator):
+class Link(Functors):
+    def __init__(self, from_cell: Cell, to_cell: Cell):
+        self.from_cell = from_cell
+        self.to_cell = to_cell
 
+    def update_state(self):
+        self.to_cell.state = self.from_cell.state
+
+
+class RandomOrganismGenerator(OrganismGenerator):
     def generate_organism(self, depth=None) -> Organism:
-        if self.organism is None:
-            self.organism = Organism(self.max_depth, self.arity)
         if depth is None:
             depth = self.max_depth
-        layers, connections = self._generate_random_shape(depth)
-        id_mapping: Dict[int, int] = {}
 
-        for layer_id in range(len(layers)):
-            layer = layers[layer_id]
-            for cell_id in layer:
-                cell_arity = len(connections[cell_id])
-                if layer_id == 0:
-                    cell_arity += self.arity
-                self.cell_generator.set_arity(cell_arity)
+        cells_per_layer = min(self.mcpl, self.arity)
+        layers = [[] for _ in range(depth)]
+        connections: Dict[int, List[int]] = {}
+
+        # Generate cells layer by layer
+        cell_count = 0
+        for d in range(depth):
+            for _ in range(cells_per_layer):
                 new_cell = self.cell_generator.new_offspring()
-                map_cell_id = self.organism.add_cell(layer_id, new_cell)
-                id_mapping[cell_id] = map_cell_id
-        for cell_id, links in connections.items():
-            for to_id in links:
-                self.organism.connect_cells(id_mapping[cell_id],
-                                            id_mapping[to_id])
-        result = self.organism
-        self.organism = None
-        return result
+                new_cell.id = cell_count
+                layers[d].append(cell_count)
+                connections[cell_count] = []
+                cell_count += 1
 
-    def _generate_random_shape(self, depth):
-        layers: Dict[t_layer_id, t_cell_ids] = {i: [] for i in range(depth + 1)}
-        k = 0
-        for layer_id in range(depth + 1):
-            if layer_id == 0:
-                per_layer = self.output_arity
-            else:
-                per_layer = random.randint(1, self.mcpl)
-            for i in range(per_layer):
-                layers[layer_id].append(k)
-                k += 1
+        # Create an Organism
+        organism = Organism(layers[0][0], self.max_depth, self.arity)
+        organism.layers = layers
 
-        connections = {cell_id: [] for layer in layers.values() for cell_id in layer}
+        # Link cells within the organism
+        for layer_idx, layer in enumerate(layers):
+            for cell_id in layer:
+                # Higher layer connections
+                if layer_idx > 0:
+                    for _ in range(random.randint(*self.hlcr)):
+                        add_connection(cell_id, connections, layers, layer_idx - 1)
 
-        for layer_id in range(depth + 1):
-            for cell_id in layers[layer_id]:
-                if layer_id > 0:
-                    num_lower_layer_connections = random.randint(1, self.llcr)
-                    for _ in range(num_lower_layer_connections):
-                        to_layer = layer_id - 1
-                        add_connection(cell_id, connections,
-                                       layers, to_layer)
+                # Equal layer connections
+                for _ in range(random.randint(*self.elcr)):
+                    add_connection(cell_id, connections, layers, layer_idx)
 
-                if layer_id < depth:
-                    num_higher_layer_connections = random.randint(1, self.hlcr)
-                    for _ in range(num_higher_layer_connections):
-                        to_layer = layer_id + 1
-                        add_connection(cell_id, connections,
-                                       layers, to_layer)
+                # Lower layer connections
+                if layer_idx < depth - 1:
+                    for _ in range(random.randint(*self.llcr)):
+                        add_connection(cell_id, connections, layers, layer_idx + 1)
 
-                num_equal_layer_connections = random.randint(1, self.elcr)
-                for _ in range(num_equal_layer_connections):
-                    add_connection(cell_id, connections,
-                                   layers, layer_id)
+        # Update cell connections in the organism
+        for from_id, to_ids in connections.items():
+            from_cell = organism.get_cell_by_id(from_id)
+            for to_id in to_ids:
+                to_cell = organism.get_cell_by_id(to_id)
+                link = Link(from_cell, to_cell)
+                link.update_state()
 
-        return layers, connections
+        return organism
 
