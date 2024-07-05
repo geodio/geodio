@@ -24,7 +24,7 @@ class Optimization:
         self.max_iter = max_iter
         self.decay_rate = decay_rate
         self.weights = cell.get_weights()
-        self.prev_weights = [weight.weight for weight in self.weights]
+        self.prev_weights = [weight.get() for weight in self.weights]
         self.prev_fitness = cell.fitness
         self.learning_rate = learning_rate
         self._initial_learning_rate = learning_rate
@@ -73,14 +73,15 @@ class Optimization:
         :param weight: The weight object.
         :return: True if the update was successful, False otherwise.
         """
-        weight.weight = weight.weight - self.learning_rate * gradient
+        weight.set(weight.get() - self.learning_rate * gradient)
         y_pred = [self.cell(x_inst) for x_inst in self.input]
+        print(y_pred)
         self.cell.fitness = self.fit_func(self.desired_output, y_pred)
         self.learning_rate *= self.decay_rate
 
         if self.prev_fitness < self.cell.fitness:
             self.cell.fitness = self.prev_fitness
-            self.weights[i].weight = self.prev_weights[i]
+            self.weights[i].set(self.prev_weights[i])
             return self.__test_vanishing_exploding(gradient, i, weight)
         return True
 
@@ -143,4 +144,5 @@ class Optimizer:
                                  desired_output,
                                  max_iterations,
                                  learning_rate)
+        print("OPTIMIZER <<<<", variables, desired_output, ">>>>")
         optimizer.optimize()

@@ -1,17 +1,18 @@
 import pickle
 import sys
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, ABCMeta
 from typing import Optional
 
 from src.math.derivable import Derivable, WeightDerivable
 
 
-class Operand(ABC, Derivable, WeightDerivable):
+class Operand(ABC, Derivable, WeightDerivable, metaclass=ABCMeta):
 
     def __init__(self, arity):
         self.arity = arity
         self.children = []
         self.fitness = None
+        self.id = 0
 
     @abstractmethod
     def __call__(self, args):

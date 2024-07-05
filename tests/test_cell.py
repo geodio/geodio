@@ -68,7 +68,7 @@ class TestCell(TestCase):
         cell.optimize_values(mse, X, Y, max_iterations=50,
                              min_fitness=sys.maxsize)
         gradient = mse.gradient(cell, X, Y, 0)
-        self.assertAlmostEqual(40.0, w.weight)
+        self.assertAlmostEqual(40.0, w.get())
         self.assertAlmostEqual(0.0, gradient)
         self.assertAlmostEqual(0.0, cell.fitness)
 
@@ -93,10 +93,10 @@ class TestCell(TestCase):
         cell.optimize_values(mse, X, Y, max_iterations=1000,
                              min_fitness=sys.maxsize)
         gradient = mse.gradient(cell, X, Y, 0)
-        self.assertTrue(abs(6.9 - w.weight) < 1e-5)
+        self.assertTrue(abs(6.9 - w.get()) < 1e-5)
         # self.assertAlmostEqual(0.0, gradient)
         self.assertTrue(cell.fitness < 1e-5)
-        print(w.weight)
+        print(w.get())
 
 """
 add_2(

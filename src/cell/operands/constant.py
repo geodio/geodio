@@ -28,7 +28,7 @@ class Constant(Operand):
 
     @staticmethod
     def from_weight(w):
-        return Constant(w.weight)
+        return Constant(w.get())
 
     def derive(self, index, by_weights=True):
         if by_weights:

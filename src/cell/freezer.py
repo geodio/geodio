@@ -104,8 +104,8 @@ def defroze(frozen: str) -> t_cell:
 
 
 def freeze(x: t_cell) -> str:
-    if t_cell.frozen is not None:
-        return t_cell.frozen
+    if x.frozen is not None:
+        return x.frozen
     clone = x.clone()
     for weight in clone.get_weights():
         weight.set_to_zero()

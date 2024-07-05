@@ -18,7 +18,7 @@ class Bank(Generic[T]):
         return self.get_functor(t_id)
 
     def __setitem__(self, t_id: str, t: T):
-        self._ts[t.func_id] = t
+        self._ts[t_id] = t
 
     def __contains__(self, t_id: str) -> bool:
         return t_id in self._ts

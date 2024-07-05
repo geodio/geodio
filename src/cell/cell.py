@@ -2,6 +2,7 @@ from typing import TypeVar, List
 
 import numpy as np
 
+from src.cell.optim.optimizable import Optimizable
 from src.math import rnd
 from src.cell.optim.fitness import FitnessFunction
 from src.cell.operands.operand import Operand
@@ -10,7 +11,7 @@ from src.genetic.pop_utils import ReproductionPolicy
 from src.cell.optim.optimizer import Optimizer
 
 
-class Cell(Operand):
+class Cell(Operand, Optimizable):
     def __init__(self, root: Operand, arity: int, max_depth,
                  reproduction_policy=ReproductionPolicy.DIVISION,
                  optimizer=None):
@@ -84,6 +85,8 @@ class Cell(Operand):
                         max_iterations=100,
                         min_fitness=10):
         y_pred = [self(x_inst) for x_inst in variables]
+        if desired_output is None:
+            return
         self.fitness = fit_fct(desired_output, y_pred)
         if not (self.fitness <= min_fitness or self.marked):
             return

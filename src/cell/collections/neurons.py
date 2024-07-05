@@ -1,9 +1,12 @@
+import random
+
 import numpy as np
 
 from src.cell.cell import Cell
 from src.cell.collections.bank import CellBank
-from src.cell.collections.builtin_functors import Div, Add, Power, Prod, Dot
-from src.cell.collections.functors import CollectionBasedFunctors
+from src.cell.collections.builtin_functors import Div, Add, Power, Prod, Dot, \
+    BuiltinFunctor
+from src.cell.collections.functors import CollectionBasedFunctors, Functor
 from src.cell.operands.constant import ONE, E, MINUS_ONE
 from src.cell.operands.variable import Variable
 from src.cell.operands.weight import Weight
@@ -20,7 +23,7 @@ def sigmoid(z):
 class Sigmoid(Neuron):
     def __init__(self, input_style):
         self.W = Weight(np.zeros_like(input_style))
-        self.B = Weight(0)
+        self.B = Weight(random.random())
         self.input = Add([
             Dot([
                 self.W,
@@ -48,6 +51,11 @@ class Sigmoid(Neuron):
         )
         super().__init__(self.activation_function, 1, 7)
         self.frozen = "SIGMOID"
+
+    def clone(self) -> 'Sigmoid':
+        clone_sigmoid = Sigmoid(self.W.get())
+        clone_sigmoid.B.set(random.random())
+        return clone_sigmoid
 
 
 NEURONS = CellBank()
