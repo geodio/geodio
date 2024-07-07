@@ -4,10 +4,9 @@ from typing import Union
 
 import numpy as np
 
-from src.cell.cell import Cell, t_cell_list
+from src.cell.cell import Cell
 from src.cell.collections.builtin_functors import Prod, Add
 from src.cell.operands.constant import ONE, ZERO
-from src.cell.operands.operand import Operand
 from src.cell.operands.weight import Weight, AbsWeight
 from src.cell.optim.fitness import FitnessFunction
 
@@ -127,7 +126,6 @@ class Link(Cell):
 
         for i, weight in enumerate(weights):
             weight.w_index = i
-
         return weights
 
     def set_weights(self, new_weights):
@@ -160,5 +158,8 @@ class Link(Cell):
                         min_fitness=10):
         if desired_output is None:
             desired_output = self.state
+        if variables is None:
+            # To have input of same length as input.
+            variables = desired_output
         self.optimizer(self, desired_output, fit_fct, learning_rate,
                        max_iterations, variables)

@@ -3,7 +3,7 @@ from enum import IntEnum
 from typing import List
 
 from src.cell.cell import Cell
-from src.cell.link import new_link_weight, build_link_root, Link
+from src.cell.link import Link
 from src.cell.operands.operand import Operand
 from src.cell.optim.fitness import FitnessFunction
 from src.cell.optim.optimizable import Optimizable
@@ -37,13 +37,21 @@ class DistributionWarning(Warning):
         super().__init__(msg)
 
 
+class LayerType(IntEnum):
+    INPUT = 0
+    OUTPUT = 1
+    HIDDEN = 2
+
+
 class Layer(Operand, Optimizable):
     def __init__(self, arity, cells=None,
-                 distribution_policy=DistributionPolicy.IGNORE):
+                 distribution_policy=DistributionPolicy.IGNORE,
+                 layer_type=LayerType.HIDDEN, ):
         super().__init__(arity)
         self.distribution_policy = distribution_policy
         self.children = cells if cells is not None else []
         self.fitness = sys.maxsize
+        self.layer_type = layer_type
 
     def add_cell(self, cell: Cell):
         self.children.append(cell)
@@ -106,23 +114,30 @@ class Layer(Operand, Optimizable):
             return self._split_distribution_call(args)
 
     def _split_distribution_call(self, args):
+        cell_args_list = self.split_args(args, True)
+
+        return [
+            cell(cell_args)
+            for cell, cell_args in zip(self.children, cell_args_list)
+        ]
+
+    def split_args(self, args, raise_warning=False):
         arity_sum = sum([
             cell.arity for cell in self.children
         ])
-        if len(args) != arity_sum:
+        if raise_warning and len(args) != arity_sum:
             raise DistributionWarning(
                 split_distribution_msg(arity_sum, len(args))
             )
         offset = 0
-        outputs = []
+        cell_args_list = []
         left = arity_sum - len(args)
         if left > 0:
             args.extend([0 for _ in range(left)])
         for cell in self.children:
-            cell_args = args[offset:offset + cell.arity]
-            outputs.append(cell(cell_args))
+            cell_args_list.append(args[offset:offset + cell.arity])
             offset += cell.arity
-        return outputs
+        return cell_args_list
 
     def __repr__(self):
         x = ",".join([str(cell.id) for cell in self.children])
@@ -133,11 +148,38 @@ class Layer(Operand, Optimizable):
                         learning_rate=0.1,
                         max_iterations=100,
                         min_fitness=sys.maxsize):
-        for i, cell in enumerate(self.children):
-            desired = desired_output[i] if desired_output is not None else None
-            vars = variables[i] if variables is not None else []
-            cell.optimize_values(fit_fct, vars,
-                                 desired,
-                                 learning_rate,
-                                 max_iterations,
-                                 min_fitness)
+        if self.layer_type == LayerType.OUTPUT:
+            for link, output in zip(self.children, desired_output):
+                link.state = output
+                link.optimize_values(fit_fct, None, [link.state],
+                                     learning_rate,
+                                     max_iterations, min_fitness)
+        elif self.layer_type == LayerType.INPUT:
+            self._handle_input_optimization(variables, fit_fct,
+                                            learning_rate, max_iterations,
+                                            min_fitness)
+        else:
+            for link in self.children:
+                link.optimize_values(fit_fct, None, [link.state],
+                                     learning_rate,
+                                     max_iterations, min_fitness)
+
+    def _handle_input_optimization(
+            self, variables, fit_fct, learning_rate, max_iterations,
+            min_fitness):
+        def optimize_cell(input_cell, input_vars):
+            input_cell.optimize_values(
+                fit_fct, input_vars, [input_cell.state],
+                learning_rate, max_iterations, min_fitness
+            )
+
+        if self.distribution_policy == DistributionPolicy.UNIFORM:
+            for cell in self.children:
+                optimize_cell(cell, variables)
+        elif self.distribution_policy == DistributionPolicy.SPLIT:
+            split_inputs = self.split_args(variables)
+            for cell, inputs in zip(self.children, split_inputs):
+                optimize_cell(cell, [inputs])
+        else:
+            for cell in self.children:
+                optimize_cell(cell, [])

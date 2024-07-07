@@ -22,7 +22,7 @@ def sigmoid(z):
 
 class Sigmoid(Neuron):
     def __init__(self, input_style):
-        self.W = Weight(np.zeros_like(input_style))
+        self.W = Weight(np.zeros_like(input_style), adaptive_shape=True)
         self.B = Weight(random.random())
         self.input = Add([
             Dot([

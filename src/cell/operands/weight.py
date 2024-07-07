@@ -24,20 +24,21 @@ class AbsWeight(Operand, metaclass=ABCMeta):
 
     def __call__(self, args):
         _w = self.get()
-        if self.adaptive_shape and len(args) > 0:
-            first_arg = args[0]
-            np_out = isinstance(first_arg, np.ndarray)
-            np_in = isinstance(_w, np.ndarray)
-            if (
-                    np_out and
-                    (np_in and first_arg.shape() != _w.shape()) or
-                    (not np_in)
-            ):
-                self.set(np.zeros_like(first_arg))
-            elif not np_out and np_in:
-                self.set(0.0)
-        return _w
+        if self.adaptive_shape:
+            try:
+                if len(args) > 0:
+                    first_arg = args[0]
+                    np_out = isinstance(first_arg, np.ndarray)
+                    np_in = isinstance(_w, np.ndarray)
+                    if np_out:
+                        self.set(np.ones_like(first_arg))
+                    elif not np_out and np_in:
+                        self.set(1.0)
+                self.adaptive_shape = False
+            except TypeError:
+                pass
 
+        return _w
     def __invert__(self):
         return None
 

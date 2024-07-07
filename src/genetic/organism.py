@@ -1,8 +1,9 @@
 from typing import List
 
 from src.cell.cell import Cell
-from src.cell.layer import Layer
+from src.cell.layer import Layer, LayerType
 from src.cell.optim.fitness import FitnessFunction
+from src.cell.optim.optimization_args import OptimizationArgs
 
 
 class Organism(Cell):
@@ -12,6 +13,8 @@ class Organism(Cell):
         self.cell_map = {}  # Mapping from cell ID to actual Cell instance
         self.cell_id_to_layer_id = {}
         self.__fill_maps()
+        self.layers[0].layer_type = LayerType.INPUT
+        self.layers[-1].layer_type = LayerType.OUTPUT
 
     def __fill_maps(self):
         cell_id = 0
@@ -60,16 +63,27 @@ class Organism(Cell):
                         learning_rate=0.1,
                         max_iterations=100,
                         min_fitness=10):
-        desired_output = [desired_output]
-        d_o = desired_output
-        vars = variables
+
+        optim_args = OptimizationArgs(
+            learning_rate=learning_rate,
+            max_iter=max_iterations,
+            min_fitness=min_fitness,
+            fitness_function=fit_fct
+        )
+
+        for x, y in zip(variables, desired_output):
+            self(x)
+            print("ORGANISM_INPUT", x)
+            optim_args.desired_output = desired_output
+            optim_args.inputs = x
+            self.layered_optimization(optim_args)
+            outputs = [self(inputs) for inputs in variables]
+            self.fitness = fit_fct(outputs, desired_output)
+            print(self.fitness)
+
+    def layered_optimization(self, opt: OptimizationArgs):
         for layer in reversed(self.layers):
             layer.optimize_values(
-                fit_fct, vars, desired_output,
-                learning_rate, max_iterations, min_fitness
+                opt.fitness_function, opt.inputs, opt.desired_output,
+                opt.learning_rate, opt.max_iter, opt.min_fitness
             )
-            desired_output = None
-            vars = None
-        outputs = [self(inputs) for inputs in variables]
-        self.fitness = fit_fct(outputs, d_o)
-

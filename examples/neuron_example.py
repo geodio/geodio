@@ -16,7 +16,7 @@ def main():
     ]
     Y = [0, 0, 0, 1, 1]
     fitness = MSE()
-    neuron = Sigmoid(np.array([1, 2]))
+    neuron = Sigmoid(0.0)
 
     neuron.optimize_values(fitness, X, Y, max_iterations=1000,
                            min_fitness=sys.maxsize)

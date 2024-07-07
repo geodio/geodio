@@ -11,7 +11,12 @@ from src.genetic.pop_utils import PopulationProperties
 
 
 def main():
-    x = np.array([[0], [0], [1], [1]])
+    x = np.array([
+        [0, 10],
+        [10, 0],
+        [0, 0],
+        [10, 10]
+    ])
     y = np.array([
         [1],
         [1],
@@ -30,11 +35,11 @@ def main():
     cell_generator = CellBankGenerator(func_set)
     cell_generator.set_pop_prop(prop)
 
-    rog = RandomOrganismGenerator(2, 1, cell_generator,
-                                  (0, 0),
-                                  (0, 0),
+    rog = RandomOrganismGenerator(3, 2, cell_generator,
                                   (2, 4),
-                                  10,
+                                  (0, 0),
+                                  (0, 0),
+                                  30,
                                   output_arity)
     org = rog.generate_organism()
     org.optimize_values(
@@ -44,14 +49,10 @@ def main():
         max_iterations=100,
         min_fitness=sys.maxsize
     )
-    for xx in x:
+    for xx in reversed(x):
         print(f"for input = {xx}, output =", org(xx))
 
     print(org.fitness)
-    for layer in org.layers:
-        for cell in layer.children:
-            print(cell)
-        print()
 
 
 if __name__ == '__main__':

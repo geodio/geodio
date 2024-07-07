@@ -1,6 +1,7 @@
 import numpy as np
 
 from src.cell.operands.operand import Operand
+from src.cell.optim.fitness import get_predicted
 
 
 class Optimization:
@@ -38,6 +39,12 @@ class Optimization:
         for iteration in range(self.max_iter):
             gradients = self.calculate_gradients()
             self.update_weights(gradients)
+            self.cell.fitness = self.fit_func(
+                self.desired_output,
+                get_predicted(self.input, self.cell)
+            )
+            if self.cell.fitness < 1e-20:
+                break
 
     def calculate_gradients(self):
         """
@@ -62,6 +69,7 @@ class Optimization:
         for i, weight in enumerate(self.weights):
             gradient = gradients[i]
             gradient = self.__handle_exploding_vanishing(gradient, i)
+
             self.__update_weight(gradient, i, weight)
 
     def __update_weight(self, gradient, i, weight):
@@ -75,14 +83,13 @@ class Optimization:
         """
         weight.set(weight.get() - self.learning_rate * gradient)
         y_pred = [self.cell(x_inst) for x_inst in self.input]
-        print(y_pred)
         self.cell.fitness = self.fit_func(self.desired_output, y_pred)
         self.learning_rate *= self.decay_rate
 
-        if self.prev_fitness < self.cell.fitness:
-            self.cell.fitness = self.prev_fitness
-            self.weights[i].set(self.prev_weights[i])
-            return self.__test_vanishing_exploding(gradient, i, weight)
+        # if self.prev_fitness < self.cell.fitness:
+        #     self.cell.fitness = self.prev_fitness
+        #     self.weights[i].set(self.prev_weights[i])
+        #     return self.__test_vanishing_exploding(gradient, i, weight)
         return True
 
     def __test_vanishing_exploding(self, gradient, i, weight):
