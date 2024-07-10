@@ -1,5 +1,5 @@
-from src.cell.cell import Cell
-from src.math import rnd
+from core.cell.cell import Cell
+from core.math import rnd
 
 
 def crossover(left_cell: 'Cell', right_cell: 'Cell'):

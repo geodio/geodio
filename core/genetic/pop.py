@@ -3,10 +3,10 @@ import threading
 
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from src.cell.cell import Cell
-from src.cell.optim.fitness import FitnessFunction
-from src.genetic.generator import RandomCellGenerator
-from src.genetic.pop_utils import PopulationProperties, ReproductionPolicy
+from core.cell.cell import Cell
+from core.cell.optim.fitness import FitnessFunction
+from core.genetic.generator import RandomCellGenerator
+from core.genetic.pop_utils import PopulationProperties, ReproductionPolicy
 
 lock = threading.Lock()
 

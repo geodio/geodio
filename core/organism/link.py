@@ -4,10 +4,10 @@ from typing import Union
 
 import numpy as np
 
-from src.cell.cell import Cell
-from src.cell.collections.builtin_functors import Prod, Add
-from src.cell.operands.weight import Weight
-from src.cell.optim.fitness import FitnessFunction
+from core.cell.cell import Cell
+from core.cell.collections.builtin_functors import Prod, Add
+from core.cell.operands.weight import Weight
+from core.cell.optim.fitness import FitnessFunction
 
 
 class LinkException(Exception):

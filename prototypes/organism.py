@@ -2,9 +2,9 @@ import random
 from abc import abstractmethod, ABC
 from typing import Dict, List, TypeVar, Any
 
-from src.cell.cell import Cell, t_cell
-from src.cell.optim.fitness import FitnessFunction
-from src.genetic.generator import CellGenerator
+from core.cell.cell import Cell, t_cell
+from core.cell.optim.fitness import FitnessFunction
+from core.genetic.generator import CellGenerator
 
 t_layer_id = TypeVar('t_layer_id', bound=int)
 t_cell_id = TypeVar('t_cell_id', bound=int)

@@ -2,8 +2,8 @@ import random
 from abc import ABC
 from typing import Dict
 
-from src.cell.collections.bank import Bank
-from src.cell.operands.function import Function
+from core.cell.collections.bank import Bank
+from core.cell.operands.function import Function
 
 
 class Functor(Function):

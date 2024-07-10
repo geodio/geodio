@@ -1,10 +1,10 @@
 from typing import List
 
-from src.cell.cell import Cell
-from src.organism.layer import Layer, LayerType
-from src.organism.link import Link
-from src.cell.optim.fitness import FitnessFunction
-from src.cell.optim.optimization_args import OptimizationArgs
+from core.cell.cell import Cell
+from core.organism.layer import Layer, LayerType
+from core.organism.link import Link
+from core.cell.optim.fitness import FitnessFunction
+from core.cell.optim.optimization_args import OptimizationArgs
 
 
 class Organism(Cell):

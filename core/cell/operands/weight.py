@@ -3,8 +3,8 @@ from typing import Union
 
 import numpy as np
 
-from src.cell.operands.constant import ONE, ZERO
-from src.cell.operands.operand import Operand
+from core.cell.operands.constant import ONE, ZERO
+from core.cell.operands.operand import Operand
 
 
 class AbsWeight(Operand, metaclass=ABCMeta):

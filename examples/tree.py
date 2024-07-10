@@ -3,7 +3,7 @@
 # import tensorflow as tf
 # import numpy as np
 # import random
-# import src.rnd as rnd
+# import core.rnd as rnd
 #
 #
 # class Node:

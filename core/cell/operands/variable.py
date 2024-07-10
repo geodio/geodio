@@ -1,8 +1,8 @@
 from typing import Optional
 
-from src.cell.collections.builtin_functors import Sub
-from src.cell.operands.operand import Operand
-from src.cell.operands.constant import ONE, ZERO
+from core.cell.collections.builtin_functors import Sub
+from core.cell.operands.operand import Operand
+from core.cell.operands.constant import ONE, ZERO
 
 
 class Variable(Operand):

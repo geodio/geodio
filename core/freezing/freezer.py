@@ -7,7 +7,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 
-from src.cell.cell import t_cell, Cell
+from core.cell.cell import t_cell, Cell
 
 
 class InvalidFrozenCell(Exception):

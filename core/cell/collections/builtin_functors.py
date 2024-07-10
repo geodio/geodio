@@ -2,8 +2,8 @@ import sys
 
 import numpy as np
 
-from src.cell.collections.functors import Functor, CollectionBasedFunctors
-from src.cell.operands.constant import Constant
+from core.cell.collections.functors import Functor, CollectionBasedFunctors
+from core.cell.operands.constant import Constant
 
 
 def clean_number(x):

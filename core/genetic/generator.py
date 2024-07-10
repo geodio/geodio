@@ -2,18 +2,18 @@ import random
 from abc import ABC, abstractmethod
 from typing import Optional, List, Tuple
 
-from src.cell.collections.bank import CellBank
-from src.organism.layer import Layer, DistributionPolicy
-from src.organism.organism import Organism
-from src.math import rnd
-from src.cell.cell import Cell
-from src.genetic.cell_utils import crossover
-from src.cell.collections.functors import Functors
-from src.cell.operands.function import Function
-from src.cell.operands.operand import Operand
-from src.cell.operands.variable import Variable
-from src.cell.operands.weight import Weight
-from src.genetic.pop_utils import PopulationProperties, ReproductionPolicy
+from core.cell.collections.bank import CellBank
+from core.organism.layer import Layer, DistributionPolicy
+from core.organism.organism import Organism
+from core.math import rnd
+from core.cell.cell import Cell
+from core.genetic.cell_utils import crossover
+from core.cell.collections.functors import Functors
+from core.cell.operands.function import Function
+from core.cell.operands.operand import Operand
+from core.cell.operands.variable import Variable
+from core.cell.operands.weight import Weight
+from core.genetic.pop_utils import PopulationProperties, ReproductionPolicy
 
 
 class CellGenerator(ABC):
@@ -155,13 +155,14 @@ class RandomOrganismGenerator(OrganismGenerator):
         for _ in range(depth):
             layers.append(Layer(self.arity))
 
-        self.cell_generator.set_arity(self.arity)
         for d in range(depth + 1):
             cell_count = random.randint(1, self.mcpl)
-            if d == depth:
-                cell_count = self.output_arity
-            elif d == 0:
+            self.cell_generator.set_arity(1)
+            if d == 0:
                 cell_count = self.arity
+                self.cell_generator.set_arity(self.arity)
+            elif d == depth:
+                cell_count = self.output_arity
             for _ in range(cell_count):
                 new_cell = self.cell_generator.new_offspring()
                 layers[d].add_cell(new_cell)

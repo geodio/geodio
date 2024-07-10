@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from src.cell.operands.operand import Operand
+from core.cell.operands.operand import Operand
 
 
 def get_predicted(X, cell):

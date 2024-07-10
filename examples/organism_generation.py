@@ -2,10 +2,10 @@ import sys
 
 import numpy as np
 
-from src.cell.collections.neurons import NEURONS
-from src.cell.optim.fitness import MSE
-from src.genetic.generator import RandomOrganismGenerator, CellBankGenerator
-from src.genetic.pop_utils import PopulationProperties
+from core.cell.collections.neurons import NEURONS
+from core.cell.optim.fitness import MSE
+from core.genetic.generator import RandomOrganismGenerator, CellBankGenerator
+from core.genetic.pop_utils import PopulationProperties
 
 
 def main():

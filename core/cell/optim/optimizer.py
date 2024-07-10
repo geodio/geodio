@@ -1,7 +1,7 @@
 import numpy as np
 
-from src.cell.operands.operand import Operand
-from src.cell.optim.fitness import get_predicted
+from core.cell.operands.operand import Operand
+from core.cell.optim.fitness import get_predicted
 
 
 class Optimization:

@@ -3,7 +3,7 @@ import sys
 from abc import ABC, abstractmethod, ABCMeta
 from typing import Optional
 
-from src.math.derivable import Derivable, WeightDerivable
+from core.math.derivable import Derivable, WeightDerivable
 
 
 class Operand(ABC, Derivable, WeightDerivable, metaclass=ABCMeta):

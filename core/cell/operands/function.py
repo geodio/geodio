@@ -2,7 +2,7 @@ from typing import Optional
 
 import numpy as np
 
-from src.cell.operands.operand import Operand
+from core.cell.operands.operand import Operand
 
 
 class Function(Operand):

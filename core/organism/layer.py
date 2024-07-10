@@ -2,11 +2,11 @@ import sys
 from enum import IntEnum
 from typing import List
 
-from src.cell.cell import Cell
-from src.organism.link import Link
-from src.cell.operands.operand import Operand
-from src.cell.optim.fitness import FitnessFunction
-from src.cell.optim.optimizable import Optimizable
+from core.cell.cell import Cell
+from core.organism.link import Link
+from core.cell.operands.operand import Operand
+from core.cell.optim.fitness import FitnessFunction
+from core.cell.optim.optimizable import Optimizable
 
 
 class DistributionPolicy(IntEnum):

@@ -1,7 +1,7 @@
 import sys
 from abc import ABC, ABCMeta, abstractmethod
 
-from src.cell.optim.fitness import FitnessFunction
+from core.cell.optim.fitness import FitnessFunction
 
 
 class Optimizable(ABC, metaclass=ABCMeta):

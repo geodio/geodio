@@ -1,7 +1,7 @@
 import numpy as np
 
-from src.cell.optim.fitness import MSE
-from src.genetic.pop import Pop
+from core.cell.optim.fitness import MSE
+from core.genetic.pop import Pop
 
 
 def main2():

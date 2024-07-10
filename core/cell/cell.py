@@ -2,16 +2,16 @@ from typing import TypeVar, List, Union
 
 import numpy as np
 
-from src.cell.operands.constant import ZERO, ONE
-from src.cell.operands.weight import AbsWeight, Weight
+from core.cell.operands.constant import ZERO, ONE
+from core.cell.operands.weight import AbsWeight, Weight
 
-from src.cell.optim.optimizable import Optimizable
-from src.math import rnd
-from src.cell.optim.fitness import FitnessFunction
-from src.cell.operands.operand import Operand
+from core.cell.optim.optimizable import Optimizable
+from core.math import rnd
+from core.cell.optim.fitness import FitnessFunction
+from core.cell.operands.operand import Operand
 
-from src.genetic.pop_utils import ReproductionPolicy
-from src.cell.optim.optimizer import Optimizer
+from core.genetic.pop_utils import ReproductionPolicy
+from core.cell.optim.optimizer import Optimizer
 
 
 class State(AbsWeight):
