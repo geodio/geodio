@@ -81,3 +81,9 @@ class Operand(ABC, Derivable, WeightDerivable, metaclass=ABCMeta):
 
     def get_fit(self):
         return self.fitness if self.fitness is not None else sys.maxsize
+
+    def __str__(self):
+        return self.to_python()
+
+    def __repr__(self):
+        return self.to_python()

@@ -151,5 +151,4 @@ class Optimizer:
                                  desired_output,
                                  max_iterations,
                                  learning_rate)
-        print("OPTIMIZER <<<<", variables, desired_output, ">>>>")
         optimizer.optimize()

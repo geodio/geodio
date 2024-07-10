@@ -2,26 +2,24 @@ import sys
 
 import numpy as np
 
-from src.cell.collections.builtin_functors import DEFAULT_FUNCTORS
 from src.cell.collections.neurons import NEURONS
 from src.cell.optim.fitness import MSE
-from src.genetic.generator import RandomOrganismGenerator, RandomCellGenerator, \
-    CellBankGenerator
+from src.genetic.generator import RandomOrganismGenerator, CellBankGenerator
 from src.genetic.pop_utils import PopulationProperties
 
 
 def main():
     x = np.array([
         [0, 10],
-        [10, 0],
         [0, 0],
-        [10, 10]
+        [10, 0],
+        # [10, 10]
     ])
     y = np.array([
-        [1],
-        [1],
         [0],
         [0],
+        [1],
+        # [0],
     ])
 
     func_set = NEURONS
@@ -35,11 +33,11 @@ def main():
     cell_generator = CellBankGenerator(func_set)
     cell_generator.set_pop_prop(prop)
 
-    rog = RandomOrganismGenerator(3, 2, cell_generator,
-                                  (2, 4),
+    rog = RandomOrganismGenerator(1, 2, cell_generator,
+                                  (2, 10),
                                   (0, 0),
                                   (0, 0),
-                                  30,
+                                  10,
                                   output_arity)
     org = rog.generate_organism()
     org.optimize_values(
@@ -49,10 +47,11 @@ def main():
         max_iterations=100,
         min_fitness=sys.maxsize
     )
-    for xx in reversed(x):
+    for xx in x:
         print(f"for input = {xx}, output =", org(xx))
 
     print(org.fitness)
+    print(org)
 
 
 if __name__ == '__main__':

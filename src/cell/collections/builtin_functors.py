@@ -37,6 +37,9 @@ class Add(BuiltinFunctor):
     def clone(self) -> "Add":
         return Add([child.clone() for child in self.children], self.arity)
 
+    def to_python(self) -> str:
+        return " + ".join(child.__repr__() for child in self.children)
+
 
 class Prod(BuiltinFunctor):
     def __init__(self, children):
@@ -56,6 +59,9 @@ class Prod(BuiltinFunctor):
 
     def clone(self) -> "Prod":
         return Prod([child.clone() for child in self.children])
+
+    def to_python(self) -> str:
+        return str(self.children[0]) + " * " + str(self.children[1])
 
 
 class Dot(BuiltinFunctor):
@@ -143,6 +149,9 @@ class Power(BuiltinFunctor):
     def clone(self) -> "Power":
         return Power([child.clone() for child in self.children])
 
+    def to_python(self) -> str:
+        return str(self.children[0]) + " ** (" + str(self.children[1]) + ")"
+
 
 class Sub(BuiltinFunctor):
     def __init__(self, children):
@@ -160,6 +169,9 @@ class Sub(BuiltinFunctor):
 
     def clone(self) -> "Sub":
         return Sub([child.clone() for child in self.children])
+
+    def to_python(self) -> str:
+        return str(self.children[0]) + " - " + str(self.children[1])
 
 
 class Div(BuiltinFunctor):
@@ -196,6 +208,10 @@ class Div(BuiltinFunctor):
 
     def clone(self) -> "Div":
         return Div([child.clone() for child in self.children])
+
+    def to_python(self) -> str:
+        return ("(" + str(self.children[0]) + ") / (" + str(self.children[1])
+                + ")")
 
 
 class Log(BuiltinFunctor):

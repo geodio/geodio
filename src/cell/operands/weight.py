@@ -13,6 +13,7 @@ class AbsWeight(Operand, metaclass=ABCMeta):
         super().__init__(0)
         self.w_index = 0
         self.adaptive_shape = adaptive_shape
+        self._locked = False
 
     @abstractmethod
     def set(self, weight: Union[np.ndarray, float]) -> None:
@@ -25,20 +26,24 @@ class AbsWeight(Operand, metaclass=ABCMeta):
     def __call__(self, args):
         _w = self.get()
         if self.adaptive_shape:
-            try:
-                if len(args) > 0:
-                    first_arg = args[0]
-                    np_out = isinstance(first_arg, np.ndarray)
-                    np_in = isinstance(_w, np.ndarray)
-                    if np_out:
-                        self.set(np.ones_like(first_arg))
-                    elif not np_out and np_in:
-                        self.set(1.0)
-                self.adaptive_shape = False
-            except TypeError:
-                pass
-
+            self.__adapt_shape(_w, args)
+            _w = self.get()
         return _w
+
+    def __adapt_shape(self, _w, args):
+        try:
+            if len(args) > 0:
+                first_arg = args[0]
+                np_out = isinstance(first_arg, np.ndarray)
+                np_in = isinstance(_w, np.ndarray)
+                if np_out:
+                    self.set(np.ones_like(first_arg))
+                elif not np_out and np_in:
+                    self.set(1.0)
+            self.adaptive_shape = False
+        except TypeError:
+            pass
+
     def __invert__(self):
         return None
 
@@ -55,6 +60,22 @@ class AbsWeight(Operand, metaclass=ABCMeta):
             self.set(np.zeros_like(_w))
         else:
             self.set(0)
+
+    def lock(self):
+        """
+        Locks the cell
+        :return: None
+        """
+        self._locked = True
+
+    def unlock(self):
+        """
+        Unlocks the cell
+        :return: None
+        """
+        self._locked = False
+
+    is_locked = property(lambda self: self._locked)
 
 
 class Weight(AbsWeight):

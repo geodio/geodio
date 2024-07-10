@@ -1,6 +1,9 @@
-from typing import TypeVar, List
+from typing import TypeVar, List, Union
 
 import numpy as np
+
+from src.cell.operands.constant import ZERO, ONE
+from src.cell.operands.weight import AbsWeight, Weight
 
 from src.cell.optim.optimizable import Optimizable
 from src.math import rnd
@@ -9,6 +12,50 @@ from src.cell.operands.operand import Operand
 
 from src.genetic.pop_utils import ReproductionPolicy
 from src.cell.optim.optimizer import Optimizer
+
+
+class State(AbsWeight):
+
+    def __init__(self, cell: 'Cell', adaptive_shape=False):
+        super().__init__(adaptive_shape)
+        self.cell = cell
+        self.cell.state_weight = self
+
+    def d(self, var_index):
+        if isinstance(self.cell.state, np.ndarray):
+            return Weight(np.zeros_like(self.cell.state))
+        return ZERO
+
+    def d_w(self, dw):
+        state = self.cell.state
+        if isinstance(state, (np.ndarray, list)):
+            return Weight(np.ones_like(state)) \
+                if self.w_index == dw \
+                else Weight(np.zeros_like(state))
+        return ONE if self.w_index == dw else ZERO
+
+    def derive(self, index, by_weights=True):
+        if by_weights:
+            return self.d_w(index)
+        return self.d(index)
+
+    def clone(self):
+        cloned_cell = self.cell.clone()
+        w_clone = State(cloned_cell, self.adaptive_shape)
+        w_clone.w_index = self.w_index
+        return w_clone
+
+    def to_python(self) -> str:
+        return f"_state({str(self.cell.state)} ~ {str(self.cell.id)})"
+
+    def set(self, weight: Union[np.ndarray, float]) -> None:
+        if isinstance(weight, AbsWeight):
+            self.cell.state = weight.get()
+        else:
+            self.cell.state = weight
+
+    def get(self) -> Union[np.ndarray, float]:
+        return self.cell.state
 
 
 class Cell(Operand, Optimizable):
@@ -31,6 +78,7 @@ class Cell(Operand, Optimizable):
             self.optimizer = Optimizer()
         else:
             self.optimizer = optimizer
+        self.state_weight = None
 
     def nodes(self):
         return self.root.children
@@ -136,31 +184,11 @@ class Cell(Operand, Optimizable):
                 f"Marked? {self.marked}\n"
                 f"")
 
+    def get_state_weight(self):
+        if self.state_weight is None:
+            self.state_weight = State(self)
+        return self.state_weight
+
 
 t_cell = TypeVar('t_cell', bound=Cell)
 t_cell_list = TypeVar('t_cell_list', bound=List[Cell])
-
-
-def crossover(left_cell: 'Cell', right_cell: 'Cell'):
-    # Perform crossover (recombination) operation
-    root1 = left_cell.root
-    root2 = right_cell.root
-    if len(root1.children) != 0 and len(root2.children) != 0:
-        index1 = rnd.from_range(0, len(root1.children), True)
-        index2 = rnd.from_range(0, len(root2.children), True)
-        # Choose random nodes from parents
-        node1 = root1.children[index1]
-        node2 = root2.children[index2]
-
-        # Swap the chosen nodes
-        new_child1 = node2.clone()
-        new_child2 = node1.clone()
-        new_child2.age = 0
-        new_child1.age = 0
-
-        # Replace the nodes in the children
-        root1.children[index1] = new_child1
-        root2.children[index2] = new_child2
-
-    return (Cell(root1, left_cell.arity, left_cell.depth),
-            Cell(root2, right_cell.arity, left_cell.depth))

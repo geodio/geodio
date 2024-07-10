@@ -1,7 +1,8 @@
 from typing import List
 
 from src.cell.cell import Cell
-from src.cell.layer import Layer, LayerType
+from src.organism.layer import Layer, LayerType
+from src.organism.link import Link
 from src.cell.optim.fitness import FitnessFunction
 from src.cell.optim.optimization_args import OptimizationArgs
 
@@ -44,6 +45,7 @@ class Organism(Cell):
         self.cell_id_to_layer_id[cell_id] = layer_idx
 
     def connect_cells(self, from_id: int, to_ids: List[int]):
+        print("CELL_ID", from_id, "\n\tLINKED_IDX", to_ids)
         from_cell = self.get_cell_by_id(from_id)
         linked_cells = [self.get_cell_by_id(to_id) for to_id in to_ids]
         layer: Layer = self.layers[self.cell_id_to_layer_id[from_id]]
@@ -55,8 +57,15 @@ class Organism(Cell):
         return cloned_organism
 
     def to_python(self) -> str:
-        return (f"organism(["
-                f"{', '.join(str(layer) for layer in self.layers)}])")
+        ret = ""
+        for i, layer in enumerate(self.layers):
+            ret += f"\n\tLAYER {i}\n"
+            for cell in layer.children:
+                if not isinstance(cell, Link):
+                    ret += f"{cell.id} => {cell.to_python()}\n"
+                else:
+                    ret += f"{cell.to_python()}\n"
+        return ret
 
     def optimize_values(self, fit_fct: FitnessFunction, variables,
                         desired_output,
@@ -79,6 +88,7 @@ class Organism(Cell):
             self.layered_optimization(optim_args)
             outputs = [self(inputs) for inputs in variables]
             self.fitness = fit_fct(outputs, desired_output)
+            print(self)
             print(self.fitness)
 
     def layered_optimization(self, opt: OptimizationArgs):

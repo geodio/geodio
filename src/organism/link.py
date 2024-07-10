@@ -6,8 +6,7 @@ import numpy as np
 
 from src.cell.cell import Cell
 from src.cell.collections.builtin_functors import Prod, Add
-from src.cell.operands.constant import ONE, ZERO
-from src.cell.operands.weight import Weight, AbsWeight
+from src.cell.operands.weight import Weight
 from src.cell.optim.fitness import FitnessFunction
 
 
@@ -29,49 +28,6 @@ def new_link_weight(w: Union[Weight, float, np.ndarray] = None):
     return Weight(w, adaptive_shape=True)
 
 
-class State(AbsWeight):
-
-    def __init__(self, cell: Cell, adaptive_shape=False):
-        super().__init__(adaptive_shape)
-        self.cell = cell
-
-    def d(self, var_index):
-        if isinstance(self.cell.state, np.ndarray):
-            return Weight(np.zeros_like(self.cell.state))
-        return ZERO
-
-    def d_w(self, dw):
-        state = self.cell.state
-        if isinstance(state, (np.ndarray, list)):
-            return Weight(np.ones_like(state)) \
-                if self.w_index == dw \
-                else Weight(np.zeros_like(state))
-        return ONE if self.w_index == dw else ZERO
-
-    def derive(self, index, by_weights=True):
-        if by_weights:
-            return self.d_w(index)
-        return self.d(index)
-
-    def clone(self):
-        cloned_cell = self.cell.clone()
-        w_clone = State(cloned_cell, self.adaptive_shape)
-        w_clone.w_index = self.w_index
-        return w_clone
-
-    def to_python(self) -> str:
-        return f"_state({str(self.cell.state)})"
-
-    def set(self, weight: Union[np.ndarray, float]) -> None:
-        if isinstance(weight, AbsWeight):
-            self.cell.state = weight.get()
-        else:
-            self.cell.state = weight
-
-    def get(self) -> Union[np.ndarray, float]:
-        return self.cell.state
-
-
 def build_link_root(internal_cell, linked_cells, weights=None):
     if weights is None:
         weights = [
@@ -85,7 +41,7 @@ def build_link_root(internal_cell, linked_cells, weights=None):
     w = weights
     nuclei = [
         Prod([
-            new_link_weight(w[i]), State(linked_cells[i])
+            new_link_weight(w[i]), linked_cells[i].get_state_weight()
         ]) for i in range(link_size)
     ]
     root = Add(nuclei, link_size)
@@ -97,6 +53,7 @@ class Link(Cell):
         super().__init__(root, 0, max_depth)
         self.internal_cell = internal_cell
         self.fitness = sys.maxsize
+        self.id = self.internal_cell.id
 
     def __call__(self, args):
         # Calculate weighted sum of inputs
@@ -138,14 +95,6 @@ class Link(Cell):
                 child.set_weights(new_weights[offset:offset + num_weights])
                 offset += num_weights
 
-    def __repr__(self):
-        return (f"Link with root: {self.root},"
-                f" internal cell: {repr(self.internal_cell)}")
-
-    def __str__(self):
-        return (f"Link: root = {self.root},"
-                f" internal cell = {str(self.internal_cell)}")
-
     @staticmethod
     def from_cells(cell, linked_cells, weights=None):
         return Link(build_link_root(cell, linked_cells, weights),
@@ -163,3 +112,7 @@ class Link(Cell):
             variables = desired_output
         self.optimizer(self, desired_output, fit_fct, learning_rate,
                        max_iterations, variables)
+
+    def to_python(self):
+        return (f"{self.root.to_python()} -> {self.internal_cell.id} => "
+                f"{self.internal_cell.to_python()}")

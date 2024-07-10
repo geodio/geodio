@@ -1,12 +1,13 @@
 import random
 from abc import ABC, abstractmethod
-from typing import Optional, List, Dict, Tuple
+from typing import Optional, List, Tuple
 
 from src.cell.collections.bank import CellBank
-from src.cell.layer import Layer, DistributionPolicy
-from src.genetic.organism import Organism
+from src.organism.layer import Layer, DistributionPolicy
+from src.organism.organism import Organism
 from src.math import rnd
-from src.cell.cell import Cell, crossover
+from src.cell.cell import Cell
+from src.genetic.cell_utils import crossover
 from src.cell.collections.functors import Functors
 from src.cell.operands.function import Function
 from src.cell.operands.operand import Operand
@@ -171,25 +172,39 @@ class RandomOrganismGenerator(OrganismGenerator):
         for layer_idx, layer in enumerate(layers):
             if layer_idx != 0:
                 for cell in layer.children:
-                    # Higher layer connections
-                    hlcr = random.randint(*self.hlcr)
-                    self._add_connection(cell, layers, layer_idx - 1,
-                                         organism, hlcr)
-                    # Equal layer connections
-                    elcr = random.randint(*self.elcr)
-                    self._add_connection(cell, layers, layer_idx, organism,
-                                         elcr)
-                    # Lower layer connections
-                    if layer_idx < depth - 1:
-                        llcr = random.randint(*self.llcr)
-                        self._add_connection(cell, layers, layer_idx + 1,
-                                             organism, llcr)
+                    self.link_cell(cell, depth, layer_idx, layers, organism)
 
         return organism
 
-    def _add_connection(self, from_cell: Cell, layers: List[Layer],
-                        target_layer_idx: int, organism: Organism,
-                        max_connectivity):
+    def link_cell(self, cell, depth, layer_idx, layers, organism):
+        target_idx = []
+        # Higher layer connections
+        hlcr = random.randint(*self.hlcr)
+        self.extend_target_idx(
+            layer_idx - 1, layers, hlcr, target_idx
+        )
+        # Equal layer connections
+        elcr = random.randint(*self.elcr)
+        self.extend_target_idx(
+            layer_idx, layers, elcr, target_idx
+        )
+        # Lower layer connections
+        if layer_idx < depth - 1:
+            llcr = random.randint(*self.llcr)
+            self.extend_target_idx(
+                layer_idx + 1, layers, llcr, target_idx
+            )
+        organism.connect_cells(cell.id, target_idx)
+
+    def extend_target_idx(self, layer_idx, layers, max_connectivity, target_idx):
+        target_idx.extend(
+            self.get_target_idx(
+                layers, layer_idx, max_connectivity
+            )
+        )
+
+    def get_target_idx(self, layers: List[Layer],
+                       target_layer_idx: int, max_connectivity):
         target_layer = layers[target_layer_idx]
         if target_layer:
             connectivity = min(max_connectivity, len(target_layer.children))
@@ -197,4 +212,5 @@ class RandomOrganismGenerator(OrganismGenerator):
                 target_layer.children, connectivity
             )
             target_ids = [cell.id for cell in target_cells]
-            organism.connect_cells(from_cell.id, target_ids)
+            return target_ids
+        return []

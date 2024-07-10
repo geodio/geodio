@@ -3,7 +3,7 @@ from enum import IntEnum
 from typing import List
 
 from src.cell.cell import Cell
-from src.cell.link import Link
+from src.organism.link import Link
 from src.cell.operands.operand import Operand
 from src.cell.optim.fitness import FitnessFunction
 from src.cell.optim.optimizable import Optimizable
@@ -99,7 +99,7 @@ class Layer(Operand, Optimizable):
                      distribution_policy=self.distribution_policy)
 
     def to_python(self) -> str:
-        return f"layer([{', '.join(self.children)}])"
+        return f"layer([{', '.join([str(child) for child in self.children])}])"
 
     def derive(self, index, by_weights=True):
         pass

@@ -2,7 +2,7 @@ import random
 from typing import TypeVar, Generic, Dict
 
 from src.cell.cell import t_cell
-from src.cell.freezer import freeze
+from src.freezing.freezer import freeze
 
 T = TypeVar('T')
 
