@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from core.cell.cell import Cell
 from core.cell.collections.builtin_functors import Power, Add, Prod
-from core.cell.optim.fitness import MSE
+from core.cell.optim.loss import MSE
 from core.cell.operands.constant import Constant
 from core.cell.operands.variable import Variable
 from core.cell.operands.weight import Weight
@@ -63,14 +63,14 @@ class TestCell(TestCase):
         gradient = mse.gradient(cell, X, Y, 0)
         self.assertAlmostEqual(- 312.0, gradient)
         mse.evaluate(cell, X, Y)
-        self.assertNotEquals(0.0, cell.fitness)
+        self.assertNotEquals(0.0, cell.error)
 
         cell.optimize_values(mse, X, Y, max_iterations=50,
-                             min_fitness=sys.maxsize)
+                             min_error=sys.maxsize)
         gradient = mse.gradient(cell, X, Y, 0)
         self.assertAlmostEqual(40.0, w.get())
         self.assertAlmostEqual(0.0, gradient)
-        self.assertAlmostEqual(0.0, cell.fitness)
+        self.assertAlmostEqual(0.0, cell.error)
 
     def test_medium_optimization(self):
         w = Weight(7.0)
@@ -88,14 +88,14 @@ class TestCell(TestCase):
         gradient = mse.gradient(cell, X, Y, 0)
         self.assertNotEqual(0, gradient)
         mse.evaluate(cell, X, Y)
-        self.assertNotEquals(0.0, cell.fitness)
+        self.assertNotEquals(0.0, cell.error)
 
         cell.optimize_values(mse, X, Y, max_iterations=1000,
-                             min_fitness=sys.maxsize)
+                             min_error=sys.maxsize)
         gradient = mse.gradient(cell, X, Y, 0)
         self.assertTrue(abs(6.9 - w.get()) < 1e-5)
         # self.assertAlmostEqual(0.0, gradient)
-        self.assertTrue(cell.fitness < 1e-5)
+        self.assertTrue(cell.error < 1e-5)
         print(w.get())
 
 """

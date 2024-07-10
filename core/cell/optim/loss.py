@@ -7,10 +7,32 @@ from core.cell.operands.operand import Operand
 
 
 def get_predicted(X, cell):
-    return [cell(x_inst) for x_inst in X]
+    return flatten([cell(x_inst) for x_inst in X])
 
 
-class FitnessFunction(ABC):
+def flatten(lst):
+    """
+    Flattens a list of any dimension to a 1-dimensional list.
+
+    Parameters:
+    - lst: The list to flatten.
+
+    Returns:
+    - A flattened 1-dimensional list.
+    """
+    flattened_list = []
+
+    def _flatten(sublist):
+        for item in sublist:
+            if isinstance(item, (list, np.ndarray)):
+                _flatten(item)
+            else:
+                flattened_list.append(item)
+
+    _flatten(lst)
+    return flattened_list
+
+class LossFunction(ABC):
 
     def evaluate(self, cell: Operand, X, Y):
         predicted = get_predicted(X, cell)
@@ -32,7 +54,7 @@ class FitnessFunction(ABC):
         return Y_minus_predicted
 
 
-class MSE(FitnessFunction):
+class MSE(LossFunction):
     def compute_fitness(self, Y, predicted):
         # Mean Squared Error (MSE) fitness function
         x = np.mean(self.get_y_minus_predicted(Y, predicted) ** 2)
@@ -44,8 +66,20 @@ class MSE(FitnessFunction):
         predicted = get_predicted(X, cell)
         delta_f_w_j = cell.derive(index, by_weight)
         gradient_results = np.array([delta_f_w_j(X_i) for X_i in X])
+        Y = flatten(Y)
+        predicted = flatten(predicted)
+        gradient_results = flatten(gradient_results)
         per_i = - self.get_y_minus_predicted(Y, predicted) * gradient_results
         result = 2 * np.mean(per_i)
         if str(result) == "nan" or str(result) == 'inf' or result == np.inf:
             result = 0.0
+        # print(
+        #     "id:", cell.id,
+        #     "result:", result,
+        #     "deriv_index:", index,
+        #     "X:", X,
+        #     "Y:", Y,
+        #     "predicted:",  predicted,
+        #     "gradient:", gradient_results
+        # )
         return result

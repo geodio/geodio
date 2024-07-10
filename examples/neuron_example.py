@@ -2,7 +2,7 @@ import sys
 
 import numpy as np
 
-from core.cell.optim.fitness import MSE, get_predicted
+from core.cell.optim.loss import MSE, get_predicted
 from core.cell.collections.neurons import Sigmoid
 
 
@@ -16,10 +16,10 @@ def main():
     ]
     Y = [0, 0, 0, 1, 1]
     fitness = MSE()
-    neuron = Sigmoid(0.0)
-
-    neuron.optimize_values(fitness, X, Y, max_iterations=1000,
-                           min_fitness=sys.maxsize)
+    neuron = Sigmoid(np.array([1, 2]))
+    neuron.optimizer.risk = True
+    neuron.optimize_values(fitness, X, Y, max_iterations=10000,
+                           min_error=sys.maxsize)
     print("MSE:", fitness.evaluate(neuron, X, Y))
     print(get_predicted(X, neuron))
     print(neuron)

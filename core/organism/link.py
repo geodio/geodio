@@ -7,7 +7,7 @@ import numpy as np
 from core.cell.cell import Cell
 from core.cell.collections.builtin_functors import Prod, Add
 from core.cell.operands.weight import Weight
-from core.cell.optim.fitness import FitnessFunction
+from core.cell.optim.loss import LossFunction
 
 
 class LinkException(Exception):
@@ -52,8 +52,9 @@ class Link(Cell):
     def __init__(self, root, internal_cell: Cell, max_depth):
         super().__init__(root, 0, max_depth)
         self.internal_cell = internal_cell
-        self.fitness = sys.maxsize
+        self.error = sys.maxsize
         self.id = self.internal_cell.id
+        self.set_optimization_risk(True)
 
     def __call__(self, args):
         # Calculate weighted sum of inputs
@@ -65,10 +66,11 @@ class Link(Cell):
         derived_root = self.root.derive(var_index, by_weights)
         derived_cell = self.internal_cell.derive(var_index, by_weights)
         derived_by_input_cell = self.internal_cell.derive(0, False)
+        derived_link = Link(self.root, derived_by_input_cell, self.depth)
         derivative = Add([
             Prod([
                 derived_root,
-                Link(self.root, derived_by_input_cell, self.depth),
+                derived_link,
             ]),
             derived_cell
         ], 2)
@@ -100,11 +102,11 @@ class Link(Cell):
         return Link(build_link_root(cell, linked_cells, weights),
                     cell, 2)
 
-    def optimize_values(self, fit_fct: FitnessFunction, variables,
+    def optimize_values(self, fit_fct: LossFunction, variables,
                         desired_output,
                         learning_rate=0.1,
                         max_iterations=100,
-                        min_fitness=10):
+                        min_error=10):
         if desired_output is None:
             desired_output = self.state
         if variables is None:

@@ -51,6 +51,7 @@ class Sigmoid(Neuron):
         )
         super().__init__(self.activation_function, 1, 7)
         self.frozen = "SIGMOID"
+        self.set_optimization_risk(True)
 
     def clone(self) -> 'Sigmoid':
         clone_sigmoid = Sigmoid(self.W.get())

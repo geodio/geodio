@@ -2,16 +2,13 @@ from typing import TypeVar, List, Union
 
 import numpy as np
 
+from core.cell.geoo import GeneExpressedOptimizableOperand
 from core.cell.operands.constant import ZERO, ONE
-from core.cell.operands.weight import AbsWeight, Weight
-
-from core.cell.optim.optimizable import Optimizable
-from core.math import rnd
-from core.cell.optim.fitness import FitnessFunction
 from core.cell.operands.operand import Operand
-
+from core.cell.operands.weight import AbsWeight, Weight
+from core.cell.optim.loss import LossFunction
 from core.genetic.pop_utils import ReproductionPolicy
-from core.cell.optim.optimizer import Optimizer
+from core.math import rnd
 
 
 class State(AbsWeight):
@@ -58,26 +55,15 @@ class State(AbsWeight):
         return self.cell.state
 
 
-class Cell(Operand, Optimizable):
+class Cell(GeneExpressedOptimizableOperand):
     def __init__(self, root: Operand, arity: int, max_depth,
                  reproduction_policy=ReproductionPolicy.DIVISION,
                  optimizer=None):
-        super().__init__(arity)
+        super().__init__(arity, max_depth, reproduction_policy, optimizer)
         self.weight_cache = None
         self.root = root
-        self.depth = max_depth
-        self.age = 0
-        self.fitness = None
-        self.marked = False
-        self.reproduction_policy = reproduction_policy
-        self.mutation_risk = 0.5
         self.derivative_cache = {}
         self.state = 0.0
-        self.frozen = None
-        if optimizer is None:
-            self.optimizer = Optimizer()
-        else:
-            self.optimizer = optimizer
         self.state_weight = None
 
     def nodes(self):
@@ -92,51 +78,20 @@ class Cell(Operand, Optimizable):
     def to_python(self):
         return self.root.to_python()
 
-    def mutate(self, generator,
-               max_depth=None):
-        if not max_depth:
-            max_depth = self.depth
-        r = np.random.rand()
-        if r < self.mutation_risk and len(self.root.children) != 0:
-            mutant_node = generator.generate_node(max_depth - 1)
-            self.depth = max_depth
-            self._randomly_replace(mutant_node)
-            self.fitness = None
-            self.weight_cache = None
-            self.derivative_cache = {}
-        return self
-
-    def _randomly_replace(self, mutant_node):
+    def randomly_replace(self, mutant_node):
         i = rnd.from_range(0, len(self.root.children), True)
         self.root.children[i] = mutant_node
 
-    def get_age(self):
-        return self.age
-
-    def inc_age(self, age_benefit=0):
-        """
-        ages the tree if the fitness exists
-        :param age_benefit: contribution of age to the fitness
-        :return:
-        """
-        if self.fitness is not None:
-            self.age += 1
-            self.fitness *= (1 - age_benefit)
-            self.mutation_risk *= (1 - age_benefit)
-
-    def mark(self):
-        self.marked = True
-
-    def optimize_values(self, fit_fct: FitnessFunction, variables,
+    def optimize_values(self, fit_fct: LossFunction, variables,
                         desired_output,
                         learning_rate=0.1,
                         max_iterations=100,
-                        min_fitness=10):
+                        min_error=10):
         y_pred = [self(x_inst) for x_inst in variables]
         if desired_output is None:
             return
-        self.fitness = fit_fct(desired_output, y_pred)
-        if not (self.fitness <= min_fitness or self.marked):
+        self.error = fit_fct(desired_output, y_pred)
+        if not (self.error <= min_error or self.marked):
             return
 
         max_iterations *= (1 / (self.age + 1))
@@ -175,11 +130,11 @@ class Cell(Operand, Optimizable):
 
     def __repr__(self):
         return (f"root = {self.to_python()}, age = {self.age}, marked? "
-                f"= {self.marked}, fitness = {self.fitness}")
+                f"= {self.marked}, fitness = {self.error}")
 
     def __str__(self):
         return (f"Individual: {self.to_python()} \n"
-                f"Fitness: {self.get_fit()} \n"
+                f"Fitness: {self.get_error()} \n"
                 f"Age: {self.age} \n"
                 f"Marked? {self.marked}\n"
                 f"")
@@ -188,6 +143,11 @@ class Cell(Operand, Optimizable):
         if self.state_weight is None:
             self.state_weight = State(self)
         return self.state_weight
+
+    def clean(self):
+        self.error = None
+        self.weight_cache = None
+        self.derivative_cache = {}
 
 
 t_cell = TypeVar('t_cell', bound=Cell)

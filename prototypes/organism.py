@@ -3,7 +3,7 @@ from abc import abstractmethod, ABC
 from typing import Dict, List, TypeVar, Any
 
 from core.cell.cell import Cell, t_cell
-from core.cell.optim.fitness import FitnessFunction
+from core.cell.optim.loss import LossFunction
 from core.genetic.generator import CellGenerator
 
 t_layer_id = TypeVar('t_layer_id', bound=int)
@@ -97,9 +97,9 @@ class Organism(Cell):
                 continue
             self.update_states(inputs, layer_id)
 
-    def optimize_values(self, fit_fct: FitnessFunction, variables,
+    def optimize_values(self, fit_fct: LossFunction, variables,
                         desired_output, learning_rate=0.1, max_iterations=100,
-                        min_fitness=10):
+                        min_error=10):
         for iteration in range(max_iterations):
             gradients = self.calculate_gradients(fit_fct, variables,
                                                  desired_output)
@@ -107,7 +107,7 @@ class Organism(Cell):
 
             fitness = self.calculate_fitness(fit_fct, variables,
                                              desired_output)
-            if fitness <= min_fitness:
+            if fitness <= min_error:
                 break
 
             learning_rate *= 0.99999  # Decay the learning rate

@@ -1,7 +1,7 @@
 import numpy as np
 
 from core.cell.collections.builtin_functors import DEFAULT_FUNCTORS
-from core.cell.optim.fitness import MSE
+from core.cell.optim.loss import MSE
 from core.genetic.pop import Pop
 
 

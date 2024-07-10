@@ -1,34 +1,32 @@
 import numpy as np
 
 from core.cell.operands.operand import Operand
-from core.cell.optim.fitness import get_predicted
+from core.cell.optim.loss import get_predicted
+from core.cell.optim.optimization_args import OptimizationArgs
 
 
 class Optimization:
-    def __init__(self, cell, fit_func, input_vars, desired_output, max_iter,
-                 learning_rate, decay_rate=0.99999):
+    def __init__(self, cell, optim_args: OptimizationArgs,
+                 decay_rate=0.99999, risk=False):
         """
         Initialize the Optimization object.
 
         :param cell: The model or neural network cell to be optimized.
-        :param fit_func: The fitness function used to evaluate the model.
-        :param input_vars: The input variables for the model.
-        :param desired_output: The desired output for the input variables.
-        :param max_iter: The maximum number of iterations for optimization.
-        :param learning_rate: The initial learning rate for gradient descent.
-        :param decay_rate: The rate at which the learning rate decays per iteration.
+        :param decay_rate: The rate at which the learning rate decays per
+        iteration.
         """
+        self.risk = risk
         self.cell = cell
-        self.fit_func = fit_func
-        self.input = input_vars
-        self.desired_output = desired_output
-        self.max_iter = max_iter
+        self.fit_func = optim_args.fitness_function
+        self.input = optim_args.inputs
+        self.desired_output = optim_args.desired_output
+        self.max_iter = optim_args.max_iter
         self.decay_rate = decay_rate
         self.weights = cell.get_weights()
         self.prev_weights = [weight.get() for weight in self.weights]
-        self.prev_fitness = cell.fitness
-        self.learning_rate = learning_rate
-        self._initial_learning_rate = learning_rate
+        self.prev_error = cell.error
+        self.learning_rate = optim_args.learning_rate
+        self._initial_learning_rate = optim_args.learning_rate
         self._vanishing = set()
         self._exploding = set()
 
@@ -39,16 +37,17 @@ class Optimization:
         for iteration in range(self.max_iter):
             gradients = self.calculate_gradients()
             self.update_weights(gradients)
-            self.cell.fitness = self.fit_func(
+            self.cell.error = self.fit_func(
                 self.desired_output,
                 get_predicted(self.input, self.cell)
             )
-            if self.cell.fitness < 1e-20:
+            if self.cell.error < 1e-20:
                 break
 
     def calculate_gradients(self):
         """
-        Calculate the gradients of the fitness function with respect to the weights.
+        Calculate the gradients of the fitness function with respect to the
+        weights.
 
         :return: A numpy array of gradients.
         """
@@ -58,6 +57,7 @@ class Optimization:
             )
             for j in range(len(self.weights))
         ])
+        # print(gradients)
         return gradients
 
     def update_weights(self, gradients):
@@ -67,6 +67,8 @@ class Optimization:
         :param gradients: The calculated gradients for each weight.
         """
         for i, weight in enumerate(self.weights):
+            if weight.is_locked:
+                continue
             gradient = gradients[i]
             gradient = self.__handle_exploding_vanishing(gradient, i)
 
@@ -74,7 +76,8 @@ class Optimization:
 
     def __update_weight(self, gradient, i, weight):
         """
-        Update a single weight and handle fitness evaluation and convergence checks.
+        Update a single weight and handle fitness evaluation and convergence
+        checks.
 
         :param gradient: The gradient for the weight.
         :param i: The index of the weight.
@@ -83,13 +86,13 @@ class Optimization:
         """
         weight.set(weight.get() - self.learning_rate * gradient)
         y_pred = [self.cell(x_inst) for x_inst in self.input]
-        self.cell.fitness = self.fit_func(self.desired_output, y_pred)
+        self.cell.error = self.fit_func(self.desired_output, y_pred)
         self.learning_rate *= self.decay_rate
-
-        # if self.prev_fitness < self.cell.fitness:
-        #     self.cell.fitness = self.prev_fitness
-        #     self.weights[i].set(self.prev_weights[i])
-        #     return self.__test_vanishing_exploding(gradient, i, weight)
+        if not self.risk:
+            if self.prev_error < self.cell.error:
+                self.cell.error = self.prev_error
+                self.weights[i].set(self.prev_weights[i])
+                return self.__test_vanishing_exploding(gradient, i, weight)
         return True
 
     def __test_vanishing_exploding(self, gradient, i, weight):
@@ -139,16 +142,31 @@ class Optimization:
 
 class Optimizer:
 
+    def __init__(self):
+        self.risk = False
+
     def __call__(self, cell: Operand,
                  desired_output,
                  fit_fct,
                  learning_rate,
                  max_iterations,
                  variables):
-        optimizer = Optimization(cell,
-                                 fit_fct,
-                                 variables,
-                                 desired_output,
-                                 max_iterations,
-                                 learning_rate)
+        """
+        Optimize a cell
+
+        :param cell: The model or neural network cell to be optimized.
+        :param fit_fct: The fitness function used to evaluate the model.
+        :param variables: The input variables for the model.
+        :param desired_output: The desired output for the input variables.
+        :param max_iterations: The maximum number of iterations for optimization.
+        :param learning_rate: The initial learning rate for gradient descent.
+        """
+        optim_args = OptimizationArgs()
+        optim_args.desired_output = desired_output
+        optim_args.fitness_function = fit_fct
+        optim_args.learning_rate = learning_rate
+        optim_args.max_iter = max_iterations
+        optim_args.inputs = variables
+        optimizer = Optimization(cell, optim_args, self.risk)
+        # print("Under Optimization:", cell.id)
         optimizer.optimize()

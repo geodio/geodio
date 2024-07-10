@@ -3,7 +3,7 @@ import sys
 import numpy as np
 
 from core.cell.collections.neurons import NEURONS
-from core.cell.optim.fitness import MSE
+from core.cell.optim.loss import MSE
 from core.genetic.generator import RandomOrganismGenerator, CellBankGenerator
 from core.genetic.pop_utils import PopulationProperties
 
@@ -13,12 +13,16 @@ def main():
         [0, 10],
         [0, 0],
         [10, 0],
+        [10, 0],
+        [10, 0],
         # [10, 10]
     ])
     y = np.array([
-        [0],
-        [0],
-        [1],
+        [[0]],
+        [[0]],
+        [[1]],
+        [[1]],
+        [[1]],
         # [0],
     ])
 
@@ -44,13 +48,13 @@ def main():
         MSE(),
         x,
         y,
-        max_iterations=100,
-        min_fitness=sys.maxsize
+        max_iterations=300,
+        min_error=sys.maxsize
     )
     for xx in x:
         print(f"for input = {xx}, output =", org(xx))
 
-    print(org.fitness)
+    print(org.error)
     print(org)
 
 

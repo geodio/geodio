@@ -164,7 +164,8 @@ class RandomOrganismGenerator(OrganismGenerator):
             elif d == depth:
                 cell_count = self.output_arity
             for _ in range(cell_count):
-                new_cell = self.cell_generator.new_offspring()
+                new_cell: Cell = self.cell_generator.new_offspring()
+                new_cell.set_optimization_risk(True)
                 layers[d].add_cell(new_cell)
 
         organism = Organism(layers, self.arity)

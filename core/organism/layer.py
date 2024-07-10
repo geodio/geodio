@@ -2,11 +2,12 @@ import sys
 from enum import IntEnum
 from typing import List
 
+import numpy as np
+
 from core.cell.cell import Cell
+from core.cell.optim.loss import LossFunction
+from core.cell.optim.optimizable import OptimizableOperand
 from core.organism.link import Link
-from core.cell.operands.operand import Operand
-from core.cell.optim.fitness import FitnessFunction
-from core.cell.optim.optimizable import Optimizable
 
 
 class DistributionPolicy(IntEnum):
@@ -43,15 +44,17 @@ class LayerType(IntEnum):
     HIDDEN = 2
 
 
-class Layer(Operand, Optimizable):
+class Layer(OptimizableOperand):
     def __init__(self, arity, cells=None,
                  distribution_policy=DistributionPolicy.IGNORE,
-                 layer_type=LayerType.HIDDEN, ):
-        super().__init__(arity)
+                 layer_type=LayerType.HIDDEN, optimizer=None):
+        super().__init__(arity, optimizer)
         self.distribution_policy = distribution_policy
         self.children = cells if cells is not None else []
         self.fitness = sys.maxsize
         self.layer_type = layer_type
+        self.optimizer.risk = True
+        self.id = np.random.randint(1, 10000)
 
     def add_cell(self, cell: Cell):
         self.children.append(cell)
@@ -102,7 +105,14 @@ class Layer(Operand, Optimizable):
         return f"layer([{', '.join([str(child) for child in self.children])}])"
 
     def derive(self, index, by_weights=True):
-        pass
+        #TODO
+        return self.children[0].derive(index, by_weights)
+        # return Layer(
+        #     self.arity,
+        #     [child.derive(index, by_weights) for child in self.children],
+        #     distribution_policy=self.distribution_policy,
+        #     layer_type=self.layer_type, optimizer=self.optimizer
+        # )
 
     def call_according_to_policy(self, args):
         if self.distribution_policy == DistributionPolicy.UNIFORM:
@@ -115,7 +125,6 @@ class Layer(Operand, Optimizable):
 
     def _split_distribution_call(self, args):
         cell_args_list = self.split_args(args, True)
-
         return [
             cell(cell_args)
             for cell, cell_args in zip(self.children, cell_args_list)
@@ -143,26 +152,25 @@ class Layer(Operand, Optimizable):
         x = ",".join([str(cell.id) for cell in self.children])
         return f"<layer[{x}]>"
 
-    def optimize_values(self, fit_fct: FitnessFunction, variables,
+    def optimize_values(self, fit_fct: LossFunction, variables,
                         desired_output,
                         learning_rate=0.1,
                         max_iterations=100,
-                        min_fitness=sys.maxsize):
+                        min_error=sys.maxsize):
         if self.layer_type == LayerType.OUTPUT:
-            for link, output in zip(self.children, desired_output):
-                link.state = output
-                link.optimize_values(fit_fct, None, [link.state],
-                                     learning_rate,
-                                     max_iterations, min_fitness)
+            outputs = desired_output
+            inputs = outputs
         elif self.layer_type == LayerType.INPUT:
             self._handle_input_optimization(variables, fit_fct,
                                             learning_rate, max_iterations,
-                                            min_fitness)
+                                            min_error)
+            return
         else:
-            for link in self.children:
-                link.optimize_values(fit_fct, None, [link.state],
-                                     learning_rate,
-                                     max_iterations, min_fitness)
+            outputs = [link.state for link in self.children]
+            inputs = outputs
+        self.optimizer(
+            self, outputs, fit_fct, learning_rate, max_iterations, inputs
+        )
 
     def _handle_input_optimization(
             self, variables, fit_fct, learning_rate, max_iterations,
@@ -183,3 +191,25 @@ class Layer(Operand, Optimizable):
         else:
             for cell in self.children:
                 optimize_cell(cell, [])
+
+    def get_weights(self):
+        linked = self.children
+        weights = []
+
+        for child in linked:
+            weights.extend(child.get_weights())
+
+        for i, weight in enumerate(weights):
+            weight.w_index = i
+        return weights
+
+    def set_weights(self, new_weights):
+        linked = self.children
+        offset = 0
+        for child in linked:
+            child_weights = child.get_weights()
+            num_weights = len(child_weights)
+            if num_weights > 0:
+                child.set_weights(new_weights[offset:offset + num_weights])
+                offset += num_weights
+

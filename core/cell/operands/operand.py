@@ -11,7 +11,7 @@ class Operand(ABC, Derivable, WeightDerivable, metaclass=ABCMeta):
     def __init__(self, arity):
         self.arity = arity
         self.children = []
-        self.fitness = None
+        self.error = sys.maxsize
         self.id = 0
 
     @abstractmethod
@@ -79,8 +79,8 @@ class Operand(ABC, Derivable, WeightDerivable, metaclass=ABCMeta):
     def from_bytes(data):
         return pickle.loads(data)
 
-    def get_fit(self):
-        return self.fitness if self.fitness is not None else sys.maxsize
+    def get_error(self):
+        return self.error if self.error is not None else sys.maxsize
 
     def __str__(self):
         return self.to_python()

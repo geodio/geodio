@@ -3,7 +3,7 @@ from typing import List
 from core.cell.cell import Cell
 from core.organism.layer import Layer, LayerType
 from core.organism.link import Link
-from core.cell.optim.fitness import FitnessFunction
+from core.cell.optim.loss import LossFunction
 from core.cell.optim.optimization_args import OptimizationArgs
 
 
@@ -67,29 +67,32 @@ class Organism(Cell):
                     ret += f"{cell.to_python()}\n"
         return ret
 
-    def optimize_values(self, fit_fct: FitnessFunction, variables,
+    def optimize_values(self, fit_fct: LossFunction, variables,
                         desired_output,
                         learning_rate=0.1,
                         max_iterations=100,
-                        min_fitness=10):
+                        min_error=10):
 
         optim_args = OptimizationArgs(
             learning_rate=learning_rate,
             max_iter=max_iterations,
-            min_fitness=min_fitness,
+            min_fitness=min_error,
             fitness_function=fit_fct
         )
 
         for x, y in zip(variables, desired_output):
             self(x)
             print("ORGANISM_INPUT", x)
-            optim_args.desired_output = desired_output
+            optim_args.desired_output = y
             optim_args.inputs = x
             self.layered_optimization(optim_args)
             outputs = [self(inputs) for inputs in variables]
-            self.fitness = fit_fct(outputs, desired_output)
+            self.error = fit_fct(outputs, desired_output)
             print(self)
-            print(self.fitness)
+            print(self.error)
+            print("DYNAMIC For input:", x,
+                  "output:", self(x),
+                  "desired output:", y)
 
     def layered_optimization(self, opt: OptimizationArgs):
         for layer in reversed(self.layers):

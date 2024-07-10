@@ -4,7 +4,7 @@ import threading
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from core.cell.cell import Cell
-from core.cell.optim.fitness import FitnessFunction
+from core.cell.optim.loss import LossFunction
 from core.genetic.generator import RandomCellGenerator
 from core.genetic.pop_utils import PopulationProperties, ReproductionPolicy
 
@@ -20,8 +20,8 @@ def evolve_individual(cell: Cell, x, y, fitness_func, age_benefit,
             cell.optimize_values(fitness_func, x, y,
                                  max_iterations=max_iterations)
     except SyntaxError:
-        cell.fitness = sys.maxsize
-    if cell.fitness is None:
+        cell.error = sys.maxsize
+    if cell.error is None:
         try:
             y_pred = [cell(x_inst) for x_inst in x]
             if None in y_pred:
@@ -31,9 +31,9 @@ def evolve_individual(cell: Cell, x, y, fitness_func, age_benefit,
         except SyntaxError:
             fit = sys.maxsize
     else:
-        fit = cell.fitness
+        fit = cell.error
     cell.inc_age(age_benefit)
-    cell.fitness = fit
+    cell.error = fit
     return cell
 
 
@@ -73,7 +73,7 @@ class Pop:
             }
             for future in as_completed(futures):
                 future.result()
-        self.population.sort(key=lambda indi: indi.get_fit(), reverse=True)
+        self.population.sort(key=lambda indi: indi.get_error(), reverse=True)
 
     def mark_best(self):
         to_mark = int(len(self.population) * self.mark_ratio)
@@ -84,29 +84,29 @@ class Pop:
 
     def get_best_individuals(self, size):
         sorted_population = sorted(self.population, key=lambda indi:
-        indi.fitness)[:size]
+        indi.error)[:size]
         sorted_population.extend([ind for ind in self.population if
-                                  ind.fitness < 1])
+                                  ind.error < 1])
         return sorted_population
 
     def get_best_ind(self):
         best_idx = self._min_fit_idx()
         best = self.population[best_idx]
-        return best, best.get_fit()
+        return best, best.get_error()
 
     def _min_fit_idx(self):
         return min(range(len(self.population)),
-                   key=lambda i: self.population[i].get_fit())
+                   key=lambda i: self.population[i].get_error())
 
     def _max_fit_idx(self):
         return max(range(len(self.population)),
-                   key=lambda i: self.population[i].fitness)
+                   key=lambda i: self.population[i].error)
 
     def _fit_of_idx(self, idx):
-        return self.population[idx].fitness
+        return self.population[idx].error
 
     def kill_worst(self):
-        fitness = np.array(list(map(lambda xx: xx.fitness, self.population)),
+        fitness = np.array(list(map(lambda xx: xx.error, self.population)),
                            dtype=np.float_)
         max_fit = fitness[np.argmax(fitness)]
         min_fit = fitness[np.argmin(fitness)]
@@ -126,7 +126,7 @@ class Pop:
         mutates if individual is not marked and if individual is not new offspring
         :return:
         """
-        cond = lambda tree: not tree.marked and tree.fitness is not None
+        cond = lambda tree: not tree.marked and tree.error is not None
         middle_class = [a for a in self.population if cond(a)]
         for individual in middle_class:
             individual.mutate(self.generator,
@@ -134,7 +134,7 @@ class Pop:
             individual.age = 0
 
     def evolve_population(self, generations, x, y,
-                          fitness_func: FitnessFunction):
+                          fitness_func: LossFunction):
         self.evaluate_population(x, y, fitness_func)
         self.generations = generations
         for gen in range(generations):
