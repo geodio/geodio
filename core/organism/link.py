@@ -65,6 +65,7 @@ class Link(Cell):
     def derive(self, var_index, by_weights=True):
         derived_root = self.root.derive(var_index, by_weights)
         derived_cell = self.internal_cell.derive(var_index, by_weights)
+        derived_cell_linked = Link(self.root, derived_cell, self.depth)
         derived_by_input_cell = self.internal_cell.derive(0, False)
         derived_link = Link(self.root, derived_by_input_cell, self.depth)
         derivative = Add([
@@ -72,12 +73,12 @@ class Link(Cell):
                 derived_root,
                 derived_link,
             ]),
-            derived_cell
+            derived_cell_linked
         ], 2)
         return derivative
 
     def get_weights(self):
-        linked = [self.root, self.internal_cell]
+        linked = [self.internal_cell, self.root]
         weights = []
 
         for child in linked:
@@ -88,7 +89,7 @@ class Link(Cell):
         return weights
 
     def set_weights(self, new_weights):
-        linked = [self.root, self.internal_cell]
+        linked = [self.internal_cell, self.root]
         offset = 0
         for child in linked:
             child_weights = child.get_weights()

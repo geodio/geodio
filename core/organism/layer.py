@@ -7,6 +7,7 @@ import numpy as np
 from core.cell.cell import Cell
 from core.cell.optim.loss import LossFunction
 from core.cell.optim.optimizable import OptimizableOperand
+from core.cell.optim.optimizer import FisherOptimizer
 from core.organism.link import Link
 
 
@@ -48,6 +49,8 @@ class Layer(OptimizableOperand):
     def __init__(self, arity, cells=None,
                  distribution_policy=DistributionPolicy.IGNORE,
                  layer_type=LayerType.HIDDEN, optimizer=None):
+        if optimizer is None:
+            optimizer = FisherOptimizer()
         super().__init__(arity, optimizer)
         self.distribution_policy = distribution_policy
         self.children = cells if cells is not None else []
@@ -92,6 +95,7 @@ class Layer(OptimizableOperand):
             self.children.remove(cell)
             link = Link.from_cells(cell, linked_cells, initial_weights)
             self.children.insert(index, link)
+            return link
 
     def __invert__(self):
         pass
@@ -105,8 +109,14 @@ class Layer(OptimizableOperand):
         return f"layer([{', '.join([str(child) for child in self.children])}])"
 
     def derive(self, index, by_weights=True):
+        # Correctly aggregate the derivatives of the cells
+        derived_cells = [child.derive(index, by_weights) for child in
+                         self.children]
+        return Layer(self.arity, derived_cells, self.distribution_policy,
+                     self.layer_type, self.optimizer)
+
         #TODO
-        return self.children[0].derive(index, by_weights)
+        # return self.children[0].derive(index, by_weights)
         # return Layer(
         #     self.arity,
         #     [child.derive(index, by_weights) for child in self.children],
@@ -119,7 +129,7 @@ class Layer(OptimizableOperand):
             return [cell(args) for cell in self.children]
         if self.distribution_policy == DistributionPolicy.IGNORE:
             empty_list = []
-            return [cell(empty_list) for cell in self.children]
+            return [cell(args) for cell in self.children]
         if self.distribution_policy == DistributionPolicy.SPLIT:
             return self._split_distribution_call(args)
 
@@ -159,7 +169,7 @@ class Layer(OptimizableOperand):
                         min_error=sys.maxsize):
         if self.layer_type == LayerType.OUTPUT:
             outputs = desired_output
-            inputs = outputs
+            inputs = [[""]]
         elif self.layer_type == LayerType.INPUT:
             self._handle_input_optimization(variables, fit_fct,
                                             learning_rate, max_iterations,
@@ -167,7 +177,7 @@ class Layer(OptimizableOperand):
             return
         else:
             outputs = [link.state for link in self.children]
-            inputs = outputs
+            inputs = [[""]]
         self.optimizer(
             self, outputs, fit_fct, learning_rate, max_iterations, inputs
         )
@@ -193,23 +203,24 @@ class Layer(OptimizableOperand):
                 optimize_cell(cell, [])
 
     def get_weights(self):
-        linked = self.children
         weights = []
-
-        for child in linked:
-            weights.extend(child.get_weights())
-
-        for i, weight in enumerate(weights):
-            weight.w_index = i
+        seen = set()
+        for child in self.children:
+            for weight in child.get_weights():
+                if weight not in seen:
+                    seen.add(weight)
+                    weights.append(weight)
         return weights
 
     def set_weights(self, new_weights):
-        linked = self.children
         offset = 0
-        for child in linked:
+        seen = set()
+        for child in self.children:
             child_weights = child.get_weights()
             num_weights = len(child_weights)
             if num_weights > 0:
-                child.set_weights(new_weights[offset:offset + num_weights])
-                offset += num_weights
-
+                for i, weight in enumerate(child_weights):
+                    if weight not in seen:
+                        seen.add(weight)
+                        child.set_weights(new_weights[offset:offset + num_weights])
+                        offset += num_weights

@@ -49,7 +49,9 @@ class Organism(Cell):
         from_cell = self.get_cell_by_id(from_id)
         linked_cells = [self.get_cell_by_id(to_id) for to_id in to_ids]
         layer: Layer = self.layers[self.cell_id_to_layer_id[from_id]]
-        layer.link(from_cell, linked_cells)
+        new_link = layer.link(from_cell, linked_cells)
+        if new_link is not None:
+            self.cell_map[from_id] = new_link
 
     def clone(self) -> "Organism":
         cloned_layers = [layer.clone() for layer in self.layers]
@@ -85,7 +87,8 @@ class Organism(Cell):
             print("ORGANISM_INPUT", x)
             optim_args.desired_output = y
             optim_args.inputs = x
-            self.layered_optimization(optim_args)
+            self.layered_optimization_backwards(optim_args)
+            self.layered_optimization_forward(optim_args)
             outputs = [self(inputs) for inputs in variables]
             self.error = fit_fct(outputs, desired_output)
             print(self)
@@ -94,9 +97,23 @@ class Organism(Cell):
                   "output:", self(x),
                   "desired output:", y)
 
-    def layered_optimization(self, opt: OptimizationArgs):
+    def layered_optimization_backwards(self, opt: OptimizationArgs):
         for layer in reversed(self.layers):
             layer.optimize_values(
                 opt.fitness_function, opt.inputs, opt.desired_output,
                 opt.learning_rate, opt.max_iter, opt.min_fitness
             )
+
+    def layered_optimization_forward(self, opt: OptimizationArgs):
+        for layer in self.layers:
+            for cell in layer.children:
+                cell.get_state_weight().lock()
+        for layer in self.layers:
+            layer.optimize_values(
+                opt.fitness_function, opt.inputs, opt.desired_output,
+                opt.learning_rate, opt.max_iter, opt.min_fitness
+            )
+
+        for layer in self.layers:
+            for cell in layer.children:
+                cell.get_state_weight().unlock()

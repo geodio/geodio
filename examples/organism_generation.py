@@ -10,20 +10,24 @@ from core.genetic.pop_utils import PopulationProperties
 
 def main():
     x = np.array([
-        [0, 10],
         [0, 0],
-        [10, 0],
-        [10, 0],
-        [10, 0],
-        # [10, 10]
+        [0, 1],
+        [1, 0],
+        [1, 1],
+        [1, 0],
+        [0, 0],
+        [1, 1],
+#        [1, 0]
     ])
     y = np.array([
         [[0]],
+        [[1]],
+        [[1]],
         [[0]],
         [[1]],
-        [[1]],
-        [[1]],
-        # [0],
+        [[0]],
+        [[0]],
+#        [[1]]
     ])
 
     func_set = NEURONS
@@ -37,18 +41,19 @@ def main():
     cell_generator = CellBankGenerator(func_set)
     cell_generator.set_pop_prop(prop)
 
-    rog = RandomOrganismGenerator(1, 2, cell_generator,
+    rog = RandomOrganismGenerator(2, 2, cell_generator,
                                   (2, 10),
                                   (0, 0),
                                   (0, 0),
-                                  10,
+                                  3,
                                   output_arity)
     org = rog.generate_organism()
+    print(org.to_python())
     org.optimize_values(
         MSE(),
         x,
         y,
-        max_iterations=300,
+        max_iterations=1000,
         min_error=sys.maxsize
     )
     for xx in x:

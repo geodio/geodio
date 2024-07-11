@@ -73,13 +73,4 @@ class MSE(LossFunction):
         result = 2 * np.mean(per_i)
         if str(result) == "nan" or str(result) == 'inf' or result == np.inf:
             result = 0.0
-        # print(
-        #     "id:", cell.id,
-        #     "result:", result,
-        #     "deriv_index:", index,
-        #     "X:", X,
-        #     "Y:", Y,
-        #     "predicted:",  predicted,
-        #     "gradient:", gradient_results
-        # )
         return result
