@@ -8,7 +8,7 @@ from core.cell.optim.optimization_args import OptimizationArgs
 class Optimization:
     def __init__(
             self, cell, optim_args: OptimizationArgs,
-            decay_rate=0.99999, risk=False, ewc_lambda=0.1, l2_lambda=0.01
+            decay_rate=0.99999, risk=False, ewc_lambda=0.1, l2_lambda=0.0
     ):
         """
         Initialize the Optimization object.
@@ -184,36 +184,21 @@ class Optimizer:
         self.risk = False
 
     def __call__(self, cell: Operand,
-                 desired_output,
-                 fit_fct,
-                 learning_rate,
-                 max_iterations,
-                 variables):
+                 args: OptimizationArgs):
         """
         Optimize a cell
 
         :param cell: The model or neural network cell to be optimized.
-        :param fit_fct: The fitness function used to evaluate the model.
-        :param variables: The input variables for the model.
-        :param desired_output: The desired output for the input variables.
-        :param max_iterations: The maximum number of iterations for optimization.
-        :param learning_rate: The initial learning rate for gradient descent.
+        :param args: The arguments used in the optimization.
         """
-        optimizer = self.make_optimizer(cell, desired_output, fit_fct,
-                                        learning_rate, max_iterations,
-                                        variables)
+        optimizer = self.make_optimizer(cell, args)
         # print("Under Optimization:", cell.id)
         optimizer.optimize()
 
-    def make_optimizer(self, cell, desired_output, fit_fct, learning_rate,
-                       max_iterations, variables):
-        optim_args = OptimizationArgs()
-        optim_args.desired_output = desired_output
-        optim_args.fitness_function = fit_fct
-        optim_args.learning_rate = learning_rate
-        optim_args.max_iter = max_iterations
-        optim_args.inputs = variables
-        optimizer = Optimization(cell, optim_args, self.risk)
+    def make_optimizer(self, cell, optim_args, ewc_lambda=0.0,
+                       l2_lambda=0.0):
+        optimizer = Optimization(cell, optim_args, self.risk,
+                                 ewc_lambda=ewc_lambda, l2_lambda=l2_lambda)
         return optimizer
 
 
@@ -245,31 +230,21 @@ class FisherOptimizer(Optimizer):
         self.risk = True
         self.fisher_information = None
 
-    def __call__(self, cell: Operand,
-                 desired_output,
-                 fit_fct,
-                 learning_rate,
-                 max_iterations,
-                 variables):
+    def __call__(self, cell: Operand, opt: OptimizationArgs):
         """
         Optimize a cell
 
         :param cell: The model or neural network cell to be optimized.
-        :param fit_fct: The fitness function used to evaluate the model.
-        :param variables: The input variables for the model.
-        :param desired_output: The desired output for the input variables.
-        :param max_iterations: The maximum number of iterations for optimization.
-        :param learning_rate: The initial learning rate for gradient descent.
+        :param args: The arguments used in the optimization.
         """
-        optimizer = self.make_optimizer(cell, desired_output, fit_fct,
-                                        learning_rate, max_iterations,
-                                        variables)
+        optimizer = self.make_optimizer(
+            cell, opt, ewc_lambda=0.1, l2_lambda=0.01
+        )
         if self.fisher_information is None:
             self.fisher_information = np.ones(len(cell.get_weights()))
         else:
             optimizer.update_ewc_importance(self.fisher_information)
-        # print("Under Optimization:", cell.id)
         optimizer.optimize()
         self.fisher_information = calculate_fisher_information(
-            cell, variables, self.fisher_information
+            cell, opt.inputs, self.fisher_information
         )

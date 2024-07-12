@@ -4,9 +4,7 @@ import numpy as np
 
 from core.cell.cell import Cell
 from core.cell.collections.bank import CellBank
-from core.cell.collections.builtin_functors import Div, Add, Power, Prod, Dot, \
-    BuiltinFunctor
-from core.cell.collections.functors import CollectionBasedFunctors, Functor
+from core.cell.collections.builtin_functors import Div, Add, Power, Prod, Dot
 from core.cell.operands.constant import ONE, E, MINUS_ONE
 from core.cell.operands.variable import Variable
 from core.cell.operands.weight import Weight

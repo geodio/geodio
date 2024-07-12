@@ -6,7 +6,7 @@ from core.cell.geoo import GeneExpressedOptimizableOperand
 from core.cell.operands.constant import ZERO, ONE
 from core.cell.operands.operand import Operand
 from core.cell.operands.weight import AbsWeight, Weight
-from core.cell.optim.loss import LossFunction
+from core.cell.optim.optimization_args import OptimizationArgs
 from core.genetic.pop_utils import ReproductionPolicy
 from core.math import rnd
 
@@ -82,23 +82,18 @@ class Cell(GeneExpressedOptimizableOperand):
         i = rnd.from_range(0, len(self.root.children), True)
         self.root.children[i] = mutant_node
 
-    def optimize_values(self, fit_fct: LossFunction, variables,
-                        desired_output,
-                        learning_rate=0.1,
-                        max_iterations=100,
-                        min_error=10):
-        y_pred = [self(x_inst) for x_inst in variables]
-        if desired_output is None:
+    def optimize(self, args: OptimizationArgs):
+        y_pred = [self(x_inst) for x_inst in args.inputs]
+        if args.desired_output is None:
             return
-        self.error = fit_fct(desired_output, y_pred)
-        if not (self.error <= min_error or self.marked):
+        self.error = args.fitness_function(args.desired_output, y_pred)
+        if not (self.error <= args.min_error or self.marked):
             return
+        args = args.clone()
+        args.max_iter *= (1 / (self.age + 1))
+        args.max_iter = int(args.max_iter)
 
-        max_iterations *= (1 / (self.age + 1))
-        max_iterations = int(max_iterations)
-
-        self.optimizer(self, desired_output, fit_fct, learning_rate,
-                       max_iterations, variables)
+        self.optimizer(self, args)
         return self.get_weights()
 
     def get_weights(self):

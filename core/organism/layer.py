@@ -5,8 +5,8 @@ from typing import List
 import numpy as np
 
 from core.cell.cell import Cell
-from core.cell.optim.loss import LossFunction
 from core.cell.optim.optimizable import OptimizableOperand
+from core.cell.optim.optimization_args import OptimizationArgs
 from core.cell.optim.optimizer import FisherOptimizer
 from core.organism.link import Link
 
@@ -128,7 +128,6 @@ class Layer(OptimizableOperand):
         if self.distribution_policy == DistributionPolicy.UNIFORM:
             return [cell(args) for cell in self.children]
         if self.distribution_policy == DistributionPolicy.IGNORE:
-            empty_list = []
             return [cell(args) for cell in self.children]
         if self.distribution_policy == DistributionPolicy.SPLIT:
             return self._split_distribution_call(args)
@@ -162,40 +161,31 @@ class Layer(OptimizableOperand):
         x = ",".join([str(cell.id) for cell in self.children])
         return f"<layer[{x}]>"
 
-    def optimize_values(self, fit_fct: LossFunction, variables,
-                        desired_output,
-                        learning_rate=0.1,
-                        max_iterations=100,
-                        min_error=sys.maxsize):
+    def optimize(self, args: OptimizationArgs):
         if self.layer_type == LayerType.OUTPUT:
-            outputs = desired_output
-            inputs = [[""]]
+            args = args.clone()
+            args.inputs = [[""]]
         elif self.layer_type == LayerType.INPUT:
-            self._handle_input_optimization(variables, fit_fct,
-                                            learning_rate, max_iterations,
-                                            min_error)
+            self._handle_input_optimization(args)
             return
         else:
-            outputs = [link.state for link in self.children]
-            inputs = [[""]]
-        self.optimizer(
-            self, outputs, fit_fct, learning_rate, max_iterations, inputs
-        )
+            args = args.clone()
+            args.inputs = [[""]]
+            args.desired_output = [link.state for link in self.children]
+        self.optimizer(self, args)
 
-    def _handle_input_optimization(
-            self, variables, fit_fct, learning_rate, max_iterations,
-            min_fitness):
+    def _handle_input_optimization(self, args: OptimizationArgs):
         def optimize_cell(input_cell, input_vars):
-            input_cell.optimize_values(
-                fit_fct, input_vars, [input_cell.state],
-                learning_rate, max_iterations, min_fitness
-            )
+            args_clone = args.clone()
+            args_clone.desired_output = [input_cell.state]
+            args_clone.inputs = input_vars
+            input_cell.optimize(args_clone)
 
         if self.distribution_policy == DistributionPolicy.UNIFORM:
             for cell in self.children:
-                optimize_cell(cell, variables)
+                optimize_cell(cell, args.inputs)
         elif self.distribution_policy == DistributionPolicy.SPLIT:
-            split_inputs = self.split_args(variables)
+            split_inputs = self.split_args(args.inputs)
             for cell, inputs in zip(self.children, split_inputs):
                 optimize_cell(cell, [inputs])
         else:
@@ -222,5 +212,6 @@ class Layer(OptimizableOperand):
                 for i, weight in enumerate(child_weights):
                     if weight not in seen:
                         seen.add(weight)
-                        child.set_weights(new_weights[offset:offset + num_weights])
+                        child.set_weights(
+                            new_weights[offset:offset + num_weights])
                         offset += num_weights

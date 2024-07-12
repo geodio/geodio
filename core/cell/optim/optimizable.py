@@ -4,18 +4,30 @@ from typing import Optional
 
 from core.cell.operands.operand import Operand
 from core.cell.optim.loss import LossFunction
+from core.cell.optim.optimization_args import OptimizationArgs
 from core.cell.optim.optimizer import Optimizer
 
 
 class Optimizable(ABC, metaclass=ABCMeta):
 
     @abstractmethod
+    def optimize(self, args: OptimizationArgs):
+        pass
+
     def optimize_values(self, fit_fct: LossFunction, variables,
                         desired_output,
                         learning_rate=0.1,
                         max_iterations=100,
                         min_error=sys.maxsize):
-        pass
+        args = OptimizationArgs(
+            fitness_function=fit_fct,
+            inputs=variables,
+            desired_output=desired_output,
+            learning_rate=learning_rate,
+            max_iter=max_iterations,
+            min_error=min_error
+        )
+        self.optimize(args)
 
 
 class OptimizableOperand(Operand, Optimizable, metaclass=ABCMeta):

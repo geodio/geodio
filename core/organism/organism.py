@@ -1,10 +1,9 @@
 from typing import List
 
 from core.cell.cell import Cell
+from core.cell.optim.optimization_args import OptimizationArgs
 from core.organism.layer import Layer, LayerType
 from core.organism.link import Link
-from core.cell.optim.loss import LossFunction
-from core.cell.optim.optimization_args import OptimizationArgs
 
 
 class Organism(Cell):
@@ -69,28 +68,21 @@ class Organism(Cell):
                     ret += f"{cell.to_python()}\n"
         return ret
 
-    def optimize_values(self, fit_fct: LossFunction, variables,
-                        desired_output,
-                        learning_rate=0.1,
-                        max_iterations=100,
-                        min_error=10):
+    def optimize(self, optim_args: OptimizationArgs):
 
-        optim_args = OptimizationArgs(
-            learning_rate=learning_rate,
-            max_iter=max_iterations,
-            min_fitness=min_error,
-            fitness_function=fit_fct
-        )
+        optim_args = optim_args.clone()
 
-        for x, y in zip(variables, desired_output):
+        for x, y in zip(optim_args.inputs, optim_args.desired_output):
             self(x)
             print("ORGANISM_INPUT", x)
             optim_args.desired_output = y
             optim_args.inputs = x
             self.layered_optimization_backwards(optim_args)
             self.layered_optimization_forward(optim_args)
-            outputs = [self(inputs) for inputs in variables]
-            self.error = fit_fct(outputs, desired_output)
+            optim_args.actual_output = [
+                self(inputs) for inputs in optim_args.inputs
+            ]
+            self.error = optim_args.compute_error()
             print(self)
             print(self.error)
             print("DYNAMIC For input:", x,
@@ -99,20 +91,14 @@ class Organism(Cell):
 
     def layered_optimization_backwards(self, opt: OptimizationArgs):
         for layer in reversed(self.layers):
-            layer.optimize_values(
-                opt.fitness_function, opt.inputs, opt.desired_output,
-                opt.learning_rate, opt.max_iter, opt.min_fitness
-            )
+            layer.optimize(opt)
 
     def layered_optimization_forward(self, opt: OptimizationArgs):
         for layer in self.layers:
             for cell in layer.children:
                 cell.get_state_weight().lock()
         for layer in self.layers:
-            layer.optimize_values(
-                opt.fitness_function, opt.inputs, opt.desired_output,
-                opt.learning_rate, opt.max_iter, opt.min_fitness
-            )
+            layer.optimize(opt)
 
         for layer in self.layers:
             for cell in layer.children:

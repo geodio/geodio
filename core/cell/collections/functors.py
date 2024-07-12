@@ -1,6 +1,4 @@
-import random
 from abc import ABC
-from typing import Dict
 
 from core.cell.collections.bank import Bank
 from core.cell.operands.function import Function

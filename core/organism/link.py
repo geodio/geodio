@@ -7,7 +7,7 @@ import numpy as np
 from core.cell.cell import Cell
 from core.cell.collections.builtin_functors import Prod, Add
 from core.cell.operands.weight import Weight
-from core.cell.optim.loss import LossFunction
+from core.cell.optim.optimization_args import OptimizationArgs
 
 
 class LinkException(Exception):
@@ -103,18 +103,14 @@ class Link(Cell):
         return Link(build_link_root(cell, linked_cells, weights),
                     cell, 2)
 
-    def optimize_values(self, fit_fct: LossFunction, variables,
-                        desired_output,
-                        learning_rate=0.1,
-                        max_iterations=100,
-                        min_error=10):
-        if desired_output is None:
-            desired_output = self.state
-        if variables is None:
+    def optimize(self, opt: OptimizationArgs):
+        opt = opt.clone()
+        if opt.desired_output is None:
+            opt.desired_output = self.state
+        if opt.inputs is None:
             # To have input of same length as input.
-            variables = desired_output
-        self.optimizer(self, desired_output, fit_fct, learning_rate,
-                       max_iterations, variables)
+            opt.inputs = opt.desired_output
+        self.optimizer(self, opt)
 
     def to_python(self):
         return (f"{self.root.to_python()} -> {self.internal_cell.id} => "

@@ -1,7 +1,5 @@
 from typing import Optional
 
-import numpy as np
-
 from core.cell.operands.operand import Operand
 
 

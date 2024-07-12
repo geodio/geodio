@@ -88,15 +88,17 @@ class TestCell(TestCase):
         gradient = mse.gradient(cell, X, Y, 0)
         self.assertNotEqual(0, gradient)
         mse.evaluate(cell, X, Y)
-        self.assertNotEquals(0.0, cell.error)
+        self.assertNotEqual(0.0, cell.error)
 
         cell.optimize_values(mse, X, Y, max_iterations=1000,
                              min_error=sys.maxsize)
+        print(cell)
         gradient = mse.gradient(cell, X, Y, 0)
         self.assertTrue(abs(6.9 - w.get()) < 1e-5)
         # self.assertAlmostEqual(0.0, gradient)
         self.assertTrue(cell.error < 1e-5)
         print(w.get())
+
 
 """
 add_2(
@@ -111,4 +113,3 @@ add_2(
     )
 ) 
 """
-
