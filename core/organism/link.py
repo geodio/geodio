@@ -1,13 +1,15 @@
 import random
 import sys
-from typing import Union
+from typing import Union, List
 
 import numpy as np
 
 from core.cell.cell import Cell
 from core.cell.collections.builtin_functors import Prod, Add
-from core.cell.operands.weight import Weight
+from core.cell.geoo import t_geoo
+from core.cell.operands.weight import Weight, t_weight
 from core.cell.optim.optimization_args import OptimizationArgs
+from core.organism.router import Router
 
 
 class LinkException(Exception):
@@ -20,15 +22,15 @@ class LinkException(Exception):
         super().__init__(message)
 
 
-def new_link_weight(w: Union[Weight, float, np.ndarray] = None):
+def new_link_weight(w: Union[t_weight, float, np.ndarray] = None):
     if w is None:
         w = random.random()
-    if isinstance(w, Weight):
+    if isinstance(w, t_weight.__bound__):
         return w
     return Weight(w, adaptive_shape=True)
 
 
-def build_link_root(internal_cell, linked_cells, weights=None):
+def build_link_root(internal_cell, linked_cells: List[t_geoo], weights=None):
     if weights is None:
         weights = [
             new_link_weight() for _ in range(len(linked_cells))
@@ -38,19 +40,15 @@ def build_link_root(internal_cell, linked_cells, weights=None):
         raise LinkException(link_size,
                             internal_cell.arity,
                             len(weights))
-    w = weights
-    nuclei = [
-        Prod([
-            new_link_weight(w[i]), linked_cells[i].get_state_weight()
-        ]) for i in range(link_size)
-    ]
-    root = Add(nuclei, link_size)
+    ws = {i: new_link_weight(w) for i, w in enumerate(weights)}
+    root = Router(linked_cells, weights=ws)
     return root
 
 
 class Link(Cell):
-    def __init__(self, root, internal_cell: Cell, max_depth):
+    def __init__(self, root: Router, internal_cell: Cell, max_depth):
         super().__init__(root, 0, max_depth)
+        self.root: Router = root
         self.internal_cell = internal_cell
         self.error = sys.maxsize
         self.id = self.internal_cell.id
@@ -115,3 +113,8 @@ class Link(Cell):
     def to_python(self):
         return (f"{self.root.to_python()} -> {self.internal_cell.id} => "
                 f"{self.internal_cell.to_python()}")
+
+    def mark_checkpoint(self):
+        super().mark_checkpoint()
+        self.root.mark_checkpoint()
+        self.internal_cell.mark_checkpoint()

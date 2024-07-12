@@ -1,16 +1,20 @@
 from abc import ABC, abstractmethod
+from typing import TypeVar
 
 import numpy as np
 
+from core.cell.operands.stateful import Stateful
 from core.cell.optim.optimizable import OptimizableOperand
 from core.genetic.pop_utils import ReproductionPolicy
 
 
-class GeneExpressedOptimizableOperand(OptimizableOperand, ABC):
+class GeneExpressedOptimizableOperand(OptimizableOperand, Stateful,
+                                      ABC):
     def __init__(self, arity: int, max_depth,
                  reproduction_policy=ReproductionPolicy.DIVISION,
                  optimizer=None):
-        super().__init__(arity, optimizer)
+        OptimizableOperand.__init__(self, arity, optimizer)
+        Stateful.__init__(self)
         self.reproduction_policy = reproduction_policy
         self.depth = max_depth
         self.age = 0
@@ -69,6 +73,21 @@ class GeneExpressedOptimizableOperand(OptimizableOperand, ABC):
     def mark(self):
         self.marked = True
 
+    def state_update(self, args):
+        """
+        Apply the function with the given args; the result will be the new
+        state of this G.E.O.O.
+        :param args: Arguments of the function.
+        :return:
+        The output of the function, which is not also the state of the G.E.O.O
+        """
+        output = self.__call__(args)
+        self.update(output)
+        return output
+
+    @abstractmethod
+    def clone(self) -> "t_geoo":
+        pass
 
 
-
+t_geoo = TypeVar('t_geoo', bound=GeneExpressedOptimizableOperand)

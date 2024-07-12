@@ -64,7 +64,7 @@ class TestCell(TestCase):
         self.assertAlmostEqual(- 312.0, gradient)
         mse.evaluate(cell, X, Y)
         self.assertNotEquals(0.0, cell.error)
-
+        cell.set_optimization_risk(True)
         cell.optimize_values(mse, X, Y, max_iterations=50,
                              min_error=sys.maxsize)
         gradient = mse.gradient(cell, X, Y, 0)

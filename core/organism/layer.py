@@ -1,10 +1,12 @@
 import sys
 from enum import IntEnum
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 
 from core.cell.cell import Cell
+from core.cell.geoo import t_geoo
+from core.cell.operands.stateful import Stateful
 from core.cell.optim.optimizable import OptimizableOperand
 from core.cell.optim.optimization_args import OptimizationArgs
 from core.cell.optim.optimizer import FisherOptimizer
@@ -45,15 +47,18 @@ class LayerType(IntEnum):
     HIDDEN = 2
 
 
-class Layer(OptimizableOperand):
-    def __init__(self, arity, cells=None,
+class Layer(OptimizableOperand, Stateful):
+    def __init__(self, arity, cells: Optional[List[t_geoo]] = None,
                  distribution_policy=DistributionPolicy.IGNORE,
                  layer_type=LayerType.HIDDEN, optimizer=None):
         if optimizer is None:
             optimizer = FisherOptimizer()
-        super().__init__(arity, optimizer)
+
+        OptimizableOperand.__init__(self, arity, optimizer)
+        Stateful.__init__(self)
+
         self.distribution_policy = distribution_policy
-        self.children = cells if cells is not None else []
+        self.children: List[t_geoo] = cells if cells is not None else []
         self.fitness = sys.maxsize
         self.layer_type = layer_type
         self.optimizer.risk = True
@@ -115,15 +120,6 @@ class Layer(OptimizableOperand):
         return Layer(self.arity, derived_cells, self.distribution_policy,
                      self.layer_type, self.optimizer)
 
-        #TODO
-        # return self.children[0].derive(index, by_weights)
-        # return Layer(
-        #     self.arity,
-        #     [child.derive(index, by_weights) for child in self.children],
-        #     distribution_policy=self.distribution_policy,
-        #     layer_type=self.layer_type, optimizer=self.optimizer
-        # )
-
     def call_according_to_policy(self, args):
         if self.distribution_policy == DistributionPolicy.UNIFORM:
             return [cell(args) for cell in self.children]
@@ -164,14 +160,25 @@ class Layer(OptimizableOperand):
     def optimize(self, args: OptimizationArgs):
         if self.layer_type == LayerType.OUTPUT:
             args = args.clone()
-            args.inputs = [[""]]
+            if len(args.inputs) > 1:
+                args.inputs = [[["O"]], [["O"]]]
+            else:
+                args.inputs = [[["O"]]]
         elif self.layer_type == LayerType.INPUT:
+            args = args.clone()
             self._handle_input_optimization(args)
             return
         else:
             args = args.clone()
-            args.inputs = [[""]]
-            args.desired_output = [link.state for link in self.children]
+            if len(args.inputs) > 1:
+                args.inputs = [[["H"]], [["H"]]]
+                args.desired_output = [link.state for link in self.children]
+                args.desired_output = [
+                    link.checkpoint for link in self.children
+                ]
+            else:
+                args.inputs = [[["H"]]]
+                args.desired_output = [link.state for link in self.children]
         self.optimizer(self, args)
 
     def _handle_input_optimization(self, args: OptimizationArgs):
@@ -215,3 +222,7 @@ class Layer(OptimizableOperand):
                         child.set_weights(
                             new_weights[offset:offset + num_weights])
                         offset += num_weights
+
+    def mark_checkpoint(self):
+        for cell in self.children:
+            cell.mark_checkpoint()

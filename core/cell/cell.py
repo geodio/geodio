@@ -1,58 +1,12 @@
-from typing import TypeVar, List, Union
-
-import numpy as np
+from typing import TypeVar, List, Iterable
 
 from core.cell.geoo import GeneExpressedOptimizableOperand
-from core.cell.operands.constant import ZERO, ONE
+from core.cell.operands.stateful import State
+from core.cell.operands.constant import ONE
 from core.cell.operands.operand import Operand
-from core.cell.operands.weight import AbsWeight, Weight
 from core.cell.optim.optimization_args import OptimizationArgs
 from core.genetic.pop_utils import ReproductionPolicy
 from core.math import rnd
-
-
-class State(AbsWeight):
-
-    def __init__(self, cell: 'Cell', adaptive_shape=False):
-        super().__init__(adaptive_shape)
-        self.cell = cell
-        self.cell.state_weight = self
-
-    def d(self, var_index):
-        if isinstance(self.cell.state, np.ndarray):
-            return Weight(np.zeros_like(self.cell.state))
-        return ZERO
-
-    def d_w(self, dw):
-        state = self.cell.state
-        if isinstance(state, (np.ndarray, list)):
-            return Weight(np.ones_like(state)) \
-                if self.w_index == dw \
-                else Weight(np.zeros_like(state))
-        return ONE if self.w_index == dw else ZERO
-
-    def derive(self, index, by_weights=True):
-        if by_weights:
-            return self.d_w(index)
-        return self.d(index)
-
-    def clone(self):
-        cloned_cell = self.cell.clone()
-        w_clone = State(cloned_cell, self.adaptive_shape)
-        w_clone.w_index = self.w_index
-        return w_clone
-
-    def to_python(self) -> str:
-        return f"_state({str(self.cell.state)} ~ {str(self.cell.id)})"
-
-    def set(self, weight: Union[np.ndarray, float]) -> None:
-        if isinstance(weight, AbsWeight):
-            self.cell.state = weight.get()
-        else:
-            self.cell.state = weight
-
-    def get(self) -> Union[np.ndarray, float]:
-        return self.cell.state
 
 
 class Cell(GeneExpressedOptimizableOperand):
@@ -63,13 +17,13 @@ class Cell(GeneExpressedOptimizableOperand):
         self.weight_cache = None
         self.root = root
         self.derivative_cache = {}
-        self.state = 0.0
-        self.state_weight = None
 
     def nodes(self):
         return self.root.children
 
     def __call__(self, args):
+        if not isinstance(args, Iterable):
+            args = [args]
         return self.root(args)
 
     def replace(self, node_old, node_new):
@@ -129,15 +83,10 @@ class Cell(GeneExpressedOptimizableOperand):
 
     def __str__(self):
         return (f"Individual: {self.to_python()} \n"
-                f"Fitness: {self.get_error()} \n"
+                f"Error: {self.get_error()} \n"
                 f"Age: {self.age} \n"
                 f"Marked? {self.marked}\n"
                 f"")
-
-    def get_state_weight(self):
-        if self.state_weight is None:
-            self.state_weight = State(self)
-        return self.state_weight
 
     def clean(self):
         self.error = None
@@ -147,3 +96,5 @@ class Cell(GeneExpressedOptimizableOperand):
 
 t_cell = TypeVar('t_cell', bound=Cell)
 t_cell_list = TypeVar('t_cell_list', bound=List[Cell])
+HALLOW_CELL = Cell(ONE, 0, 1)
+HALLOW_CELL.state = 1.0

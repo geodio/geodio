@@ -2,6 +2,7 @@ from abc import abstractmethod, ABCMeta
 from typing import Union
 
 import numpy as np
+from typing_extensions import TypeVar
 
 from core.cell.operands.constant import ONE, ZERO
 from core.cell.operands.operand import Operand
@@ -59,7 +60,7 @@ class AbsWeight(Operand, metaclass=ABCMeta):
         self.adapted = False
 
     @abstractmethod
-    def set(self, weight: Union[np.ndarray, float]) -> None:
+    def set(self, weight: Union[np.ndarray, float, 't_weight']) -> None:
         pass
 
     @abstractmethod
@@ -146,7 +147,7 @@ class Weight(AbsWeight):
     def get(self):
         return self.__weight
 
-    def set(self, weight: Union[np.ndarray, float]):
+    def set(self, weight: Union[np.ndarray, float, 't_weight']):
         if isinstance(weight, AbsWeight):
             self.__weight = weight.get()
         else:
@@ -154,3 +155,4 @@ class Weight(AbsWeight):
 
 
 ZERO_WEIGHT = Weight(0)
+t_weight = TypeVar('t_weight', bound=AbsWeight)

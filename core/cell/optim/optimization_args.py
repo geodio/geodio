@@ -27,8 +27,8 @@ class OptimizationArgs:
             max_iter=self.max_iter,
             min_fitness=self.min_fitness,
             fitness_function=self.fitness_function,
-            inputs=self.inputs,
-            desired_output=self.desired_output,
+            inputs=self.inputs[:],
+            desired_output=self.desired_output[:],
             actual_output=self.actual_output,
             min_error=self.min_error,
         )

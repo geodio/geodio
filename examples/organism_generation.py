@@ -3,7 +3,7 @@ import sys
 import numpy as np
 
 from core.cell.collections.neurons import NEURONS
-from core.cell.optim.loss import MSE
+from core.cell.optim.loss import MSE, CheckpointedMSE
 from core.genetic.generator import RandomOrganismGenerator, CellBankGenerator
 from core.genetic.pop_utils import PopulationProperties
 
@@ -14,9 +14,8 @@ def main():
         [0, 1],
         [1, 0],
         [1, 1],
-        [1, 0],
         [0, 0],
-        [1, 1],
+        [0, 1],
 #        [1, 0]
     ])
     y = np.array([
@@ -24,9 +23,8 @@ def main():
         [[1]],
         [[1]],
         [[0]],
+        [[0]],
         [[1]],
-        [[0]],
-        [[0]],
 #        [[1]]
     ])
 
@@ -45,15 +43,15 @@ def main():
                                   (2, 10),
                                   (0, 0),
                                   (0, 0),
-                                  3,
+                                  2,
                                   output_arity)
     org = rog.generate_organism()
     print(org.to_python())
     org.optimize_values(
-        MSE(),
+        CheckpointedMSE(),
         x,
         y,
-        max_iterations=1000,
+        max_iterations=100,
         min_error=sys.maxsize
     )
     for xx in x:

@@ -197,6 +197,7 @@ class Optimizer:
 
     def make_optimizer(self, cell, optim_args, ewc_lambda=0.0,
                        l2_lambda=0.0):
+        optim_args = optim_args.clone()
         optimizer = Optimization(cell, optim_args, self.risk,
                                  ewc_lambda=ewc_lambda, l2_lambda=l2_lambda)
         return optimizer
@@ -238,7 +239,7 @@ class FisherOptimizer(Optimizer):
         :param args: The arguments used in the optimization.
         """
         optimizer = self.make_optimizer(
-            cell, opt, ewc_lambda=0.1, l2_lambda=0.01
+            cell, opt, ewc_lambda=0.05, l2_lambda=0.001
         )
         if self.fisher_information is None:
             self.fisher_information = np.ones(len(cell.get_weights()))
