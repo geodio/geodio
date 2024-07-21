@@ -7,6 +7,8 @@ from core.cell.operands.constant import Constant
 
 
 def clean_number(x):
+    if isinstance(x, np.ndarray):
+        return x
     try:
         if x is None or str(x) == 'nan' or str(x) == 'inf' or np.isinf(x):
             return 0
@@ -31,8 +33,9 @@ class Add(BuiltinFunctor):
         return clean_number(sum([child(x) for child in self.children]))
 
     def derive(self, index, by_weights=True):
-        return Add([child.derive(index, by_weights) for child in self.children],
-                   arity=self.arity)
+        return Add(
+            [child.derive(index, by_weights) for child in self.children],
+            arity=self.arity)
 
     def clone(self) -> "Add":
         return Add([child.clone() for child in self.children], self.arity)
@@ -51,8 +54,10 @@ class Prod(BuiltinFunctor):
     def derive(self, index, by_weights=True):
         return Add(
             [
-                Prod([self.children[0].derive(index, by_weights), self.children[1]]),
-                Prod([self.children[0], self.children[1].derive(index, by_weights)])
+                Prod([self.children[0].derive(index, by_weights),
+                      self.children[1]]),
+                Prod([self.children[0],
+                      self.children[1].derive(index, by_weights)])
             ],
             2
         )
@@ -78,15 +83,16 @@ class Dot(BuiltinFunctor):
         return Add(
             [
                 Dot([self.children[0].derive(index, by_weights),
-                   self.children[1]]),
+                     self.children[1]]),
                 Dot([self.children[0], self.children[1].derive(index,
-                                                             by_weights)])
+                                                               by_weights)])
             ],
             2
         )
 
     def clone(self) -> "Prod":
         return Prod([child.clone() for child in self.children])
+
 
 class Max(BuiltinFunctor):
     def __init__(self, children, arity):
@@ -236,13 +242,13 @@ class Log(BuiltinFunctor):
         return Log([child.clone() for child in self.children])
 
 
-DEFAULT_FUNCTORS = CollectionBasedFunctors()
-DEFAULT_FUNCTORS.add_functor(Add([], 2))
-DEFAULT_FUNCTORS.add_functor(Add([], 3))
-DEFAULT_FUNCTORS.add_functor(Add([], 4))
-DEFAULT_FUNCTORS.add_functor(Add([], 5))
-DEFAULT_FUNCTORS.add_functor(Prod([]))
-DEFAULT_FUNCTORS.add_functor(Log([]))
-DEFAULT_FUNCTORS.add_functor(Div([]))
-DEFAULT_FUNCTORS.add_functor(Sub([]))
-DEFAULT_FUNCTORS.add_functor(Power([]))
+BUILTIN_FUNCTORS = CollectionBasedFunctors()
+BUILTIN_FUNCTORS.add_functor(Add([], 2))
+BUILTIN_FUNCTORS.add_functor(Add([], 3))
+BUILTIN_FUNCTORS.add_functor(Add([], 4))
+BUILTIN_FUNCTORS.add_functor(Add([], 5))
+BUILTIN_FUNCTORS.add_functor(Prod([]))
+BUILTIN_FUNCTORS.add_functor(Log([]))
+BUILTIN_FUNCTORS.add_functor(Div([]))
+BUILTIN_FUNCTORS.add_functor(Sub([]))
+BUILTIN_FUNCTORS.add_functor(Power([]))

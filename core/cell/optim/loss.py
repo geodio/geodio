@@ -5,47 +5,25 @@ import numpy as np
 
 from core.cell.operands.operand import Operand
 from core.cell.operands.stateful import Stateful
+from core.utils import flatten
 
 
 def get_predicted(X, cell):
     return flatten([cell(x_inst) for x_inst in X])
 
 
-def flatten(lst):
-    """
-    Flattens a list of any dimension to a 1-dimensional list.
-
-    Parameters:
-    - lst: The list to flatten.
-
-    Returns:
-    - A flattened 1-dimensional list.
-    """
-    flattened_list = []
-
-    def _flatten(sublist):
-        for item in sublist:
-            if isinstance(item, (list, np.ndarray)):
-                _flatten(item)
-            else:
-                flattened_list.append(item)
-
-    _flatten(lst)
-    return flattened_list
-
-
 class LossFunction(ABC):
 
     def evaluate(self, cell: Operand, X, Y):
         predicted = get_predicted(X, cell)
-        return self.compute_fitness(Y, predicted)
+        return self.compute_fitness(flatten(Y), flatten(predicted))
 
     @abstractmethod
     def compute_fitness(self, Y, predicted):
         pass
 
     def __call__(self, Y, predicted):
-        return self.compute_fitness(Y, predicted)
+        return self.compute_fitness(flatten(Y), flatten(predicted))
 
     @abstractmethod
     def gradient(self, cell: Operand, X, Y, index, by_weight=True):
@@ -74,7 +52,7 @@ class MSE(LossFunction):
     def compute_gradient(self, Y, gradient_results, predicted):
         Y = flatten(Y)
         predicted = flatten(predicted)
-        gradient_results = flatten(gradient_results)
+        gradient_results = flatten(gradient_results)[:len(Y)]
         per_i = - self.get_y_minus_predicted(Y, predicted) * gradient_results
         result = 2 * np.mean(per_i)
         if str(result) == "nan" or str(

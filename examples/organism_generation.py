@@ -2,9 +2,11 @@ import sys
 
 import numpy as np
 
+from core.cell.collections.builtin_functors import BUILTIN_FUNCTORS
 from core.cell.collections.neurons import NEURONS
 from core.cell.optim.loss import MSE, CheckpointedMSE
-from core.genetic.generator import RandomOrganismGenerator, CellBankGenerator
+from core.genetic.generator import CellBankGenerator, \
+    RandomCellGenerator
 from core.genetic.pop_utils import PopulationProperties
 
 
@@ -59,7 +61,6 @@ def main():
 
     print(org.error)
     print(org)
-
 
 if __name__ == '__main__':
     main()

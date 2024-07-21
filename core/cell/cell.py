@@ -40,7 +40,7 @@ class Cell(GeneExpressedOptimizableOperand):
         y_pred = [self(x_inst) for x_inst in args.inputs]
         if args.desired_output is None:
             return
-        self.error = args.fitness_function(args.desired_output, y_pred)
+        self.error = args.loss_function(args.desired_output, y_pred)
         if not (self.error <= args.min_error or self.marked):
             return
         args = args.clone()

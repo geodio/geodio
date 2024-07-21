@@ -20,7 +20,7 @@ class Optimizable(ABC, metaclass=ABCMeta):
                         max_iterations=100,
                         min_error=sys.maxsize):
         args = OptimizationArgs(
-            fitness_function=fit_fct,
+            loss_function=fit_fct,
             inputs=variables,
             desired_output=desired_output,
             learning_rate=learning_rate,
@@ -41,3 +41,28 @@ class OptimizableOperand(Operand, Optimizable, metaclass=ABCMeta):
 
     def set_optimization_risk(self, risk: bool):
         self.optimizer.risk = risk
+
+    def __invert__(self):
+        pass
+
+    def get_weights(self):
+        weights = []
+        for child in self.get_sub_items():
+            weights.extend(child.get_weights())
+
+        for i, weight in enumerate(weights):
+            weight.w_index = i
+
+        return weights
+
+    def set_weights(self, new_weights):
+        offset = 0
+        for child in self.get_sub_items():
+            child_weights = child.get_weights()
+            num_weights = len(child_weights)
+            if num_weights > 0:
+                child.set_weights(new_weights[offset:offset + num_weights])
+                offset += num_weights
+
+    def get_sub_items(self):
+        return self.children

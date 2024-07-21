@@ -21,7 +21,7 @@ class Optimization:
         """
         self.risk = risk
         self.cell = cell
-        self.fit_func = optim_args.fitness_function
+        self.fit_func = optim_args.loss_function
         self.input = optim_args.inputs
         self.desired_output = optim_args.desired_output
         self.max_iter = optim_args.max_iter
@@ -202,6 +202,11 @@ class Optimizer:
                                  ewc_lambda=ewc_lambda, l2_lambda=l2_lambda)
         return optimizer
 
+    def clone(self):
+        cloned = Optimizer()
+        cloned.risk = self.risk
+        return cloned
+
 
 def calculate_fisher_information(cell, inputs, old_fisher):
     """
@@ -249,3 +254,9 @@ class FisherOptimizer(Optimizer):
         self.fisher_information = calculate_fisher_information(
             cell, opt.inputs, self.fisher_information
         )
+
+    def clone(self):
+        cloned = FisherOptimizer()
+        cloned.risk = self.risk
+        cloned.fisher_information = self.fisher_information
+        return cloned

@@ -12,13 +12,14 @@ lock = threading.Lock()
 
 
 def evolve_individual(cell: Cell, x, y, fitness_func, age_benefit,
-                      optimize=True, max_iterations=100):
+                      optimize=True, max_iterations=100, min_error=10):
     if cell is None or cell.root is None:
         print("ERROR")
     try:
         if optimize:
             cell.optimize_values(fitness_func, x, y,
-                                 max_iterations=max_iterations)
+                                 max_iterations=max_iterations,
+                                 min_error=min_error)
     except SyntaxError:
         cell.error = sys.maxsize
     if cell.error is None:

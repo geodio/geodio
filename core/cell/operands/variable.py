@@ -1,11 +1,14 @@
-from typing import Optional
+from abc import ABCMeta, abstractmethod
+from typing import Optional, List
+
+import numpy as np
 
 from core.cell.collections.builtin_functors import Sub
 from core.cell.operands.operand import Operand
 from core.cell.operands.constant import ONE, ZERO
 
 
-class Variable(Operand):
+class BaseVariable(Operand, metaclass=ABCMeta):
     def __init__(self, value):
         super().__init__(0)
         self.value = value
@@ -22,8 +25,9 @@ class Variable(Operand):
     def __invert__(self):
         return None  # Variables do not have an inverse
 
-    def clone(self) -> "Variable":
-        return Variable(self.value)
+    @abstractmethod
+    def clone(self) -> "BaseVariable":
+        pass
 
     def to_python(self) -> str:
         return f"x[{self.value}]"
@@ -32,3 +36,37 @@ class Variable(Operand):
         if by_weights:
             return self.d_w(index)
         return self.d(index)
+
+
+class AdaptiveConstant(BaseVariable):
+    def __init__(self, value, constant):
+        super().__init__(value)
+        self.__constant = constant
+
+    def clone(self) -> "AdaptiveConstant":
+        return AdaptiveConstant(self.value, self.__constant)
+
+    def __call__(self, args):
+        arg = args[self.value]
+        if isinstance(arg, np.ndarray):
+            return np.ones_like(arg) * self.__constant
+        return self.__constant
+
+    def to_python(self) -> str:
+        return f"ADACON_{self.value}[{self.__constant}]"
+
+
+class Variable(BaseVariable):
+    def __init__(self, value):
+        super().__init__(value)
+        self.one = AdaptiveConstant(value, 1.0)
+        self.zero = AdaptiveConstant(value, 0.0)
+
+    def clone(self) -> "Variable":
+        return Variable(self.value)
+
+    def d(self, var_index) -> Optional[Operand]:
+        return self.one if self.value == var_index else self.zero
+
+    def d_w(self, var_index) -> Optional[Operand]:
+        return self.zero

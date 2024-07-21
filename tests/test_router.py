@@ -8,7 +8,7 @@ from core.cell.operands.weight import Weight
 from core.organism.router import Router
 
 
-class TestCell(TestCase):
+class TestRouter(TestCase):
 
     def test_derivative_router(self):
         roots = [
