@@ -48,3 +48,26 @@ class Function(Operand):
 
     def derive(self, index, by_weight=True):
         return None
+
+
+class PassThrough(Operand):
+    def __invert__(self):
+        pass
+
+    def __init__(self, arity):
+        super().__init__(arity)
+
+    def __call__(self, args):
+        return args
+
+    def derive(self, index, by_weight=True):
+        return self
+
+    def set_weights(self, new_weights):
+        pass
+
+    def clone(self):
+        return PassThrough(self.arity)
+
+    def to_python(self) -> str:
+        return "<->"

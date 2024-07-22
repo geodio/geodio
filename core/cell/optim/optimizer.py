@@ -59,12 +59,22 @@ class Optimization:
         :return: A numpy array of gradients.
         """
         gradients = np.array([
-            self.fit_func.gradient(
-                self.cell, self.input, self.desired_output, j
-            )
-            for j in range(len(self.weights))
+            self.calculate_gradient(j) for j in range(len(self.weights))
         ])
         return gradients
+
+    def calculate_gradient(self, j):
+        """
+        Calculate the gradient of the fitness function with respect to one
+        weight.
+
+        :param j: The index of the weight.
+        :return: The gradient for the weight with index j.
+        """
+        gradient = self.fit_func.gradient(
+            self.cell, self.input, self.desired_output, j
+        )
+        return gradient
 
     def update_weights(self, gradients):
         """
@@ -76,9 +86,19 @@ class Optimization:
             if weight.is_locked:
                 continue
             gradient = gradients[i]
-            gradient = self.__handle_exploding_vanishing(gradient, i)
+            self.update_weight(i, gradient)
 
-            self.__update_weight(gradient, i, weight)
+    def update_weight(self, w_index, gradient):
+        """
+        Update the weight based on the calculated gradients.
+
+        :param w_index: The index of the weight.
+        :param gradient: The calculated gradient for the weight with index
+        w_index.
+        :return: None
+        """
+        gradient = self.__handle_exploding_vanishing(gradient, w_index)
+        self.__update_weight(gradient, w_index, self.weights[w_index])
 
     def __update_weight(self, gradient, i, weight):
         """
@@ -174,8 +194,22 @@ class Optimization:
                                                       new_weights,
                                                       self.ewc_importance):
             ewc_loss += self.ewc_lambda * importance * (
-                        new_weight - old_weight) ** 2
+                    new_weight - old_weight) ** 2
         return ewc_loss
+
+
+class RollingOptimization(Optimization):
+    def optimize(self):
+        for w_index in range(len(self.weights)):
+            self.learning_rate = self._initial_learning_rate
+            if self.weights[w_index].is_locked:
+                continue
+            print("OPTIMIZING WEIGHT WITH INDEX", w_index)
+            for iteration in range(self.max_iter):
+                gradient = self.calculate_gradient(w_index)
+                self.update_weight(w_index, gradient)
+                if self.cell.error < 1e-20:
+                    break
 
 
 class Optimizer:
@@ -198,8 +232,9 @@ class Optimizer:
     def make_optimizer(self, cell, optim_args, ewc_lambda=0.0,
                        l2_lambda=0.0):
         optim_args = optim_args.clone()
-        optimizer = Optimization(cell, optim_args, self.risk,
-                                 ewc_lambda=ewc_lambda, l2_lambda=l2_lambda)
+        optimizer = RollingOptimization(cell, optim_args, self.risk,
+                                        ewc_lambda=ewc_lambda,
+                                        l2_lambda=l2_lambda)
         return optimizer
 
     def clone(self):

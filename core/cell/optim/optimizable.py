@@ -56,13 +56,9 @@ class OptimizableOperand(Operand, Optimizable, metaclass=ABCMeta):
         return weights
 
     def set_weights(self, new_weights):
-        offset = 0
-        for child in self.get_sub_items():
-            child_weights = child.get_weights()
-            num_weights = len(child_weights)
-            if num_weights > 0:
-                child.set_weights(new_weights[offset:offset + num_weights])
-                offset += num_weights
+        past_weights = self.get_weights()
+        for new, past in zip(new_weights, past_weights):
+            new.set(past)
 
     def get_sub_items(self):
         return self.children

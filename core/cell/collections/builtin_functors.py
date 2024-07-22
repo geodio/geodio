@@ -1,9 +1,13 @@
 import sys
+import time
 
 import numpy as np
 
 from core.cell.collections.functors import Functor, CollectionBasedFunctors
 from core.cell.operands.constant import Constant
+from core.cell.operands.operand import Operand
+from core.cell.optim.optimizable import OptimizableOperand
+from core.cell.optim.optimization_args import OptimizationArgs
 
 
 def clean_number(x):
@@ -49,7 +53,9 @@ class Prod(BuiltinFunctor):
         super().__init__(children, "prod", 2)
 
     def __call__(self, x):
-        return clean_number(self.children[0](x) * self.children[1](x))
+        a = self.children[0](x)
+        b = self.children[1](x)
+        return clean_number(a * b)
 
     def derive(self, index, by_weights=True):
         return Add(
@@ -76,6 +82,7 @@ class Dot(BuiltinFunctor):
     def __call__(self, x):
         a = self.children[0](x)
         b = self.children[1](x)
+
         r = clean_number(np.dot(a, b))
         return r
 
@@ -252,3 +259,61 @@ BUILTIN_FUNCTORS.add_functor(Log([]))
 BUILTIN_FUNCTORS.add_functor(Div([]))
 BUILTIN_FUNCTORS.add_functor(Sub([]))
 BUILTIN_FUNCTORS.add_functor(Power([]))
+
+class T(OptimizableOperand):
+    def __init__(self, arity, x: Operand):
+        super().__init__(arity)
+        self.x = x
+
+    def __call__(self, x):
+        return self.x(x).T
+
+    def derive(self, index, by_weight=True):
+        pass
+
+    def clone(self):
+        return T(self.arity, self.x.clone())
+
+    def to_python(self) -> str:
+        return self.x.to_python() + ".T"
+
+    def get_sub_items(self):
+        return [self.x]
+
+    def optimize(self, args: OptimizationArgs):
+        pass
+
+
+class Linker(OptimizableOperand):
+
+    def __init__(self, arity, f: Operand, g: Operand):
+        super().__init__(arity)
+        self.f = f
+        self.g = g
+
+    def __call__(self, x):
+        return self.f(self.g(x))
+
+    def derive(self, index, by_weight=True):
+        """
+        (f(g(x)))' = f'(g(x)) * g'(x)
+        :param index:
+        :param by_weight:
+        :return:
+        """
+        chain = Linker(self.arity, self.f.derive(index, by_weight), self.g)
+        chained = T(1, self.g.derive(index, by_weight))
+        derivative = Prod([chain, chained])
+        return derivative
+
+    def clone(self):
+        return Linker(self.arity, self.f.clone(), self.g.clone())
+
+    def to_python(self) -> str:
+        return self.f.to_python() + "(" + self.g.to_python() + ")"
+
+    def get_sub_items(self):
+        return [self.f, self.g]
+
+    def optimize(self, args: OptimizationArgs):
+        pass
