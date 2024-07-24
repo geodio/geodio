@@ -1,5 +1,4 @@
 import sys
-import time
 
 import numpy as np
 
@@ -28,6 +27,17 @@ class BuiltinFunctor(Functor):
         self.children = children
         self.value = self
 
+    def get_output_dim(self):
+        # TODO consider tuple output
+        max_dim = 0
+        for child in self.children:
+            output_dim = child.get_output_dim()
+            if isinstance(output_dim, int):
+                max_dim = max(max_dim, output_dim)
+            elif isinstance(output_dim, tuple):
+                max_dim = max(max_dim, len(output_dim))
+        return max_dim
+
 
 class Add(BuiltinFunctor):
     def __init__(self, children, arity):
@@ -55,7 +65,11 @@ class Prod(BuiltinFunctor):
     def __call__(self, x):
         a = self.children[0](x)
         b = self.children[1](x)
-        return clean_number(a * b)
+        try:
+            return clean_number(a * b)
+        except:
+            a = a[:, np.newaxis]
+            return clean_number(a * b)
 
     def derive(self, index, by_weights=True):
         return Add(
@@ -97,8 +111,34 @@ class Dot(BuiltinFunctor):
             2
         )
 
-    def clone(self) -> "Prod":
-        return Prod([child.clone() for child in self.children])
+    def clone(self) -> "Dot":
+        return Dot([child.clone() for child in self.children])
+
+
+class Outer(BuiltinFunctor):
+    def __init__(self, children):
+        super().__init__(children, "outer_prod", 2)
+
+    def __call__(self, x):
+        a = self.children[0](x)
+        b = self.children[1](x)
+
+        r = clean_number(np.outer(a, b))
+        return r
+
+    def derive(self, index, by_weights=True):
+        return Add(
+            [
+                Outer([self.children[0].derive(index, by_weights),
+                       self.children[1]]),
+                Outer([self.children[0], self.children[1].derive(index,
+                                                                 by_weights)])
+            ],
+            2
+        )
+
+    def clone(self) -> "Outer":
+        return Outer([child.clone() for child in self.children])
 
 
 class Max(BuiltinFunctor):
@@ -260,6 +300,7 @@ BUILTIN_FUNCTORS.add_functor(Div([]))
 BUILTIN_FUNCTORS.add_functor(Sub([]))
 BUILTIN_FUNCTORS.add_functor(Power([]))
 
+
 class T(OptimizableOperand):
     def __init__(self, arity, x: Operand):
         super().__init__(arity)
@@ -286,13 +327,14 @@ class T(OptimizableOperand):
 
 class Linker(OptimizableOperand):
 
-    def __init__(self, arity, f: Operand, g: Operand):
+    def __init__(self, arity, f: Operand, g: Operand, input_shape=0):
         super().__init__(arity)
         self.f = f
         self.g = g
+        self.input_shape = input_shape
 
     def __call__(self, x):
-        return self.f(self.g(x))
+        return self.f([self.g(x)])
 
     def derive(self, index, by_weight=True):
         """
@@ -301,9 +343,31 @@ class Linker(OptimizableOperand):
         :param by_weight:
         :return:
         """
-        chain = Linker(self.arity, self.f.derive(index, by_weight), self.g)
-        chained = T(1, self.g.derive(index, by_weight))
-        derivative = Prod([chain, chained])
+        chain = Linker(self.arity, self.f.derive(0, False), self.g)
+        chained = self.g.derive(index, by_weight)
+        prepared_input = 0
+        if self.input_shape != 0:
+            prepared_input = np.zeros(self.input_shape)
+        prepared_args = [prepared_input for _ in range(self.arity)]
+        chain_val = chain(prepared_args)
+        chained_val = chained(prepared_args)
+        # print("Chain Val Shape:", np.shape(chain_val))
+        # print("Chained Val Shape:", np.shape(chained_val))
+        if np.isscalar(chain_val) and np.isscalar(chained_val):
+            derivative = Dot([chain, chained])
+        elif np.isscalar(chain_val) or np.isscalar(chained_val):
+            # One is scalar, the other is a vector/matrix
+            if np.isscalar(chain_val):
+                derivative = Outer([chain, chained])
+            else:
+                derivative = Outer([chained, chain])
+        else:
+            # Both are vectors/matrices
+            if chain_val.shape[-1] == chained_val.shape[0]:
+                derivative = Prod([chain, chained])
+            else:
+                derivative = Outer([chain, chained])
+
         return derivative
 
     def clone(self):

@@ -79,3 +79,57 @@ class CheckpointedMSE(MSE):
         # print("LOSS_CHECKPOINT_MSE_GRADIENT", X, Y, predicted)
         result = self.compute_gradient(Y, gradient_results, predicted)
         return result
+
+
+class MSEMultivariate(MSE):
+    def compute_fitness(self, Y, predicted):
+        Y = np.array(Y)
+        predicted = np.array(predicted)
+        squared_diff = (Y - predicted) ** 2
+        mse = np.mean(squared_diff)
+        if np.isnan(mse) or np.isinf(mse):
+            mse = sys.maxsize / 2
+        return mse
+
+    def gradient(self, cell: Operand, X, Y, index, by_weight=True):
+        # Flatten the nested input_data and desired_output for processing
+        X_flat = [x[0] for x in X]
+        Y_flat = [y[0] for y in Y]
+
+        predicted = get_predicted(X, cell)
+        delta_f_w_j = cell.derive(index, by_weight)
+        jacobian_results = np.array([delta_f_w_j(x_i) for x_i in X])
+
+        result = self.compute_multivariate_gradient(Y_flat, jacobian_results, predicted, len(X_flat))
+        return result
+
+    def compute_multivariate_gradient(self, Y, jacobian_results, predicted, train_sets):
+        Y = np.array(Y)
+        predicted = np.array(predicted)
+        jacobian_results = np.array(jacobian_results)
+
+        predicted = predicted.reshape(Y.shape)
+        diff = Y - predicted
+
+        # Print shapes for debugging
+        # print("PREDICTED", predicted.shape)
+        # print("Y", Y.shape)
+        # print("JACOBIAN", jacobian_results.shape)
+        # print("DIFF", diff.shape)
+
+        # Ensure correct dimensions for einsum
+        if jacobian_results.ndim == 3 and diff.ndim == 3:
+            per_instance_grad = -2 * np.einsum('ijk,ik->ij', diff,
+                                               jacobian_results)
+        elif jacobian_results.ndim == 2 and diff.ndim == 2:
+            per_instance_grad = -2 * np.einsum('ij,ij->i', diff,
+                                               jacobian_results)
+        else:
+            diff = diff[:, :, np.newaxis]
+            per_instance_grad = -2 * (diff * jacobian_results)
+
+        gradient = np.mean(per_instance_grad, axis=0)
+
+        if np.isnan(gradient).any() or np.isinf(gradient).any():
+            gradient = np.zeros_like(gradient)
+        return gradient

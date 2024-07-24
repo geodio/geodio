@@ -116,7 +116,7 @@ class Optimization:
         )
         # Regularization term for L2
         l2_term = self.l2_lambda * weight.get()
-
+        # print("INSIDE OPTIMIZATION, __update_weight", weight, gradient)
         weight.set(
             weight.get() - self.learning_rate * (gradient + ewc_term + l2_term)
         )
@@ -204,7 +204,7 @@ class RollingOptimization(Optimization):
             self.learning_rate = self._initial_learning_rate
             if self.weights[w_index].is_locked:
                 continue
-            print("OPTIMIZING WEIGHT WITH INDEX", w_index)
+            # print("OPTIMIZING WEIGHT WITH INDEX", w_index)
             for iteration in range(self.max_iter):
                 gradient = self.calculate_gradient(w_index)
                 self.update_weight(w_index, gradient)

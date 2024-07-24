@@ -1,18 +1,18 @@
 import sys
-from typing import Union, List
+from typing import Union
 
 import numpy as np
 
-from core.cell.collections.builtin_functors import Prod, Add, Dot, Sub, Linker
-from core.cell.operands.constant import ONE
+from core.cell.collections.builtin_functors import Add, Dot, Linker
 from core.cell.operands.function import Function, PassThrough
-from core.cell.operands.operand import Operand
-from core.cell.operands.variable import Variable
+from core.cell.operands.variable import Variable, AdaptiveConstant
 from core.cell.operands.weight import AbsWeight, t_weight
-from core.cell.optim.loss import MSE, LossFunction
+from core.cell.optim.loss import MSEMultivariate
 from core.cell.optim.optimizable import OptimizableOperand
 from core.cell.optim.optimization_args import OptimizationArgs
 from core.cell.optim.optimizer import Optimizer
+from core.organism.activation_function import SigmoidActivation, \
+    ActivationFunction
 
 
 class ShapedWeight(AbsWeight):
@@ -65,16 +65,79 @@ class ShapedWeight(AbsWeight):
         return str(self.__weight)
 
 
+class LinearTransformation(OptimizableOperand):
+    def __init__(self, dim_in, dim_out, optimizer=None):
+        super().__init__(arity=1, optimizer=optimizer)
+        self.dim_in = dim_in
+        self.dim_out = dim_out
+        self.weight = ShapedWeight((dim_out, dim_in),
+                                   np.random.randn(dim_out, dim_in))
+        self.bias = ShapedWeight((dim_out,), np.zeros(dim_out))
+
+    def __call__(self, args):
+        X = np.array(args[0])
+        return np.dot(self.weight.get(), X) + self.bias.get()
+
+    def derive(self, index, by_weights=True):
+        if by_weights:
+            if index == self.weight.w_index:  # Derivative with respect to W
+                return self._derive_w()
+            elif index == self.bias.w_index:  # Derivative with respect to B
+                return self._derive_b()
+            else:
+                return ShapedWeight((self.dim_out,), np.zeros(self.dim_out))
+        else:  # Derivative with respect to X
+            return self._derive_x()
+
+    def _derive_w(self):
+        # The derivative of W * X + B with respect to W is X.
+        def dW(args):
+            X = np.array(args[0])
+            # Repeat X to match the shape of W
+            return np.tile(X, (self.dim_out, 1))
+
+        return Function(1, dW, [PassThrough(1)])
+
+    def _derive_x(self):
+        # The derivative of W * X + B with respect to X is W.
+        def dX(args):
+            return self.weight.get()
+
+        return Function(1, dX, [PassThrough(1)])
+
+    def _derive_b(self):
+        # The derivative of W * X + B with respect to B is 1.
+        def dB(args):
+            return np.ones(self.dim_out)
+
+        return Function(1, dB, [PassThrough(1)])
+
+    def clone(self):
+        cloned = LinearTransformation(self.dim_in, self.dim_out,
+                                      self.optimizer.clone() if self.optimizer else None)
+        cloned.weight = self.weight.clone()
+        cloned.bias = self.bias.clone()
+        return cloned
+
+    def to_python(self) -> str:
+        return f"np.dot({self.weight.to_python()}, X) + {self.bias.to_python()}"
+
+    def get_sub_items(self):
+        return [self.weight, self.bias]
+
+    def optimize(self, args):
+        self.optimizer(self, args)
+
+
 class Node(OptimizableOperand):
-    def __init__(self, arity, dim_in, dim_out, activ_fun, optimizer=None,
-                 nxt=None):
+    def __init__(self, arity, dim_in, dim_out, activ_fun: ActivationFunction,
+                 optimizer=None):
         super().__init__(arity, optimizer)
         self.arity = arity
         self.dim_in = dim_in
         self.dim_out = dim_out
         self.activ_fun = activ_fun
         self.optimizer = optimizer
-        self.nxt = nxt
 
         self.weight = ShapedWeight(
             (dim_out, dim_in), np.random.randn(dim_out, dim_in)
@@ -87,16 +150,14 @@ class Node(OptimizableOperand):
         self.z = None
         self.activated_output = None
         self.derivative_cache = {}
+        self.output_dimensionality = dim_out
 
     def __call__(self, args):
         try:
             self.input_data = np.array(args[0])
             self.z = np.dot(self.weight.get(),
                             self.input_data) + self.bias.get()
-            self.activated_output = self.activ_fun(self.z)
-            if self.nxt:
-                to_be_returned = self.nxt([self.activated_output])
-                return to_be_returned
+            self.activated_output = self.activ_fun([self.z])
             return self.activated_output
         except ValueError:
             return self.activated_output
@@ -105,11 +166,7 @@ class Node(OptimizableOperand):
         self.optimizer(self, args)
 
     def get_sub_items(self):
-        # return [self.weight, self.bias, self.activ_fun]
-        if self.nxt is None:
-            return [self.weight, self.bias]
-        else:
-            return [self.weight, self.nxt, self.bias]
+        return [self.weight, self.bias]
 
     def to_python(self) -> str:
         return self.activ_fun.to_python() + "{\n" + (
@@ -120,49 +177,26 @@ class Node(OptimizableOperand):
     def derive(self, index, by_weights=True):
         derivative_id = f'{"W" if by_weights else "X"}_{index}'
         if derivative_id not in self.derivative_cache:
-            if self.nxt is not None:
-                derivative = self.derive_chained(index, by_weights)
-            else:
-                derivative = self.derive_unchained(index, by_weights)
+            derivative = self.derive_unchained(index, by_weights)
             self.derivative_cache[derivative_id] = derivative
         return self.derivative_cache[derivative_id]
 
-    def derive_chained(self, index, by_weights=True):
-        self.get_weights()
-        clone = self.clone()
-        clone.nxt = None
-        clone.weight = self.weight
-        clone.bias = self.bias
-        chained = Linker(1, self.nxt, clone)
-        return chained
-
     def derive_unchained(self, index, by_weights=True):
-        activ_fun_derived = self.activ_fun.derive(index, by_weights)
-        clone = self.clone()
-        clone.nxt = None
-        clone.activ_fun = activ_fun_derived
-        clone.weight = self.weight
-        clone.bias = self.bias
-
-        function = Dot([self.weight, Variable(0)])
-        z_function = Add(
-            [function, self.bias], 1
-        )
-        link = Linker(1, self.activ_fun, z_function)
-
+        z_function = LinearTransformation(self.dim_in, self.dim_out)
+        z_function.weight = self.weight
+        z_function.bias = self.bias
+        link = Linker(1, self.activ_fun, z_function, (self.dim_in,))
         unchained = link.derive(index, by_weights)
+        print("Unchained Derivative Shape:",
+              unchained([np.zeros(self.dim_in)]).shape)
         return unchained
 
     def clone(self):
         cloned = Node(self.arity, self.dim_in, self.dim_out,
                       self.activ_fun.clone(),
-                      self.optimizer.clone() if self.optimizer else None,
-                      self.nxt.clone() if self.nxt else None)
+                      self.optimizer.clone() if self.optimizer else None)
         cloned.weight = self.weight.clone()
         cloned.bias = self.bias.clone()
-        if self.nxt:
-            cloned.nxt.weight = self.nxt.weight
-            cloned.nxt.bias = self.nxt.bias
         return cloned
 
 
@@ -177,14 +211,9 @@ class BackpropagationOptimizer(Optimizer):
         self._update_weights(node, args.learning_rate)
 
     def _compute_gradients(self, node: Node, args: OptimizationArgs):
-        if node.nxt and node.nxt.optimizer.weight_grad:
-            next_grad = np.dot(
-                node.nxt.weight.get().T, node.nxt.optimizer.weight_grad
-            )
-        else:
-            next_grad = args.loss_function.gradient(
-                node, node.activated_output, args.desired_output, 1
-            )
+        next_grad = args.loss_function.gradient(
+            node, node.activated_output, args.desired_output, 1
+        )
 
         local_grad = node.activ_fun.derive(node.z)
         delta = next_grad * local_grad
@@ -200,65 +229,17 @@ class BackpropagationOptimizer(Optimizer):
         return BackpropagationOptimizer()
 
 
-# Example usage
-class SimpleActivation(OptimizableOperand):
-    def __init__(self, arity):
-        super().__init__(arity)
-
-    def __call__(self, x):
-        return np.maximum(0, x)  # ReLU activation
-
-    def clone(self):
-        return SimpleActivation(self.arity)
-
-    def derive(self, index, by_weights=True):
-        # Derivative of ReLU
-        return lambda x: np.where(x > 0, 1, 0)
-
-    def optimize(self, args: OptimizationArgs):
-        pass
-
-    def to_python(self) -> str:
-        return "SimpleActivation()"
-
-
-class SigmoidActivation(Operand):
-    def __init__(self, arity):
-        super().__init__(arity)
-
-        def d_sigmoid(z):
-            x = 1 / (1 + np.exp(-z))
-            return x * (1 - x)
-
-        self._derivative = Function(1, d_sigmoid, [PassThrough(1)])
-
-    def __call__(self, args):
-        return 1 / (1 + np.exp(-args))
-
-    def __invert__(self):
-        pass
-
-    def clone(self) -> "Operand":
-        return SigmoidActivation(self.arity)
-
-    def to_python(self) -> str:
-        return "sigmoid"
-
-    def derive(self, index, by_weights=True):
-        return self._derivative
-
-
 def main():
     dim_in = 5
     dim_out = 3
     arity = 1
 
-    activation_function = SigmoidActivation(arity)
+    activation_function = SigmoidActivation()
 
     node2 = Node(arity, dim_out, dim_out, activation_function,
                  optimizer=Optimizer())
     node1 = Node(arity, dim_in, dim_out, activation_function,
-                 optimizer=Optimizer(), nxt=node2)
+                 optimizer=Optimizer())
     node1.set_optimization_risk(True)
     input_data = [
         [np.array([1, 1, 1, 1, 1])],
@@ -272,11 +253,12 @@ def main():
         [np.array([1.0, 0.0, 1.0])],
         [np.array([0.0, 0.0, 0.0])]
     ]
+    loss_function = MSEMultivariate()
 
     optimization_args = OptimizationArgs(
         inputs=input_data,
         desired_output=desired_output,
-        loss_function=MSE(),
+        loss_function=loss_function,
         learning_rate=0.1,
         max_iter=10000,
         min_error=sys.maxsize
@@ -284,11 +266,11 @@ def main():
     output_before = [node1(input_data_i) for input_data_i in input_data]
     print("Weights before optimization:")
     print([[w, w.w_index] for w in node1.get_weights()])
-    print(MSE().evaluate(node1, input_data, desired_output))
+    print(loss_function.evaluate(node1, input_data, desired_output))
     node1.optimize(optimization_args)
     print("Weights after optimization:")
     print([[w, w.w_index] for w in node1.get_weights()])
-    print(MSE().evaluate(node1, input_data, desired_output))
+    print(loss_function.evaluate(node1, input_data, desired_output))
     output = [node1(input_data_i) for input_data_i in input_data]
 
     print("            Input         :", input_data)

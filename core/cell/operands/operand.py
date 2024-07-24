@@ -13,6 +13,7 @@ class Operand(ABC, Derivable, WeightDerivable, metaclass=ABCMeta):
         self.children = []
         self.error = sys.maxsize
         self.id = 0
+        self.output_dimensionality = 0
 
     @abstractmethod
     def __call__(self, args):
@@ -87,3 +88,6 @@ class Operand(ABC, Derivable, WeightDerivable, metaclass=ABCMeta):
 
     def __repr__(self):
         return self.to_python()
+
+    def get_output_dim(self):
+        return self.output_dimensionality

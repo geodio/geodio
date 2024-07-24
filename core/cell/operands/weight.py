@@ -109,6 +109,12 @@ class AbsWeight(Operand, metaclass=ABCMeta):
 
     is_locked = property(lambda self: self._locked)
 
+    def get_output_dim(self):
+        if np.isscalar(self.get()):
+            return 0
+        else:
+            return self.get().shape
+
 
 class Weight(AbsWeight):
     def __init__(self, weight: Union[np.ndarray, float] = 0.0,
