@@ -116,18 +116,15 @@ class MSEMultivariate(MSE):
         # print("Y", Y.shape)
         # print("JACOBIAN", jacobian_results.shape)
         # print("DIFF", diff.shape)
-
-        # Ensure correct dimensions for einsum
         if jacobian_results.ndim == 3 and diff.ndim == 3:
             per_instance_grad = -2 * np.einsum('ijk,ik->ij', diff,
                                                jacobian_results)
         elif jacobian_results.ndim == 2 and diff.ndim == 2:
-            per_instance_grad = -2 * np.einsum('ij,ij->i', diff,
+            per_instance_grad = -2 * np.matmul(diff.T,
                                                jacobian_results)
         else:
             diff = diff[:, :, np.newaxis]
-            per_instance_grad = -2 * (diff * jacobian_results)
-
+            per_instance_grad = -2 * diff * jacobian_results
         gradient = np.mean(per_instance_grad, axis=0)
 
         if np.isnan(gradient).any() or np.isinf(gradient).any():

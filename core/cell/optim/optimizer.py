@@ -58,9 +58,9 @@ class Optimization:
 
         :return: A numpy array of gradients.
         """
-        gradients = np.array([
+        gradients = [
             self.calculate_gradient(j) for j in range(len(self.weights))
-        ])
+        ]
         return gradients
 
     def calculate_gradient(self, j):
@@ -114,12 +114,13 @@ class Optimization:
         ewc_term = self.ewc_lambda * self.ewc_importance[i] * (
                 weight.get() - self.prev_weights[i]
         )
+        gradient = gradient.reshape(weight.get().shape)
         # Regularization term for L2
         l2_term = self.l2_lambda * weight.get()
         # print("INSIDE OPTIMIZATION, __update_weight", weight, gradient)
-        weight.set(
-            weight.get() - self.learning_rate * (gradient + ewc_term + l2_term)
-        )
+        new_weight = weight.get() - self.learning_rate * (
+                    gradient + ewc_term + l2_term)
+        weight.set(new_weight)
         y_pred = [self.cell(x_inst) for x_inst in self.input]
         self.cell.error = self.fit_func(self.desired_output, y_pred)
         self.learning_rate *= self.decay_rate
@@ -199,6 +200,7 @@ class Optimization:
 
 
 class RollingOptimization(Optimization):
+    # TODO REMOVE
     def optimize(self):
         for w_index in range(len(self.weights)):
             self.learning_rate = self._initial_learning_rate
@@ -232,7 +234,7 @@ class Optimizer:
     def make_optimizer(self, cell, optim_args, ewc_lambda=0.0,
                        l2_lambda=0.0):
         optim_args = optim_args.clone()
-        optimizer = RollingOptimization(cell, optim_args, self.risk,
+        optimizer = Optimization(cell, optim_args, self.risk,
                                         ewc_lambda=ewc_lambda,
                                         l2_lambda=l2_lambda)
         return optimizer

@@ -16,7 +16,6 @@ class Cell(GeneExpressedOptimizableOperand):
         super().__init__(arity, max_depth, reproduction_policy, optimizer)
         self.weight_cache = None
         self.root = root
-        self.derivative_cache = {}
 
     def nodes(self):
         return self.root.children
@@ -58,18 +57,10 @@ class Cell(GeneExpressedOptimizableOperand):
     def set_weights(self, new_weights):
         self.root.set_weights(new_weights)
 
-    def derive(self, var_index, by_weights=True):
-        derivative_id = 'X'
-        if by_weights:
-            derivative_id = 'W'
-        derivative_id += f'_{var_index}'
-
-        if self.derivative_cache.get(derivative_id) is None:
-            derivative_root = self.root.derive(var_index, by_weights)
-            derivative = Cell(derivative_root, self.arity, 0)
-            self.derivative_cache[derivative_id] = derivative
-            return derivative
-        return self.derivative_cache[derivative_id]
+    def derive_unchained(self, var_index, by_weights=True):
+        derivative_root = self.root.derive(var_index, by_weights)
+        derivative = Cell(derivative_root, self.arity, 0)
+        return derivative
 
     def __invert__(self):
         return ~self.root

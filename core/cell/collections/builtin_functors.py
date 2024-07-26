@@ -115,30 +115,31 @@ class Dot(BuiltinFunctor):
         return Dot([child.clone() for child in self.children])
 
 
-class Outer(BuiltinFunctor):
+class Matmul(BuiltinFunctor):
     def __init__(self, children):
-        super().__init__(children, "outer_prod", 2)
+        super().__init__(children, "matmul", 2)
 
     def __call__(self, x):
         a = self.children[0](x)
         b = self.children[1](x)
-
-        r = clean_number(np.outer(a, b))
+        if np.ndim(b) == 1:
+            b = [b]
+        r = a @ b
         return r
 
     def derive(self, index, by_weights=True):
         return Add(
             [
-                Outer([self.children[0].derive(index, by_weights),
-                       self.children[1]]),
-                Outer([self.children[0], self.children[1].derive(index,
-                                                                 by_weights)])
+                Matmul([self.children[0].derive(index, by_weights),
+                        self.children[1]]),
+                Matmul([self.children[0], self.children[1].derive(index,
+                                                                  by_weights)])
             ],
             2
         )
 
-    def clone(self) -> "Outer":
-        return Outer([child.clone() for child in self.children])
+    def clone(self) -> "Matmul":
+        return Matmul([child.clone() for child in self.children])
 
 
 class Max(BuiltinFunctor):
@@ -307,9 +308,15 @@ class T(OptimizableOperand):
         self.x = x
 
     def __call__(self, x):
-        return self.x(x).T
+        out = self.x(x)
+        if np.ndim(out) == 1:
+            out = out[:, np.newaxis]
+            return out
+        r = out.T
 
-    def derive(self, index, by_weight=True):
+        return r
+
+    def derive_unchained(self, index, by_weight=True):
         pass
 
     def clone(self):
@@ -327,16 +334,19 @@ class T(OptimizableOperand):
 
 class Linker(OptimizableOperand):
 
-    def __init__(self, arity, f: Operand, g: Operand, input_shape=0):
+    def __init__(self, arity, f: Operand, g: Operand, input_shape=0,
+                 mark=False):
         super().__init__(arity)
         self.f = f
         self.g = g
         self.input_shape = input_shape
+        self.mark = mark
 
     def __call__(self, x):
-        return self.f([self.g(x)])
+        x_ = [self.g(x)]
+        return self.f(x_)
 
-    def derive(self, index, by_weight=True):
+    def derive_unchained(self, index, by_weight=True):
         """
         (f(g(x)))' = f'(g(x)) * g'(x)
         :param index:
@@ -351,22 +361,11 @@ class Linker(OptimizableOperand):
         prepared_args = [prepared_input for _ in range(self.arity)]
         chain_val = chain(prepared_args)
         chained_val = chained(prepared_args)
-        # print("Chain Val Shape:", np.shape(chain_val))
-        # print("Chained Val Shape:", np.shape(chained_val))
-        if np.isscalar(chain_val) and np.isscalar(chained_val):
-            derivative = Dot([chain, chained])
-        elif np.isscalar(chain_val) or np.isscalar(chained_val):
-            # One is scalar, the other is a vector/matrix
-            if np.isscalar(chain_val):
-                derivative = Outer([chain, chained])
-            else:
-                derivative = Outer([chained, chain])
-        else:
-            # Both are vectors/matrices
-            if chain_val.shape[-1] == chained_val.shape[0]:
-                derivative = Prod([chain, chained])
-            else:
-                derivative = Outer([chain, chained])
+        print("Chain Val Shape:", np.shape(chain_val))
+        print("Chained Val Shape:", np.shape(chained_val))
+        if self.mark:
+            print("!!!!!!!!!!")
+        derivative = Matmul([T(1, chain), chained])
 
         return derivative
 
@@ -380,4 +379,4 @@ class Linker(OptimizableOperand):
         return [self.f, self.g]
 
     def optimize(self, args: OptimizationArgs):
-        pass
+        self.optimizer(self, args)

@@ -35,5 +35,5 @@ class TestNode(TestCase):
         gradient_0 = loss_function.gradient(node, input_data,
                                             desired_output, 0)
         d0 = node.derive(0)
-        out0 = d0(input_data[0]).T
-        self.assertEqual(out0.shape, (5, 3))
+        out0 = d0(input_data[0])
+        self.assertEqual(out0.shape, (3, 5))

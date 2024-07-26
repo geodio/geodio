@@ -3,9 +3,9 @@ from typing import Union
 
 import numpy as np
 
-from core.cell.collections.builtin_functors import Add, Dot, Linker
+from core.cell.collections.builtin_functors import Linker
+from core.cell.operands.constant import ZERO
 from core.cell.operands.function import Function, PassThrough
-from core.cell.operands.variable import Variable, AdaptiveConstant
 from core.cell.operands.weight import AbsWeight, t_weight
 from core.cell.optim.loss import MSEMultivariate
 from core.cell.optim.optimizable import OptimizableOperand
@@ -78,14 +78,20 @@ class LinearTransformation(OptimizableOperand):
         X = np.array(args[0])
         return np.dot(self.weight.get(), X) + self.bias.get()
 
-    def derive(self, index, by_weights=True):
+    def derive_unchained(self, index, by_weights=True):
         if by_weights:
             if index == self.weight.w_index:  # Derivative with respect to W
                 return self._derive_w()
             elif index == self.bias.w_index:  # Derivative with respect to B
                 return self._derive_b()
             else:
-                return ShapedWeight((self.dim_out,), np.zeros(self.dim_out))
+                # TODO
+                sw = ShapedWeight(
+                    (self.dim_out, ),
+                    np.zeros((self.dim_out, ))
+                )
+                sw.lock()
+                return sw
         else:  # Derivative with respect to X
             return self._derive_x()
 
@@ -94,7 +100,7 @@ class LinearTransformation(OptimizableOperand):
         def dW(args):
             X = np.array(args[0])
             # Repeat X to match the shape of W
-            return np.tile(X, (self.dim_out, 1))
+            return X  # np.tile(X, (self.dim_out, 1))
 
         return Function(1, dW, [PassThrough(1)])
 
@@ -108,7 +114,7 @@ class LinearTransformation(OptimizableOperand):
     def _derive_b(self):
         # The derivative of W * X + B with respect to B is 1.
         def dB(args):
-            return np.ones(self.dim_out)
+            return np.ones(1)
 
         return Function(1, dB, [PassThrough(1)])
 
@@ -149,14 +155,12 @@ class Node(OptimizableOperand):
         self.input_data = None
         self.z = None
         self.activated_output = None
-        self.derivative_cache = {}
         self.output_dimensionality = dim_out
 
     def __call__(self, args):
         try:
             self.input_data = np.array(args[0])
-            self.z = np.dot(self.weight.get(),
-                            self.input_data) + self.bias.get()
+            self.z = self.weight.get() @ self.input_data + self.bias.get()
             self.activated_output = self.activ_fun([self.z])
             return self.activated_output
         except ValueError:
@@ -173,13 +177,6 @@ class Node(OptimizableOperand):
                 "\ty * " + self.weight.to_python() + " + " +
                 self.bias.to_python()
         ) + "\n}"
-
-    def derive(self, index, by_weights=True):
-        derivative_id = f'{"W" if by_weights else "X"}_{index}'
-        if derivative_id not in self.derivative_cache:
-            derivative = self.derive_unchained(index, by_weights)
-            self.derivative_cache[derivative_id] = derivative
-        return self.derivative_cache[derivative_id]
 
     def derive_unchained(self, index, by_weights=True):
         z_function = LinearTransformation(self.dim_in, self.dim_out)

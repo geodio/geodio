@@ -34,6 +34,7 @@ class OptimizableOperand(Operand, Optimizable, metaclass=ABCMeta):
 
     def __init__(self, arity, optimizer: Optional[Optimizer] = None):
         super().__init__(arity)
+        self.derivative_cache = {}
         if optimizer is None:
             self.optimizer = Optimizer()
         else:
@@ -62,3 +63,14 @@ class OptimizableOperand(Operand, Optimizable, metaclass=ABCMeta):
 
     def get_sub_items(self):
         return self.children
+
+    def derive(self, index, by_weights=True):
+        derivative_id = f'{"W" if by_weights else "X"}_{index}'
+        if derivative_id not in self.derivative_cache:
+            derivative = self.derive_unchained(index, by_weights)
+            self.derivative_cache[derivative_id] = derivative
+        return self.derivative_cache[derivative_id]
+
+    @abstractmethod
+    def derive_unchained(self, index, by_weights):
+        pass
