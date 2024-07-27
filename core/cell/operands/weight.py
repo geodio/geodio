@@ -79,7 +79,7 @@ class AbsWeight(Operand, metaclass=ABCMeta):
     def __invert__(self):
         return None
 
-    def get_weights(self):
+    def get_weights_local(self):
         return [self]
 
     def set_weights(self, new_weights):

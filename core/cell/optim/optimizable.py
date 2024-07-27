@@ -46,14 +46,10 @@ class OptimizableOperand(Operand, Optimizable, metaclass=ABCMeta):
     def __invert__(self):
         pass
 
-    def get_weights(self):
+    def get_weights_local(self):
         weights = []
         for child in self.get_sub_items():
-            weights.extend(child.get_weights())
-
-        for i, weight in enumerate(weights):
-            weight.w_index = i
-
+            weights.extend(child.get_weights_local())
         return weights
 
     def set_weights(self, new_weights):

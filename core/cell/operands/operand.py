@@ -60,11 +60,36 @@ class Operand(ABC, Derivable, WeightDerivable, metaclass=ABCMeta):
     def to_python(self) -> str:
         pass
 
-    def get_weights(self):
+    def get_weights_local(self):
         return []
+
+    def get_weights(self):
+        weights = self.get_weights_local()
+        self.update_weights_index(weights)
+        return weights
 
     def set_weights(self, new_weights):
         pass
+
+    def is_independent_of(self, index) -> bool:
+        """
+        Checks if the operand is independent of the
+        weight corresponding to given index. The
+        method assumes that ``get_weights`` has already
+        been called.
+        Args:
+            index: given index of the weight
+
+        Returns:
+            true, if independent of the weight;
+            false, otherwise
+
+        """
+        weights = self.get_weights_local()
+        for weight in weights:
+            if weight.w_index == index:
+                return False
+        return True
 
     @abstractmethod
     def derive(self, index, by_weights=True):
@@ -91,3 +116,7 @@ class Operand(ABC, Derivable, WeightDerivable, metaclass=ABCMeta):
 
     def get_output_dim(self):
         return self.output_dimensionality
+
+    def update_weights_index(self, weights):
+        for i, weight in enumerate(weights):
+            weight.w_index = i

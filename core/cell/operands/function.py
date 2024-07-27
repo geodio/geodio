@@ -27,14 +27,10 @@ class Function(Operand):
         args = [child.to_python() for child in self.children]
         return f"{self.value.__name__}({', '.join(args)})"
 
-    def get_weights(self):
+    def get_weights_local(self):
         weights = []
         for child in self.children:
-            weights.extend(child.get_weights())
-
-        for i, weight in enumerate(weights):
-            weight.w_index = i
-
+            weights.extend(child.get_weights_local())
         return weights
 
     def set_weights(self, new_weights):

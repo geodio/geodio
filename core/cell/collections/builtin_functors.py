@@ -353,6 +353,14 @@ class Linker(OptimizableOperand):
         :param by_weight:
         :return:
         """
+        if by_weight and self.g.is_independent_of(index):
+            # TODO
+            derivative = None
+        else:
+            derivative = self.__derive_unchained_g(by_weight, index)
+        return derivative
+
+    def __derive_unchained_g(self, by_weight, index):
         chain = Linker(self.arity, self.f.derive(0, False), self.g)
         chained = self.g.derive(index, by_weight)
         prepared_input = 0
@@ -363,10 +371,7 @@ class Linker(OptimizableOperand):
         chained_val = chained(prepared_args)
         print("Chain Val Shape:", np.shape(chain_val))
         print("Chained Val Shape:", np.shape(chained_val))
-        if self.mark:
-            print("!!!!!!!!!!")
         derivative = Matmul([T(1, chain), chained])
-
         return derivative
 
     def clone(self):

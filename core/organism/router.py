@@ -111,13 +111,9 @@ class Router(GeneExpressedOptimizableOperand):
         self.optimizer(self, args)
         self._validate_weights()
 
-    def get_weights(self):
+    def get_weights_local(self):
         weights = [node.get_state_weight() for node in self.children]
         weights.extend(self.weights.values())
-
-        for i, weight in enumerate(weights):
-            weight.w_index = i
-
         return weights
 
     def set_weights(self, new_weights):

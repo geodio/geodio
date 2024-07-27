@@ -49,9 +49,9 @@ class Cell(GeneExpressedOptimizableOperand):
         self.optimizer(self, args)
         return self.get_weights()
 
-    def get_weights(self):
+    def get_weights_local(self):
         if self.weight_cache is None:
-            self.weight_cache = self.root.get_weights()
+            self.weight_cache = self.root.get_weights_local()
         return self.weight_cache
 
     def set_weights(self, new_weights):

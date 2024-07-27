@@ -75,15 +75,12 @@ class Link(Cell):
         ], 2)
         return derivative
 
-    def get_weights(self):
+    def get_weights_local(self):
         linked = [self.internal_cell, self.root]
         weights = []
 
         for child in linked:
-            weights.extend(child.get_weights())
-
-        for i, weight in enumerate(weights):
-            weight.w_index = i
+            weights.extend(child.get_weights_local())
         return weights
 
     def set_weights(self, new_weights):
