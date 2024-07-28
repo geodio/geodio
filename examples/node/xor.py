@@ -11,10 +11,9 @@ from core.organism.node import Node
 
 
 def main():
-    # TODO chaining not working
     dim_in = 2
-    dim_mid = 2
-    dim_out = 2
+    dim_mid = 100
+    dim_out = 1
     arity = 1
 
     activation_function = SigmoidActivation()
@@ -34,10 +33,10 @@ def main():
         [np.array([0, 0])]
     ]
     desired_output = [
-        [np.array([0.0, 0.0])],
-        [np.array([1.0, 0.0])],
-        [np.array([1.0, 0.0])],
-        [np.array([0.0, 0.0])]
+        [np.array([0.0])],
+        [np.array([1.0])],
+        [np.array([1.0])],
+        [np.array([0.0])]
     ]
     loss_function = MSEMultivariate()
 

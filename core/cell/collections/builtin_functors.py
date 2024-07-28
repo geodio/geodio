@@ -124,7 +124,11 @@ class Matmul(BuiltinFunctor):
         b = self.children[1](x)
         if np.ndim(b) == 1:
             b = [b]
-        r = a @ b
+        try:
+            r = a @ b
+        except ValueError:
+            # unmaching shapes/desired order
+            r = b * a
         return r
 
     def derive(self, index, by_weights=True):
@@ -354,23 +358,18 @@ class Linker(OptimizableOperand):
         :return:
         """
         if by_weight and self.g.is_independent_of(index):
-            # TODO
-            derivative = None
+            derivative = self.__derive_chained_f(index)
         else:
             derivative = self.__derive_unchained_g(by_weight, index)
         return derivative
 
+    def __derive_chained_f(self, index):
+        self_double = Linker(self.arity, self.f.derive(index, True), self.g)
+        return self_double
+
     def __derive_unchained_g(self, by_weight, index):
         chain = Linker(self.arity, self.f.derive(0, False), self.g)
         chained = self.g.derive(index, by_weight)
-        prepared_input = 0
-        if self.input_shape != 0:
-            prepared_input = np.zeros(self.input_shape)
-        prepared_args = [prepared_input for _ in range(self.arity)]
-        chain_val = chain(prepared_args)
-        chained_val = chained(prepared_args)
-        print("Chain Val Shape:", np.shape(chain_val))
-        print("Chained Val Shape:", np.shape(chained_val))
         derivative = Matmul([T(1, chain), chained])
         return derivative
 

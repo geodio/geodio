@@ -87,8 +87,8 @@ class LinearTransformation(OptimizableOperand):
             else:
                 # TODO
                 sw = ShapedWeight(
-                    (self.dim_out, ),
-                    np.zeros((self.dim_out, ))
+                    (self.dim_out, self.dim_in),
+                    np.zeros((self.dim_out, self.dim_in))
                 )
                 sw.lock()
                 return sw
@@ -184,8 +184,6 @@ class Node(OptimizableOperand):
         z_function.bias = self.bias
         link = Linker(1, self.activ_fun, z_function, (self.dim_in,))
         unchained = link.derive(index, by_weights)
-        print("Unchained Derivative Shape:",
-              unchained([np.zeros(self.dim_in)]).shape)
         return unchained
 
     def clone(self):
