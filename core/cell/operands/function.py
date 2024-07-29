@@ -66,4 +66,4 @@ class PassThrough(Operand):
         return PassThrough(self.arity)
 
     def to_python(self) -> str:
-        return "<->"
+        return "<X>"

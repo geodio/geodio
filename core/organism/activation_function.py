@@ -1,13 +1,15 @@
 from abc import ABC, abstractmethod
+from typing import List
 
 import numpy as np
 
 from core.cell.operands.function import Function, PassThrough
 from core.cell.operands.operand import Operand
 from core.cell.operands.variable import AdaptiveConstant
+from core.organism.backpropagation import Backpropagatable
 
 
-class ActivationFunction(Operand, ABC):
+class ActivationFunction(Backpropagatable, ABC):
 
     def __init__(self):
         super().__init__(1)
@@ -15,7 +17,13 @@ class ActivationFunction(Operand, ABC):
     def __invert__(self):
         pass
 
-    def derive(self, index, by_weights=True) -> Operand:
+    def get_gradients(self) -> List[np.ndarray]:
+        return []
+
+    def backpropagation(self, dx: np.ndarray) -> np.ndarray:
+        return self.d(0)(dx)
+
+    def derive_unchained(self, index, by_weights=True) -> Operand:
         if by_weights or index != 0:
             return AdaptiveConstant(0, 0)
         return self.get_derivative()

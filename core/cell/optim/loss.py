@@ -22,6 +22,10 @@ class LossFunction(ABC):
     def compute_fitness(self, Y, predicted):
         pass
 
+    @abstractmethod
+    def compute_d_fitness(self, Y, predicted):
+        pass
+
     def __call__(self, Y, predicted):
         return self.compute_fitness(flatten(Y), flatten(predicted))
 
@@ -41,6 +45,9 @@ class MSE(LossFunction):
         if str(x) == "nan" or str(x) == 'inf':
             x = sys.maxsize / 2
         return x
+
+    def compute_d_fitness(self, Y, predicted):
+        return predicted - Y
 
     def gradient(self, cell: Operand, X, Y, index, by_weight=True):
         predicted = get_predicted(X, cell)

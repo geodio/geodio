@@ -1,5 +1,5 @@
 import sys
-from typing import Union
+from typing import Union, List
 
 import numpy as np
 
@@ -13,6 +13,7 @@ from core.cell.optim.optimization_args import OptimizationArgs
 from core.cell.optim.optimizer import Optimizer
 from core.organism.activation_function import SigmoidActivation, \
     ActivationFunction
+from core.organism.backpropagation import Backpropagatable
 
 
 class ShapedWeight(AbsWeight):
@@ -62,7 +63,7 @@ class ShapedWeight(AbsWeight):
         return sw
 
     def to_python(self) -> str:
-        return str(self.__weight)
+        return str(self.__weight.shape)
 
 
 class LinearTransformation(OptimizableOperand):
@@ -87,8 +88,8 @@ class LinearTransformation(OptimizableOperand):
             else:
                 # TODO
                 sw = ShapedWeight(
-                    (self.dim_out, self.dim_in),
-                    np.zeros((self.dim_out, self.dim_in))
+                    (self.dim_out, self.dim_out),
+                    np.zeros((self.dim_out, self.dim_out))
                 )
                 sw.lock()
                 return sw
@@ -126,7 +127,7 @@ class LinearTransformation(OptimizableOperand):
         return cloned
 
     def to_python(self) -> str:
-        return f"np.dot({self.weight.to_python()}, X) + {self.bias.to_python()}"
+        return f"{self.weight.to_python()} * x + {self.bias.to_python()}"
 
     def get_sub_items(self):
         return [self.weight, self.bias]
@@ -135,15 +136,16 @@ class LinearTransformation(OptimizableOperand):
         self.optimizer(self, args)
 
 
-class Node(OptimizableOperand):
+class Node(Backpropagatable):
     def __init__(self, arity, dim_in, dim_out, activ_fun: ActivationFunction,
                  optimizer=None):
         super().__init__(arity, optimizer)
+        self.dW = None
+        self.db = None
         self.arity = arity
         self.dim_in = dim_in
         self.dim_out = dim_out
         self.activ_fun = activ_fun
-        self.optimizer = optimizer
 
         self.weight = ShapedWeight(
             (dim_out, dim_in), np.random.randn(dim_out, dim_in)
@@ -159,24 +161,43 @@ class Node(OptimizableOperand):
 
     def __call__(self, args):
         try:
-            self.input_data = np.array(args[0])
-            self.z = self.weight.get() @ self.input_data + self.bias.get()
+            ind = np.array(args[0])
+            biaas = self.bias.get()
+            if np.ndim(ind) > 1:
+                biaas = biaas[:, np.newaxis]
+            self.input_data = ind
+            # print("FORWARD", self.input_data.shape)
+            # print("AA", (self.weight.get() @ self.input_data + biaas).shape)
+            self.z = self.weight.get() @ self.input_data + biaas
+            # print("Z", self.z.shape)
             self.activated_output = self.activ_fun([self.z])
             return self.activated_output
         except ValueError:
             return self.activated_output
 
-    def optimize(self, args: OptimizationArgs):
-        self.optimizer(self, args)
+    def backpropagation(self, dx: np.ndarray) -> np.ndarray:
+        dz = self.activ_fun.backpropagation(dx)
+        dr = dz.copy()
+        # print("INPUT DATA", self.input_data.shape)
+        # print("dz", dr.shape)
+        # print("weight", self.weight.shape)
+        self.db = np.sum(dz, axis=1).reshape(-1, 1)
+        self.dW = dr @ self.input_data.T
+        dx = self.weight.get().T @ dr
+        # print("dW", self.dW.shape)
+        return dx
+
+    def get_gradients(self) -> List[np.ndarray]:
+        return [self.dW, self.db]
 
     def get_sub_items(self):
         return [self.weight, self.bias]
 
     def to_python(self) -> str:
-        return self.activ_fun.to_python() + "{\n" + (
-                "\ty * " + self.weight.to_python() + " + " +
+        return self.activ_fun.to_python() + "(\n" + (
+                "\t" + self.weight.to_python() + " * x + " +
                 self.bias.to_python()
-        ) + "\n}"
+        ) + "\n)"
 
     def derive_unchained(self, index, by_weights=True):
         z_function = LinearTransformation(self.dim_in, self.dim_out)
@@ -193,36 +214,6 @@ class Node(OptimizableOperand):
         cloned.weight = self.weight.clone()
         cloned.bias = self.bias.clone()
         return cloned
-
-
-class BackpropagationOptimizer(Optimizer):
-    def __init__(self):
-        super().__init__()
-        self.weight_grad = None
-        self.bias_grad = None
-
-    def optimize(self, node: Node, args: OptimizationArgs):
-        self._compute_gradients(node, args)
-        self._update_weights(node, args.learning_rate)
-
-    def _compute_gradients(self, node: Node, args: OptimizationArgs):
-        next_grad = args.loss_function.gradient(
-            node, node.activated_output, args.desired_output, 1
-        )
-
-        local_grad = node.activ_fun.derive(node.z)
-        delta = next_grad * local_grad
-
-        self.weight_grad = np.outer(delta, node.input_data)
-        self.bias_grad = delta
-
-    def _update_weights(self, node: Node, learning_rate: float):
-        node.weight.set(node.weight.get() - learning_rate * self.weight_grad)
-        node.bias.set(node.bias.get() - learning_rate * self.bias_grad)
-
-    def clone(self):
-        return BackpropagationOptimizer()
-
 
 def main():
     dim_in = 5

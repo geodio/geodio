@@ -128,7 +128,10 @@ class Matmul(BuiltinFunctor):
             r = a @ b
         except ValueError:
             # unmaching shapes/desired order
-            r = b * a
+            try:
+                r = b * a
+            except ValueError:
+                r = b.T @ a
         return r
 
     def derive(self, index, by_weights=True):
@@ -377,10 +380,36 @@ class Linker(OptimizableOperand):
         return Linker(self.arity, self.f.clone(), self.g.clone())
 
     def to_python(self) -> str:
-        return self.f.to_python() + "(" + self.g.to_python() + ")"
+        return "[λX.[" + self.f.to_python() + "]" + self.g.to_python() + "]"
 
     def get_sub_items(self):
-        return [self.f, self.g]
+        return [self.g, self.f]
 
     def optimize(self, args: OptimizationArgs):
         self.optimizer(self, args)
+
+
+# sigmoid = lambda _:_
+# matmul = np.matmul
+# dX = sigmoid
+# dW = sigmoid
+# X = x = 0
+# d_sigmoid = sigmoid
+#
+# gamma = sigmoid((5, 4) * x + (5,))
+# betta = sigmoid((5, 4) * x + (5,))  # (5,)
+# delta = sigmoid((5, 5) * betta + (5,))  # (5,)
+# zetta = (3, 5) * x + (3,)  # (3,)
+#
+# a = matmul(
+#         d_sigmoid(zetta).T,  # (1, 3)
+#         dX(delta)  # (5,)
+#     ).T # 5, 3
+#
+# matmul(
+#     a,
+#     matmul(
+#         d_sigmoid((5, 5) * gamma + (5,)).T,
+#         dW(gamma)
+#     )
+# )

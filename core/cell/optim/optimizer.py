@@ -1,7 +1,7 @@
 import numpy as np
 
 from core.cell.operands.operand import Operand
-from core.cell.optim.loss import get_predicted
+from core.cell.optim.loss import get_predicted, LossFunction
 from core.cell.optim.optimization_args import OptimizationArgs
 
 
@@ -21,7 +21,7 @@ class Optimization:
         """
         self.risk = risk
         self.cell = cell
-        self.fit_func = optim_args.loss_function
+        self.fit_func: LossFunction = optim_args.loss_function
         self.input = optim_args.inputs
         self.desired_output = optim_args.desired_output
         self.max_iter = optim_args.max_iter
@@ -117,7 +117,7 @@ class Optimization:
         gradient = gradient.reshape(weight.get().shape)
         # Regularization term for L2
         l2_term = self.l2_lambda * weight.get()
-        # print("INSIDE OPTIMIZATION, __update_weight", weight, gradient)
+        print("INSIDE OPTIMIZATION, __update_weight", weight.get(), gradient)
         new_weight = weight.get() - self.learning_rate * (
                     gradient + ewc_term + l2_term)
         weight.set(new_weight)
@@ -141,9 +141,9 @@ class Optimization:
         """
         if i in self._vanishing or i in self._exploding:
             return False
-        if np.abs(gradient) > 1:
+        if (np.abs(gradient) > 1).any():
             self.__mark_exploding(i)
-        elif np.abs(gradient) < 1e-5:
+        elif (np.abs(gradient) < 1e-5).any():
             self.__mark_vanishing(i)
         else:
             return False
