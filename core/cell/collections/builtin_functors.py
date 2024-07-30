@@ -94,8 +94,8 @@ class Dot(BuiltinFunctor):
         super().__init__(children, "dot_prod", 2)
 
     def __call__(self, args, meta_args=None):
-        a = self.children[0](x)
-        b = self.children[1](x)
+        a = self.children[0](args, meta_args)
+        b = self.children[1](args, meta_args)
 
         r = clean_number(np.dot(a, b))
         return r
