@@ -8,10 +8,10 @@ from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
-
 from core.cell.collections.builtin_functors import Linker
 from core.cell.optim.loss import MSEMultivariate
 from core.cell.optim.optimization_args import OptimizationArgs
+from core.cell.optim.optimizer import Optimizer
 from core.organism.activation_function import SigmoidActivation
 from core.organism.link import Link
 from core.organism.node import Node
@@ -23,17 +23,21 @@ def reverse_one_hot(y):
     class_dict = {
         cls: i for i, cls in enumerate(classes)
     }
-    rev_classes = np.zeros((y.size, classes.size), dtype=int)
+    class_weight = 1.0 / (len(classes) - 1)
+    rev_classes = np.zeros((y.size, 1), dtype=int)
     for i, yi in enumerate(y):
-        rev_classes[i, class_dict[yi]] = 1
+        rev_classes[i] = class_weight * class_dict[yi]
     return rev_classes
+
 
 def one_hot(y, classes):
     hot_y = []
+    lcls = len(classes) - 1
     for i in range(len(y)):
-        class_idx = np.argmax(y[i])
+        class_idx = int(y[i][0] * lcls)
         hot_y.append(classes[class_idx])
     return hot_y
+
 
 def data_from_dict(t_X):
     keys = t_X.keys()
@@ -43,17 +47,18 @@ def data_from_dict(t_X):
     columns = np.asarray(columns)
     return columns.T
 
+
 def encapsulate(y):
     return [[x] for x in y]
 
 
 def make_nodes(dim_in, dim_out, hidden):
     activation = SigmoidActivation()
-    input_gate = Node(1, dim_in, dim_out, activation)
+    input_gate = Node(1, dim_in, hidden, activation)
     hidden_layer = Node(1, hidden, hidden, activation)
     output_gate = Node(1, hidden, dim_out, activation)
-    model = Organism([input_gate])
-    model.set_optimization_risk(True)
+    model = Linker(1, hidden_layer, input_gate, dim_in)
+    model = Linker(1, output_gate, model, dim_in)
     return model
 
 
@@ -67,7 +72,7 @@ def main():
     e_train_y = encapsulate(reverse_one_hot(train_y))
     e_validation_y = encapsulate(reverse_one_hot(validation_y))
     dim_in = len(train_X[0][0])
-    dim_out = len(e_train_y[0][0])
+    dim_out = 1
     hidden = 5
 
     model = make_nodes(dim_in, dim_out, hidden)
@@ -85,20 +90,31 @@ def main():
     starting_error = loss.evaluate(model, validation_X, e_validation_y)
     print("STARTING ERROR:", starting_error)
     get_accuracy_validation(classes, model, validation_X, validation_y)
-
+    get_accuracy_training(classes, model, train_X, train_y)
     model.optimize(optimization_args)
 
     ending_error = loss.evaluate(model, validation_X, e_validation_y)
     print("ENDING ERROR:", ending_error)
 
     get_accuracy_validation(classes, model, validation_X, validation_y)
+    get_accuracy_training(classes, model, train_X, train_y)
 
 
 def get_accuracy_validation(classes, model, validation_X, validation_y):
-    prediction_y = [model(x) for x in validation_X]
-    hot_prediction = one_hot(prediction_y, classes)
-    accuracy = accuracy_score(hot_prediction, validation_y)
+    accuracy = get_accuracy(classes, model, validation_X, validation_y)
     print('\taccuracy using the validation dataset:\t{:.3f}'.format(accuracy))
+
+
+def get_accuracy_training(classes, model, train_x, train_y):
+    accuracy = get_accuracy(classes, model, train_x, train_y)
+    print('\taccuracy using the training dataset:\t{:.3f}'.format(accuracy))
+
+
+def get_accuracy(classes, model, train_x, train_y):
+    prediction_y = [model(x) for x in train_x]
+    hot_prediction = one_hot(prediction_y, classes)
+    accuracy = accuracy_score(hot_prediction, train_y)
+    return accuracy
 
 
 def get_iris_dataset():

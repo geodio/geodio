@@ -40,12 +40,13 @@ class BPOptimization(Optimization):
 
     def calculate_gradients(self):
         predicted = self.cell(self.forward_input)
+        # print("PREDICTED", predicted)
         # print("GRADIENTS", self.y.shape, predicted.shape)
         dz = self.fit_func.compute_d_fitness(self.y, predicted)
         # print("DZ", dz.shape)
-        self.cell.backpropagation([dz])
+        self.cell.backpd_mseropagation([dz])
         gradients = self.cell.get_gradients()
-        print(gradients)
+        # print("CALCULATE GRADIENTS", gradients)
         return gradients
 
 

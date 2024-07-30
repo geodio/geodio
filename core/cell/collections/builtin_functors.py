@@ -123,15 +123,11 @@ class Matmul(BuiltinFunctor):
         a = self.children[0](x)
         b = self.children[1](x)
         if np.ndim(b) == 1:
-            b = [b]
+            b = np.array([b])
         try:
             r = a @ b
         except ValueError:
-            # unmaching shapes/desired order
-            try:
-                r = b * a
-            except ValueError:
-                r = b.T @ a
+            r = b * a
         return r
 
     def derive(self, index, by_weights=True):
@@ -309,7 +305,7 @@ BUILTIN_FUNCTORS.add_functor(Sub([]))
 BUILTIN_FUNCTORS.add_functor(Power([]))
 
 
-class T(OptimizableOperand):
+class Transpose(OptimizableOperand):
     def __init__(self, arity, x: Operand):
         super().__init__(arity)
         self.x = x
@@ -327,7 +323,7 @@ class T(OptimizableOperand):
         pass
 
     def clone(self):
-        return T(self.arity, self.x.clone())
+        return Transpose(self.arity, self.x.clone())
 
     def to_python(self) -> str:
         return self.x.to_python() + ".T"
@@ -337,6 +333,29 @@ class T(OptimizableOperand):
 
     def optimize(self, args: OptimizationArgs):
         pass
+
+
+def matmul_of(operand_a: Operand, operand_b: Operand) -> Matmul:
+    if isinstance(operand_b, Matmul):
+        child_a = operand_b.children[0]
+        child_b = operand_b.children[1]
+        result = matmul_of(operand_a, child_a)
+        result = matmul_of(result, child_b)
+    else:
+        result = Matmul([operand_a, operand_b])
+    return result
+
+
+def transpose_of(operand: Operand) -> Transpose:
+    if isinstance(operand, Matmul):
+        child_a = operand.children[0]
+        child_b = operand.children[1]
+        result = matmul_of(transpose_of(child_b), transpose_of(child_a))
+    elif isinstance(operand, Transpose):
+        result = operand.x
+    else:
+        result = Transpose(1, operand)
+    return result
 
 
 class Linker(OptimizableOperand):
@@ -373,7 +392,7 @@ class Linker(OptimizableOperand):
     def __derive_unchained_g(self, by_weight, index):
         chain = Linker(self.arity, self.f.derive(0, False), self.g)
         chained = self.g.derive(index, by_weight)
-        derivative = Matmul([T(1, chain), chained])
+        derivative = matmul_of(transpose_of(chain), chained)
         return derivative
 
     def clone(self):
@@ -413,3 +432,22 @@ class Linker(OptimizableOperand):
 #         dW(gamma)
 #     )
 # )
+
+"""
+alpha = sigmoid((5, 4) * x + (5,))      # (5,)
+gamma = sigmoid((5, 5) * alpha + (5,))  # (5,)
+
+matmul(
+    matmul(
+        matmul(
+            matmul(
+                d_sigmoid((3, 5) * gamma + (3,)).T,
+                dX(gamma)
+            ).T,
+            matmul(d_sigmoid((5, 5) * alpha + (5,)).T, dX(alpha)).T
+        ), 
+        d_sigmoid(alpha).T
+    ), 
+    dW(<X>)
+)
+"""

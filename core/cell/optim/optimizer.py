@@ -117,9 +117,10 @@ class Optimization:
         gradient = gradient.reshape(weight.get().shape)
         # Regularization term for L2
         l2_term = self.l2_lambda * weight.get()
-        print("INSIDE OPTIMIZATION, __update_weight", weight.get(), gradient)
         new_weight = weight.get() - self.learning_rate * (
                     gradient + ewc_term + l2_term)
+        # print("INSIDE OPTIMIZATION, __update_weight", weight.get(),
+        #       gradient, new_weight)
         weight.set(new_weight)
         y_pred = [self.cell(x_inst) for x_inst in self.input]
         self.cell.error = self.fit_func(self.desired_output, y_pred)

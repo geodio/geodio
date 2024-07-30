@@ -178,13 +178,11 @@ class Node(Backpropagatable):
     def backpropagation(self, dx: np.ndarray) -> np.ndarray:
         dz = self.activ_fun.backpropagation(dx)
         dr = dz.copy()
-        # print("INPUT DATA", self.input_data.shape)
-        # print("dz", dr.shape)
-        # print("weight", self.weight.shape)
         self.db = np.sum(dz, axis=1).reshape(-1, 1)
-        self.dW = dr @ self.input_data.T
+        d_weight = np.matmul(dr, self.input_data.Transpose)
+        self.dW = d_weight
         dx = self.weight.get().T @ dr
-        # print("dW", self.dW.shape)
+
         return dx
 
     def get_gradients(self) -> List[np.ndarray]:
