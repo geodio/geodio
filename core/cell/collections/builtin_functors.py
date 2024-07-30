@@ -6,7 +6,6 @@ from core.cell.collections.functors import Functor, CollectionBasedFunctors
 from core.cell.operands.constant import Constant
 from core.cell.operands.operand import Operand
 from core.cell.optim.optimizable import OptimizableOperand
-from core.cell.optim.optimization_args import OptimizationArgs
 
 
 def clean_number(x):
@@ -216,7 +215,9 @@ class Sub(BuiltinFunctor):
 
     def __call__(self, args, meta_args=None):
         try:
-            return clean_number(self.children[0](args, meta_args) - self.children[1](args, meta_args))
+            return clean_number(
+                self.children[0](args, meta_args) - self.children[1](args, meta_args)
+            )
         except IndexError:
             return 0
 
