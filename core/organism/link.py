@@ -54,7 +54,7 @@ class Link(Cell):
         self.id = self.internal_cell.id
         self.set_optimization_risk(True)
 
-    def __call__(self, args):
+    def __call__(self, args, meta_args=None):
         # Calculate weighted sum of inputs
         hidden_cell_input = [self.root(args)]
         hidden_cell_output = self.internal_cell(hidden_cell_input)

@@ -34,8 +34,8 @@ def get_model(dim_in, dim_mid, dim_out, hidden_layer_count, activation_function)
     model = input_node
     for i in range(hidden_layer_count):
         hl = Node(1, dim_mid, dim_mid, activation_function, Optimizer())
-        model = Linker(1, hl, model, dim_in)
-    model = Linker(1, output_node, model, dim_out)
+        model = Linker(hl, model, dim_in)
+    model = Linker(output_node, model, dim_out)
     model.set_optimization_risk(True)
     return model
 

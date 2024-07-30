@@ -67,7 +67,7 @@ class AbsWeight(Operand, metaclass=ABCMeta):
     def get(self) -> Union[np.ndarray, float]:
         pass
 
-    def __call__(self, args):
+    def __call__(self, args, meta_args=None):
         _w = self.get()
         if self.adaptive_shape and not self.adapted:
             _w, b = adapt_shape_and_apply(_w, *args)

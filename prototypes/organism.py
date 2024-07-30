@@ -138,7 +138,7 @@ class Organism(Cell):
         predictions = self(variables)
         return fit_fct(desired_output, predictions)
 
-    def __call__(self, inputs):
+    def __call__(self, args, meta_args=None):
         self.update_states_forward(inputs)
         self.update_states_backward(inputs)
         return [self.cells[cell_id].state for cell_id in self.layers[0]]

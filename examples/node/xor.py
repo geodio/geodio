@@ -135,7 +135,7 @@ def launch_model(model, max_iter=10000, data='xor'):
 
 
 def link_nodes(dim_in, node1, node2):
-    leenk = Linker(1, node2, node1, dim_in, True)
+    leenk = Linker(node2, node1, dim_in, True)
     leenk.set_optimization_risk(True)
     return leenk
 

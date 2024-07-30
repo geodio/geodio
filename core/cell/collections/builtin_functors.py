@@ -43,8 +43,8 @@ class Add(BuiltinFunctor):
     def __init__(self, children, arity):
         super().__init__(children, f"add_{arity}", arity)
 
-    def __call__(self, x):
-        return clean_number(sum([child(x) for child in self.children]))
+    def __call__(self, args, meta_args=None):
+        return clean_number(sum([child(args, meta_args) for child in self.children]))
 
     def derive(self, index, by_weights=True):
         return Add(
@@ -62,9 +62,9 @@ class Prod(BuiltinFunctor):
     def __init__(self, children):
         super().__init__(children, "prod", 2)
 
-    def __call__(self, x):
-        a = self.children[0](x)
-        b = self.children[1](x)
+    def __call__(self, args, meta_args=None):
+        a = self.children[0](args, meta_args)
+        b = self.children[1](args, meta_args)
         try:
             return clean_number(a * b)
         except:
@@ -93,7 +93,7 @@ class Dot(BuiltinFunctor):
     def __init__(self, children):
         super().__init__(children, "dot_prod", 2)
 
-    def __call__(self, x):
+    def __call__(self, args, meta_args=None):
         a = self.children[0](x)
         b = self.children[1](x)
 
@@ -119,9 +119,9 @@ class Matmul(BuiltinFunctor):
     def __init__(self, children):
         super().__init__(children, "matmul", 2)
 
-    def __call__(self, x):
-        a = self.children[0](x)
-        b = self.children[1](x)
+    def __call__(self, args, meta_args=None):
+        a = self.children[0](args, meta_args)
+        b = self.children[1](args, meta_args)
         if np.ndim(b) == 1:
             b = np.array([b])
         try:
@@ -149,8 +149,8 @@ class Max(BuiltinFunctor):
     def __init__(self, children, arity):
         super().__init__(children, f"max_{arity}", arity)
 
-    def __call__(self, x):
-        return max([child(x) for child in self.children])
+    def __call__(self, args, meta_args=None):
+        return max([child(args, meta_args) for child in self.children])
 
     def d(self, dx):
         # TODO the derivative is not correctly computed
@@ -164,13 +164,13 @@ class Power(BuiltinFunctor):
     def __init__(self, children):
         super().__init__(children, "power", 2)
 
-    def __call__(self, x):
+    def __call__(self, args, meta_args=None):
         base_func = self.children[0]
-        exponent = self.children[1](x)
+        exponent = self.children[1](args, meta_args)
         try:
             if exponent == 0:
                 return 1.0
-            return clean_number(np.power(0.0 + base_func(x), exponent))
+            return clean_number(np.power(0.0 + base_func(args, meta_args), exponent))
         except:
             return 0.0
 
@@ -214,9 +214,9 @@ class Sub(BuiltinFunctor):
     def __init__(self, children):
         super().__init__(children, "sub", 2)
 
-    def __call__(self, x):
+    def __call__(self, args, meta_args=None):
         try:
-            return clean_number(self.children[0](x) - self.children[1](x))
+            return clean_number(self.children[0](args, meta_args) - self.children[1](args, meta_args))
         except IndexError:
             return 0
 
@@ -235,10 +235,10 @@ class Div(BuiltinFunctor):
     def __init__(self, children):
         super().__init__(children, "div", 2)
 
-    def __call__(self, x):
+    def __call__(self, args, meta_args=None):
         try:
-            up = self.children[0](x)
-            down = self.children[1](x)
+            up = self.children[0](args, meta_args)
+            down = self.children[1](args, meta_args)
         except IndexError:
             return 0.0
         if down == 0:
@@ -275,9 +275,9 @@ class Log(BuiltinFunctor):
     def __init__(self, children):
         super().__init__(children, "log", 1)
 
-    def __call__(self, x):
+    def __call__(self, args, meta_args=None):
         try:
-            return clean_number(np.log(self.children[0](x)))
+            return clean_number(np.log(self.children[0](args, meta_args)))
         except:
             return 0
 
@@ -310,8 +310,8 @@ class Transpose(OptimizableOperand):
         super().__init__(arity)
         self.x = x
 
-    def __call__(self, x):
-        out = self.x(x)
+    def __call__(self, args, meta_args=None):
+        out = self.x(args, meta_args)
         if np.ndim(out) == 1:
             out = out[:, np.newaxis]
             return out
@@ -330,9 +330,6 @@ class Transpose(OptimizableOperand):
 
     def get_sub_items(self):
         return [self.x]
-
-    def optimize(self, args: OptimizationArgs):
-        pass
 
 
 def matmul_of(operand_a: Operand, operand_b: Operand) -> Matmul:
@@ -360,17 +357,17 @@ def transpose_of(operand: Operand) -> Transpose:
 
 class Linker(OptimizableOperand):
 
-    def __init__(self, arity, f: Operand, g: Operand, input_shape=0,
+    def __init__(self, f: Operand, g: Operand, input_shape=0,
                  mark=False):
-        super().__init__(arity)
+        super().__init__(g.arity)
         self.f = f
         self.g = g
         self.input_shape = input_shape
         self.mark = mark
 
-    def __call__(self, x):
-        x_ = [self.g(x)]
-        return self.f(x_)
+    def __call__(self, args, meta_args=None):
+        x_ = [self.g(args, meta_args)]
+        return self.f(x_, meta_args)
 
     def derive_unchained(self, index, by_weight=True):
         """
@@ -386,68 +383,20 @@ class Linker(OptimizableOperand):
         return derivative
 
     def __derive_chained_f(self, index):
-        self_double = Linker(self.arity, self.f.derive(index, True), self.g)
+        self_double = Linker(self.f.derive(index, True), self.g)
         return self_double
 
     def __derive_unchained_g(self, by_weight, index):
-        chain = Linker(self.arity, self.f.derive(0, False), self.g)
+        chain = Linker(self.f.derive(0, False), self.g)
         chained = self.g.derive(index, by_weight)
         derivative = matmul_of(transpose_of(chain), chained)
         return derivative
 
     def clone(self):
-        return Linker(self.arity, self.f.clone(), self.g.clone())
+        return Linker(self.f.clone(), self.g.clone())
 
     def to_python(self) -> str:
         return "[λX.[" + self.f.to_python() + "]" + self.g.to_python() + "]"
 
     def get_sub_items(self):
         return [self.g, self.f]
-
-    def optimize(self, args: OptimizationArgs):
-        self.optimizer(self, args)
-
-
-# sigmoid = lambda _:_
-# matmul = np.matmul
-# dX = sigmoid
-# dW = sigmoid
-# X = x = 0
-# d_sigmoid = sigmoid
-#
-# gamma = sigmoid((5, 4) * x + (5,))
-# betta = sigmoid((5, 4) * x + (5,))  # (5,)
-# delta = sigmoid((5, 5) * betta + (5,))  # (5,)
-# zetta = (3, 5) * x + (3,)  # (3,)
-#
-# a = matmul(
-#         d_sigmoid(zetta).T,  # (1, 3)
-#         dX(delta)  # (5,)
-#     ).T # 5, 3
-#
-# matmul(
-#     a,
-#     matmul(
-#         d_sigmoid((5, 5) * gamma + (5,)).T,
-#         dW(gamma)
-#     )
-# )
-
-"""
-alpha = sigmoid((5, 4) * x + (5,))      # (5,)
-gamma = sigmoid((5, 5) * alpha + (5,))  # (5,)
-
-matmul(
-    matmul(
-        matmul(
-            matmul(
-                d_sigmoid((3, 5) * gamma + (3,)).T,
-                dX(gamma)
-            ).T,
-            matmul(d_sigmoid((5, 5) * alpha + (5,)).T, dX(alpha)).T
-        ), 
-        d_sigmoid(alpha).T
-    ), 
-    dW(<X>)
-)
-"""

@@ -1,7 +1,6 @@
 from typing import TypeVar, List, Iterable
 
 from core.cell.geoo import GeneExpressedOptimizableOperand
-from core.cell.operands.stateful import State
 from core.cell.operands.constant import ONE
 from core.cell.operands.operand import Operand
 from core.cell.optim.optimization_args import OptimizationArgs
@@ -20,10 +19,10 @@ class Cell(GeneExpressedOptimizableOperand):
     def nodes(self):
         return self.root.children
 
-    def __call__(self, args):
+    def __call__(self, args, meta_args=None):
         if not isinstance(args, Iterable):
             args = [args]
-        return self.root(args)
+        return self.root(args, meta_args)
 
     def replace(self, node_old, node_new):
         self.root.replace_child(node_old, node_new)

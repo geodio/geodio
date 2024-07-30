@@ -9,8 +9,8 @@ class Function(Operand):
         self.value = value
         self.children = children if children is not None else []
 
-    def __call__(self, args):
-        func_args = [child(args) for child in self.children]
+    def __call__(self, args, meta_args=None):
+        func_args = [child(args, meta_args) for child in self.children]
         return self.value(*func_args)
 
     def d(self, var_index) -> Optional[Operand]:
@@ -53,7 +53,7 @@ class PassThrough(Operand):
     def __init__(self, arity):
         super().__init__(arity)
 
-    def __call__(self, args):
+    def __call__(self, args, meta_args=None):
         return args
 
     def derive(self, index, by_weight=True):

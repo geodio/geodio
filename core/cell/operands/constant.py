@@ -17,7 +17,7 @@ class Constant(Operand):
         super().__init__(weight)
         self.__value = weight
 
-    def __call__(self, x):
+    def __call__(self, args, meta_args=None):
         return self.__value
 
     def d(self, dx):

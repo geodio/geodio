@@ -63,7 +63,7 @@ class Router(GeneExpressedOptimizableOperand):
             self.children[index] = mutant_node
         self._validate_weights()
 
-    def __call__(self, args):
+    def __call__(self, args, meta_args=None):
         weighted_sum = sum(
             node.get_state_weight()(args) * self.weights[i](args)
             for i, node in enumerate(self.children)

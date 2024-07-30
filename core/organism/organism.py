@@ -3,12 +3,12 @@ from typing import List
 
 import numpy as np
 
-from core.organism.backpropagation import Backpropagatable, BPOptimizer
+from core.cell.optim.optimizable import OptimizableOperand
 
 
-class Organism(Backpropagatable):
-    def __init__(self, nodes):
-        super().__init__(1, BPOptimizer())
+class Organism(OptimizableOperand):
+    def __init__(self, nodes, optimizer=None):
+        super().__init__(1, optimizer)
         self.weight_cache = None
         self.children = nodes
 
@@ -33,7 +33,7 @@ class Organism(Backpropagatable):
                 self.weight_cache.extend(node.get_weights_local())
         return self.weight_cache
 
-    def __call__(self, args):
+    def __call__(self, args, meta_args=None):
         x = args[0]
         for node in self.children:
             x = node([x])

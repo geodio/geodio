@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 import numpy as np
 
@@ -13,7 +13,7 @@ class BaseVariable(Operand, metaclass=ABCMeta):
         super().__init__(0)
         self.value = value
 
-    def __call__(self, args):
+    def __call__(self, args, meta_args=None):
         return args[self.value]
 
     def d(self, var_index) -> Optional[Operand]:
@@ -46,7 +46,7 @@ class AdaptiveConstant(BaseVariable):
     def clone(self) -> "AdaptiveConstant":
         return AdaptiveConstant(self.value, self.__constant)
 
-    def __call__(self, args):
+    def __call__(self, args, meta_args=None):
         arg = args[self.value]
         if isinstance(arg, np.ndarray):
             return np.ones_like(arg) * self.__constant
@@ -70,3 +70,25 @@ class Variable(BaseVariable):
 
     def d_w(self, var_index) -> Optional[Operand]:
         return self.zero
+
+
+class MetaVariable(Operand):
+    def __init__(self, meta_id):
+        super().__init__(0)
+        self.__meta_id = meta_id
+
+    def clone(self) -> "MetaVariable":
+        return MetaVariable(self.__meta_id)
+
+    def __call__(self, args, meta_args=None):
+        return meta_args[self.__meta_id]
+
+    def __invert__(self):
+        pass
+
+    def to_python(self) -> str:
+        return f"M[{self.__meta_id}]"
+
+    def derive(self, index, by_weights=True):
+        # TODO
+        return

@@ -1,7 +1,8 @@
 import pickle
 import sys
 from abc import ABC, abstractmethod, ABCMeta
-from typing import Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Optional, List, Dict, Any
 
 from core.math.derivable import Derivable, WeightDerivable
 
@@ -16,10 +17,11 @@ class Operand(ABC, Derivable, WeightDerivable, metaclass=ABCMeta):
         self.output_dimensionality = 0
 
     @abstractmethod
-    def __call__(self, args):
+    def __call__(self, args, meta_args: Optional[Dict[str, Any]]=None):
         """
         Calling the operand.
 
+        :param meta_args:
         :param args: of length self.arity
         :return: the result of the applied operand
         """

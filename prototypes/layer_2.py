@@ -41,7 +41,7 @@ class Layer(OptimizableOperand, Stateful):
     def add_cells(self, cells: List[Cell]):
         self.children.extend(cells)
 
-    def __call__(self, args):
+    def __call__(self, args, meta_args=None):
         outputs = self.call_according_to_policy(args)
         self.update_cells_states(outputs)
         return outputs

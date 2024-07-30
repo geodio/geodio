@@ -57,8 +57,8 @@ def make_nodes(dim_in, dim_out, hidden):
     input_gate = Node(1, dim_in, hidden, activation)
     hidden_layer = Node(1, hidden, hidden, activation)
     output_gate = Node(1, hidden, dim_out, activation)
-    model = Linker(1, hidden_layer, input_gate, dim_in)
-    model = Linker(1, output_gate, model, dim_in)
+    model = Linker(hidden_layer, input_gate, dim_in)
+    model = Linker(output_gate, model, dim_in)
     return model
 
 

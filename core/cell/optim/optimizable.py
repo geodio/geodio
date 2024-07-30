@@ -1,6 +1,7 @@
 import sys
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Optional, List
 
 from core.cell.operands.operand import Operand
 from core.cell.optim.loss import LossFunction
@@ -69,4 +70,42 @@ class OptimizableOperand(Operand, Optimizable, metaclass=ABCMeta):
 
     @abstractmethod
     def derive_unchained(self, index, by_weights):
+        pass
+
+    def optimize(self, args: OptimizationArgs):
+        self.optimizer(self, args)
+
+    def multi_tree_derive(self, by_weights=True):
+
+        keys = list(filter(
+            lambda x: x.startswith("W" if by_weights else "X"),
+            self.derivative_cache.keys()
+        ))
+
+
+class MultiTree(OptimizableOperand):
+    def __init__(self, trees: List[OptimizableOperand], arity, optimizer: Optional[Optimizer] = None):
+        super().__init__(arity, optimizer)
+        self.children = trees
+
+    def derive_unchained(self, index, by_weights):
+        derived_trees = [tree.derive(index, by_weights) for tree in self.children]
+        return MultiTree(derived_trees, self.arity, self.optimizer.clone())
+
+    def __call__(self, args, meta_args=None):
+        with ThreadPoolExecutor() as executor:
+            futures = {
+                executor.submit(
+                    tree,
+                    args
+                ): tree for tree in self.children
+            }
+            for future in as_completed(futures):
+                future.result()
+
+    def clone(self) -> "Operand":
+        cloned_trees = [tree.clone() for tree in self.children]
+        return MultiTree(cloned_trees, self.arity, self.optimizer.clone())
+
+    def to_python(self) -> str:
         pass

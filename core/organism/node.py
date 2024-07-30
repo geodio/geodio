@@ -1,19 +1,12 @@
-import sys
 from typing import Union, List
 
 import numpy as np
 
 from core.cell.collections.builtin_functors import Linker
-from core.cell.operands.constant import ZERO
 from core.cell.operands.function import Function, PassThrough
-from core.cell.operands.weight import AbsWeight, t_weight
-from core.cell.optim.loss import MSEMultivariate
 from core.cell.optim.optimizable import OptimizableOperand
-from core.cell.optim.optimization_args import OptimizationArgs
-from core.cell.optim.optimizer import Optimizer
-from core.organism.activation_function import SigmoidActivation, \
-    ActivationFunction
-from core.organism.backpropagation import Backpropagatable
+from core.cell.operands.weight import AbsWeight, t_weight
+from core.organism.activation_function import ActivationFunction
 
 
 class ShapedWeight(AbsWeight):
@@ -75,7 +68,7 @@ class LinearTransformation(OptimizableOperand):
                                    np.random.randn(dim_out, dim_in))
         self.bias = ShapedWeight((dim_out,), np.zeros(dim_out))
 
-    def __call__(self, args):
+    def __call__(self, args, meta_args=None):
         X = np.array(args[0])
         return np.dot(self.weight.get(), X) + self.bias.get()
 
@@ -132,11 +125,8 @@ class LinearTransformation(OptimizableOperand):
     def get_sub_items(self):
         return [self.weight, self.bias]
 
-    def optimize(self, args):
-        self.optimizer(self, args)
 
-
-class Node(Backpropagatable):
+class Node(OptimizableOperand):
     def __init__(self, arity, dim_in, dim_out, activ_fun: ActivationFunction,
                  optimizer=None):
         super().__init__(arity, optimizer)
@@ -145,7 +135,7 @@ class Node(Backpropagatable):
         self.arity = arity
         self.dim_in = dim_in
         self.dim_out = dim_out
-        self.activ_fun = activ_fun
+        self.activ_fun: ActivationFunction = activ_fun
 
         self.weight = ShapedWeight(
             (dim_out, dim_in), np.random.randn(dim_out, dim_in)
@@ -159,31 +149,18 @@ class Node(Backpropagatable):
         self.activated_output = None
         self.output_dimensionality = dim_out
 
-    def __call__(self, args):
+    def __call__(self, args, meta_args=None):
         try:
             ind = np.array(args[0])
             biaas = self.bias.get()
             if np.ndim(ind) > 1:
                 biaas = biaas[:, np.newaxis]
             self.input_data = ind
-            # print("FORWARD", self.input_data.shape)
-            # print("AA", (self.weight.get() @ self.input_data + biaas).shape)
             self.z = self.weight.get() @ self.input_data + biaas
-            # print("Z", self.z.shape)
             self.activated_output = self.activ_fun([self.z])
             return self.activated_output
         except ValueError:
             return self.activated_output
-
-    def backpropagation(self, dx: np.ndarray) -> np.ndarray:
-        dz = self.activ_fun.backpropagation(dx)
-        dr = dz.copy()
-        self.db = np.sum(dz, axis=1).reshape(-1, 1)
-        d_weight = np.matmul(dr, self.input_data.Transpose)
-        self.dW = d_weight
-        dx = self.weight.get().T @ dr
-
-        return dx
 
     def get_gradients(self) -> List[np.ndarray]:
         return [self.dW, self.db]
@@ -201,7 +178,7 @@ class Node(Backpropagatable):
         z_function = LinearTransformation(self.dim_in, self.dim_out)
         z_function.weight = self.weight
         z_function.bias = self.bias
-        link = Linker(1, self.activ_fun, z_function, (self.dim_in,))
+        link = Linker(self.activ_fun, z_function, (self.dim_in,))
         unchained = link.derive(index, by_weights)
         return unchained
 
@@ -212,56 +189,3 @@ class Node(Backpropagatable):
         cloned.weight = self.weight.clone()
         cloned.bias = self.bias.clone()
         return cloned
-
-def main():
-    dim_in = 5
-    dim_out = 3
-    arity = 1
-
-    activation_function = SigmoidActivation()
-
-    node2 = Node(arity, dim_out, dim_out, activation_function,
-                 optimizer=Optimizer())
-    node1 = Node(arity, dim_in, dim_out, activation_function,
-                 optimizer=Optimizer())
-    node1.set_optimization_risk(True)
-    input_data = [
-        [np.array([1, 1, 1, 1, 1])],
-        [np.array([0, 1, 1, 0, 1])],
-        [np.array([1, 1, 0, 1, 1])],
-        [np.array([1, 0, 0, 1, 0])]
-    ]
-    desired_output = [
-        [np.array([1.0, 1.0, 1.0])],
-        [np.array([0.0, 1.0, 0.0])],
-        [np.array([1.0, 0.0, 1.0])],
-        [np.array([0.0, 0.0, 0.0])]
-    ]
-    loss_function = MSEMultivariate()
-
-    optimization_args = OptimizationArgs(
-        inputs=input_data,
-        desired_output=desired_output,
-        loss_function=loss_function,
-        learning_rate=0.1,
-        max_iter=10000,
-        min_error=sys.maxsize
-    )
-    output_before = [node1(input_data_i) for input_data_i in input_data]
-    print("Weights before optimization:")
-    print([[w, w.w_index] for w in node1.get_weights()])
-    print(loss_function.evaluate(node1, input_data, desired_output))
-    node1.optimize(optimization_args)
-    print("Weights after optimization:")
-    print([[w, w.w_index] for w in node1.get_weights()])
-    print(loss_function.evaluate(node1, input_data, desired_output))
-    output = [node1(input_data_i) for input_data_i in input_data]
-
-    print("            Input         :", input_data)
-    print("Before Optimization output:", output_before)
-    print("       Final output       :", output)
-    print("       Desired output     :", desired_output)
-
-
-if __name__ == "__main__":
-    main()
