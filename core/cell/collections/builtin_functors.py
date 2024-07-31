@@ -6,6 +6,7 @@ from core.cell.collections.functors import Functor, CollectionBasedFunctors
 from core.cell.operands.constant import Constant
 from core.cell.operands.operand import Operand
 from core.cell.optim.optimizable import OptimizableOperand
+from core.cell.operands.utility import verify_equal_children
 
 
 def clean_number(x):
@@ -37,13 +38,19 @@ class BuiltinFunctor(Functor):
                 max_dim = max(max_dim, len(output_dim))
         return max_dim
 
+    def __eq__(self, other):
+        if isinstance(other, BuiltinFunctor):
+            return self.func_id == other.func_id and verify_equal_children(
+                self, other)
+        return False
 
 class Add(BuiltinFunctor):
     def __init__(self, children, arity):
         super().__init__(children, f"add_{arity}", arity)
 
     def __call__(self, args, meta_args=None):
-        return clean_number(sum([child(args, meta_args) for child in self.children]))
+        return clean_number(
+            sum([child(args, meta_args) for child in self.children]))
 
     def derive(self, index, by_weights=True):
         return Add(
@@ -169,7 +176,8 @@ class Power(BuiltinFunctor):
         try:
             if exponent == 0:
                 return 1.0
-            return clean_number(np.power(0.0 + base_func(args, meta_args), exponent))
+            return clean_number(
+                np.power(0.0 + base_func(args, meta_args), exponent))
         except:
             return 0.0
 
@@ -216,7 +224,8 @@ class Sub(BuiltinFunctor):
     def __call__(self, args, meta_args=None):
         try:
             return clean_number(
-                self.children[0](args, meta_args) - self.children[1](args, meta_args)
+                self.children[0](args, meta_args) - self.children[1](args,
+                                                                     meta_args)
             )
         except IndexError:
             return 0

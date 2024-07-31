@@ -35,6 +35,10 @@ class Constant(Operand):
             return self.d_w(index)
         return self.d(index)
 
+    def __eq__(self, other):
+        if isinstance(other, Constant):
+            return self.__value == other.__value
+
 
 ZERO = Constant(0.0)
 ONE = Constant(1)

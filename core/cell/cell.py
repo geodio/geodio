@@ -83,6 +83,11 @@ class Cell(GeneExpressedOptimizableOperand):
         self.weight_cache = None
         self.derivative_cache = {}
 
+    def __eq__(self, other):
+        if not isinstance(other, Cell):
+            return False
+        return self.root == other.root
+
 
 t_cell = TypeVar('t_cell', bound=Cell)
 t_cell_list = TypeVar('t_cell_list', bound=List[Cell])

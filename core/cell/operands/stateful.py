@@ -50,6 +50,14 @@ class State(AbsWeight):
     def get(self) -> Union[np.ndarray, float]:
         return self.cell.state
 
+    def get_children(self):
+        return []
+
+    def __eq__(self, other):
+        if isinstance(other, State):
+            return self.cell == other.cell
+        return False
+
 
 class Stateful(ABC):
     def __init__(self):

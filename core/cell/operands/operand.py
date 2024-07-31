@@ -17,7 +17,7 @@ class Operand(ABC, Derivable, WeightDerivable, metaclass=ABCMeta):
         self.output_dimensionality = 0
 
     @abstractmethod
-    def __call__(self, args, meta_args: Optional[Dict[str, Any]]=None):
+    def __call__(self, args, meta_args: Optional[Dict[str, Any]] = None):
         """
         Calling the operand.
 
@@ -122,3 +122,9 @@ class Operand(ABC, Derivable, WeightDerivable, metaclass=ABCMeta):
     def update_weights_index(self, weights):
         for i, weight in enumerate(weights):
             weight.w_index = i
+
+    def get_children(self):
+        return self.children
+
+    def __eq__(self, other: "Operand") -> bool:
+        return self == other

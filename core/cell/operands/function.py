@@ -1,6 +1,7 @@
 from typing import Optional
 
 from core.cell.operands.operand import Operand
+from core.cell.operands.utility import verify_equal_children
 
 
 class Function(Operand):
@@ -45,6 +46,14 @@ class Function(Operand):
     def derive(self, index, by_weight=True):
         return None
 
+    def __eq__(self, other):
+        if isinstance(other, Function):
+            return (
+                    self.value.__name__ == other.value.__name__ and
+                    verify_equal_children(self, other)
+                    )
+        return False
+
 
 class PassThrough(Operand):
     def __invert__(self):
@@ -66,4 +75,7 @@ class PassThrough(Operand):
         return PassThrough(self.arity)
 
     def to_python(self) -> str:
-        return "<X>"
+        return "X"
+
+    def __eq__(self, other):
+        return isinstance(other, PassThrough)

@@ -4,6 +4,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional, List
 
 from core.cell.operands.operand import Operand
+from core.cell.operands.variable import Variable, MetaVariable
+from core.cell.operands.weight import AbsWeight
 from core.cell.optim.loss import LossFunction
 from core.cell.optim.optimization_args import OptimizationArgs
 from core.cell.optim.optimizer import Optimizer
@@ -58,6 +60,9 @@ class OptimizableOperand(Operand, Optimizable, metaclass=ABCMeta):
         for new, past in zip(new_weights, past_weights):
             new.set(past)
 
+    def get_children(self):
+        return self.get_sub_items()
+
     def get_sub_items(self):
         return self.children
 
@@ -75,33 +80,29 @@ class OptimizableOperand(Operand, Optimizable, metaclass=ABCMeta):
     def optimize(self, args: OptimizationArgs):
         self.optimizer(self, args)
 
-    def multi_tree_derive(self, by_weights=True):
-
-        keys = list(filter(
-            lambda x: x.startswith("W" if by_weights else "X"),
-            self.derivative_cache.keys()
-        ))
-
 
 class MultiTree(OptimizableOperand):
-    def __init__(self, trees: List[OptimizableOperand], arity, optimizer: Optional[Optimizer] = None):
+    def __init__(self, trees: List[OptimizableOperand], arity,
+                 optimizer: Optional[Optimizer] = None):
         super().__init__(arity, optimizer)
         self.children = trees
 
     def derive_unchained(self, index, by_weights):
-        derived_trees = [tree.derive(index, by_weights) for tree in self.children]
+        derived_trees = [tree.derive(index, by_weights) for tree in
+                         self.children]
         return MultiTree(derived_trees, self.arity, self.optimizer.clone())
 
     def __call__(self, args, meta_args=None):
         with ThreadPoolExecutor() as executor:
-            futures = {
-                executor.submit(
-                    tree,
-                    args
-                ): tree for tree in self.children
-            }
+            futures = {executor.submit(tree, args, meta_args): idx for
+                       idx, tree in enumerate(self.children)}
+            results = [None] * len(self.children)
+
             for future in as_completed(futures):
-                future.result()
+                idx = futures[future]
+                results[idx] = future.result()
+
+            return results
 
     def clone(self) -> "Operand":
         cloned_trees = [tree.clone() for tree in self.children]
@@ -109,3 +110,18 @@ class MultiTree(OptimizableOperand):
 
     def to_python(self) -> str:
         pass
+
+
+def multi_tree_derive(operand_to_derive: Operand, operands: List[Operand]):
+    derivatives = []
+    for operand in operands:
+        if isinstance(operand, Variable):
+            derivative = operand_to_derive.derive(operand.value, False)
+        elif isinstance(operand, AbsWeight):
+            derivative = operand_to_derive.derive(operand.w_index, True)
+        elif isinstance(operand, MetaVariable):
+            derivative = operand_to_derive.derive(operand.meta_id, False)
+        else:
+            continue
+        derivatives.append(derivative)
+    return MultiTree(derivatives, operand_to_derive.arity)

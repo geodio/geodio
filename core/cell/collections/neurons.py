@@ -56,6 +56,13 @@ class Sigmoid(Neuron):
         clone_sigmoid.B.set(random.random())
         return clone_sigmoid
 
+    def get_children(self):
+        return [self.activation_function]
+
+    def __eq__(self, other):
+        if isinstance(other, Sigmoid):
+            return self.W == other.W and self.B == other.B
+        return False
 
 NEURONS = CellBank()
 NEURONS.add_cell(Sigmoid(0.0))

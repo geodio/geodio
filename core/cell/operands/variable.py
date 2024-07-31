@@ -92,3 +92,5 @@ class MetaVariable(Operand):
     def derive(self, index, by_weights=True):
         # TODO
         return
+
+    meta_id = property(lambda self: self.__meta_id)

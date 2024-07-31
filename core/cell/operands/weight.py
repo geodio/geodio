@@ -50,6 +50,12 @@ def adapt_shape_and_apply(_w, *args):
             return _w, False
 
 
+class LockedException(Exception):
+    def __init__(self, msg: str):
+        self.msg = f"Attempted to alter value of locked weight: {msg}"
+        super().__init__(self.msg)
+
+
 class AbsWeight(Operand, metaclass=ABCMeta):
 
     def __init__(self, adaptive_shape=False):
@@ -83,6 +89,8 @@ class AbsWeight(Operand, metaclass=ABCMeta):
         return [self]
 
     def set_weights(self, new_weights):
+        if self._locked:
+            raise LockedException(self.to_python())
         new_weight = new_weights[0]
         self.set(new_weight)
 
@@ -114,6 +122,12 @@ class AbsWeight(Operand, metaclass=ABCMeta):
             return 0
         else:
             return self.get().shape
+
+    def __eq__(self, other):
+        if isinstance(other, AbsWeight):
+            return (self.w_index == other.w_index and self.get() ==
+                    other.get() and self._locked == other._locked and
+                    self.adapted == other.adapted)
 
 
 class Weight(AbsWeight):
