@@ -3,7 +3,6 @@ from typing import Optional, List, Dict
 
 import numpy as np
 
-from core.cell.collections.builtin_functors import Sub
 from core.cell.operands.operand import Operand
 from core.cell.operands.constant import ONE, ZERO
 
@@ -20,7 +19,7 @@ class BaseVariable(Operand, metaclass=ABCMeta):
         return ONE if self.value == var_index else ZERO
 
     def d_w(self, var_index) -> Optional[Operand]:
-        return Sub([self, self])
+        return ZERO
 
     def __invert__(self):
         return None  # Variables do not have an inverse

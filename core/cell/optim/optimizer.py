@@ -1,7 +1,7 @@
 import numpy as np
 
 from core.cell.operands.operand import Operand
-from core.cell.optim.loss import get_predicted, LossFunction
+from core.cell.operands.utility import get_predicted
 from core.cell.optim.optimization_args import OptimizationArgs
 
 
@@ -21,7 +21,7 @@ class Optimization:
         """
         self.risk = risk
         self.cell = cell
-        self.fit_func: LossFunction = optim_args.loss_function
+        self.fit_func = optim_args.loss_function
         self.input = optim_args.inputs
         self.desired_output = optim_args.desired_output
         self.max_iter = optim_args.max_iter

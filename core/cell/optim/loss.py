@@ -1,18 +1,17 @@
 import sys
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, ABCMeta
+from typing import List
 
 import numpy as np
 
 from core.cell.operands.operand import Operand
 from core.cell.operands.stateful import Stateful
+from core.cell.operands.utility import get_predicted
+from core.cell.optim.optimizable import multi_tree_derive
 from core.utils import flatten
 
 
-def get_predicted(X, cell):
-    return flatten([cell(x_inst) for x_inst in X])
-
-
-class LossFunction(ABC):
+class LossFunction(ABC, metaclass=ABCMeta):
 
     def evaluate(self, cell: Operand, X, Y):
         predicted = get_predicted(X, cell)
@@ -37,6 +36,10 @@ class LossFunction(ABC):
         Y_minus_predicted = np.array(Y) - np.array(predicted[:len(Y)])
         return Y_minus_predicted
 
+    @abstractmethod
+    def multi_gradient(self, cell, X, Y, operands):
+        pass
+
 
 class MSE(LossFunction):
     def compute_fitness(self, Y, predicted):
@@ -55,6 +58,18 @@ class MSE(LossFunction):
         gradient_results = np.array([delta_f_w_j(X_i) for X_i in X])
         result = self.compute_gradient(Y, gradient_results, predicted)
         return result
+
+    def multi_gradient(self, cell, X, Y,
+                       operands: List[Operand]):
+        m_tree = multi_tree_derive(cell, operands)
+        Y_flat = [y[0] for y in Y]
+
+        predicted = get_predicted(X, cell)
+        m_gradient_results = np.array([m_tree(x_i) for x_i in X]).T
+        return [
+            self.compute_gradient(Y_flat, gradient_results, predicted)
+            for gradient_results in m_gradient_results
+        ]
 
     def compute_gradient(self, Y, gradient_results, predicted):
         Y = flatten(Y)
@@ -100,17 +115,32 @@ class MSEMultivariate(MSE):
 
     def gradient(self, cell: Operand, X, Y, index, by_weight=True):
         # Flatten the nested input_data and desired_output for processing
-        X_flat = [x[0] for x in X]
         Y_flat = [y[0] for y in Y]
 
         predicted = get_predicted(X, cell)
         delta_f_w_j = cell.derive(index, by_weight)
         jacobian_results = np.array([delta_f_w_j(x_i) for x_i in X])
 
-        result = self.compute_multivariate_gradient(Y_flat, jacobian_results, predicted, len(X_flat))
+        result = self.compute_multivariate_gradient(Y_flat, jacobian_results,
+                                                    predicted)
         return result
 
-    def compute_multivariate_gradient(self, Y, jacobian_results, predicted, train_sets):
+    def multi_gradient(self, cell, X, Y,
+                       operands: List[Operand]):
+        m_tree = multi_tree_derive(cell, operands)
+        Y_flat = [y[0] for y in Y]
+
+        predicted = get_predicted(X, cell)
+        m_jacobian_results = np.array([m_tree(x_i) for x_i in X]).T
+        return [
+            self.compute_multivariate_gradient(Y_flat,
+                                               jacobian_results,
+                                               predicted)
+            for jacobian_results in m_jacobian_results
+        ]
+
+
+    def compute_multivariate_gradient(self, Y, jacobian_results, predicted):
         Y = np.array(Y)
         predicted = np.array(predicted)
         jacobian_results = np.array(jacobian_results)
@@ -118,11 +148,6 @@ class MSEMultivariate(MSE):
         predicted = predicted.reshape(Y.shape)
         diff = Y - predicted
 
-        # Print shapes for debugging
-        # print("PREDICTED", predicted.shape)
-        # print("Y", Y.shape)
-        # print("JACOBIAN", jacobian_results.shape)
-        # print("DIFF", diff.shape)
         if jacobian_results.ndim == 3 and diff.ndim == 3:
             per_instance_grad = -2 * np.einsum('ijk,ik->ij', diff,
                                                jacobian_results)

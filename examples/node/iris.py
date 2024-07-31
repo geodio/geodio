@@ -3,18 +3,13 @@ import sys
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from matplotlib import pyplot as plt
 from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
 
-from core.cell.collections.builtin_functors import Linker
 from core.cell.optim.loss import MSEMultivariate
 from core.cell.optim.optimization_args import OptimizationArgs
-from core.cell.optim.optimizer import Optimizer
 from core.organism.activation_function import SigmoidActivation
-from core.organism.link import Link
-from core.organism.node import Node
 from core.organism.organism import Organism
 
 
@@ -23,18 +18,16 @@ def reverse_one_hot(y):
     class_dict = {
         cls: i for i, cls in enumerate(classes)
     }
-    class_weight = 1.0 / (len(classes) - 1)
-    rev_classes = np.zeros((y.size, 1), dtype=int)
+    rev_classes = np.zeros((y.size, classes.size), dtype=int)
     for i, yi in enumerate(y):
-        rev_classes[i] = class_weight * class_dict[yi]
+        rev_classes[i, class_dict[yi]] = 1
     return rev_classes
 
 
 def one_hot(y, classes):
     hot_y = []
-    lcls = len(classes) - 1
     for i in range(len(y)):
-        class_idx = int(y[i][0] * lcls)
+        class_idx = np.argmax(y[i])
         hot_y.append(classes[class_idx])
     return hot_y
 
@@ -54,11 +47,14 @@ def encapsulate(y):
 
 def make_nodes(dim_in, dim_out, hidden):
     activation = SigmoidActivation()
-    input_gate = Node(1, dim_in, hidden, activation)
-    hidden_layer = Node(1, hidden, hidden, activation)
-    output_gate = Node(1, hidden, dim_out, activation)
-    model = Linker(hidden_layer, input_gate, dim_in)
-    model = Linker(output_gate, model, dim_in)
+    model = Organism.create_simple_organism(
+        dim_in,
+        hidden,
+        6,
+        dim_out,
+        activation,
+        4
+    )
     return model
 
 
@@ -72,7 +68,7 @@ def main():
     e_train_y = encapsulate(reverse_one_hot(train_y))
     e_validation_y = encapsulate(reverse_one_hot(validation_y))
     dim_in = len(train_X[0][0])
-    dim_out = 1
+    dim_out = 3
     hidden = 5
 
     model = make_nodes(dim_in, dim_out, hidden)
@@ -84,8 +80,10 @@ def main():
         desired_output=e_train_y,
         loss_function=loss,
         learning_rate=0.1,
-        max_iter=1000,
-        min_error=sys.maxsize
+        max_iter=1,
+        min_error=sys.maxsize,
+        batch_size=5,
+        epochs=250
     )
     starting_error = loss.evaluate(model, validation_X, e_validation_y)
     print("STARTING ERROR:", starting_error)

@@ -2,7 +2,8 @@ import sys
 
 import numpy as np
 
-from core.cell.optim.loss import MSE, get_predicted
+from core.cell.optim.loss import MSE
+from core.cell.operands.utility import get_predicted
 from core.cell.collections.neurons import Sigmoid
 
 

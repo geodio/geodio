@@ -3,10 +3,12 @@ from abc import ABC, ABCMeta, abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional, List
 
+from networkx.generators import trees
+
+from core.cell.operands.constant import ZERO
 from core.cell.operands.operand import Operand
 from core.cell.operands.variable import Variable, MetaVariable
 from core.cell.operands.weight import AbsWeight
-from core.cell.optim.loss import LossFunction
 from core.cell.optim.optimization_args import OptimizationArgs
 from core.cell.optim.optimizer import Optimizer
 
@@ -17,7 +19,7 @@ class Optimizable(ABC, metaclass=ABCMeta):
     def optimize(self, args: OptimizationArgs):
         pass
 
-    def optimize_values(self, fit_fct: LossFunction, variables,
+    def optimize_values(self, fit_fct, variables,
                         desired_output,
                         learning_rate=0.1,
                         max_iterations=100,
@@ -88,9 +90,16 @@ class MultiTree(OptimizableOperand):
         self.children = trees
 
     def derive_unchained(self, index, by_weights):
-        derived_trees = [tree.derive(index, by_weights) for tree in
-                         self.children]
-        return MultiTree(derived_trees, self.arity, self.optimizer.clone())
+        non_independent_trees = list(filter(lambda x: x.is_independent_of(
+            index, by_weights), self.children))
+        if len(non_independent_trees) == 0:
+            return ZERO
+        elif len(non_independent_trees) == 1:
+            return non_independent_trees[0].derive(index, by_weights)
+        else:
+            derived_trees = [tree.derive(index, by_weights) for tree in
+                             self.children]
+            return MultiTree(derived_trees, self.arity, self.optimizer.clone())
 
     def __call__(self, args, meta_args=None):
         with ThreadPoolExecutor() as executor:

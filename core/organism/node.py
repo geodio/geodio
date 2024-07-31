@@ -130,8 +130,6 @@ class Node(OptimizableOperand):
     def __init__(self, arity, dim_in, dim_out, activ_fun: ActivationFunction,
                  optimizer=None):
         super().__init__(arity, optimizer)
-        self.dW = None
-        self.db = None
         self.arity = arity
         self.dim_in = dim_in
         self.dim_out = dim_out
@@ -161,9 +159,6 @@ class Node(OptimizableOperand):
             return self.activated_output
         except ValueError:
             return self.activated_output
-
-    def get_gradients(self) -> List[np.ndarray]:
-        return [self.dW, self.db]
 
     def get_sub_items(self):
         return [self.weight, self.bias]

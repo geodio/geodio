@@ -1,4 +1,5 @@
 import sys
+
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -10,7 +11,6 @@ from core.cell.optim.optimization_args import OptimizationArgs
 from core.cell.optim.optimizer import Optimizer
 from core.organism.activation_function import SigmoidActivation
 from core.organism.node import Node
-from core.organism.organism import Organism
 
 
 def load_iris_dataset(filename):
@@ -80,6 +80,7 @@ def main():
         learning_rate -= decay
         epoch_loss /= len(X_train) // batch_size
         accuracy = evaluate_accuracy(model, X_test, y_test)
+
         print(f"Epoch {epoch + 1}/{epochs} - Loss: {epoch_loss:.4f}, Accuracy: {accuracy:.4f}")
 
     # Final evaluation on test set

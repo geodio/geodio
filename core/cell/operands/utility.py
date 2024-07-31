@@ -5,6 +5,7 @@ from core.cell.operands.variable import MetaVariable
 import uuid
 
 from core.cell.operands.operand import Operand
+from core.utils import flatten
 
 
 def verify_equal_children(operand_a: Operand, operand_b: Operand) -> bool:
@@ -95,8 +96,11 @@ def reduce(operand: Operand) -> Operand:
     reduced_operand = operand.__class__(*new_children)
 
     # Attach meta assignments to the reduced operand
-    # Assuming there is a method or a way to attach meta assignments to an operand
     # If not, this part needs to be adjusted according to actual implementation
     reduced_operand.meta_assignments = meta_assignments
 
     return reduced_operand
+
+
+def get_predicted(X, cell):
+    return flatten([cell(x_inst) for x_inst in X])
