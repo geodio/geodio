@@ -114,7 +114,14 @@ class Optimization:
         ewc_term = self.ewc_lambda * self.ewc_importance[i] * (
                 weight.get() - self.prev_weights[i]
         )
-        gradient = gradient.reshape(weight.get().shape)
+        try:
+            gradient = gradient.reshape(weight.get().shape)
+        except ValueError:
+            if gradient.size > weight.get().size:
+                gradient = np.sum(gradient, axis=0)
+            else:
+                gradient = np.tile(gradient, (weight.get().shape[1], 1))
+            gradient = gradient.reshape(weight.get().shape)
         # Regularization term for L2
         l2_term = self.l2_lambda * weight.get()
         new_weight = weight.get() - self.learning_rate * (

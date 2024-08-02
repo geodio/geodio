@@ -44,6 +44,7 @@ class BuiltinFunctor(Functor):
                 self, other)
         return False
 
+
 class Add(BuiltinFunctor):
     def __init__(self, children, arity):
         super().__init__(children, f"add_{arity}", arity)
@@ -128,12 +129,37 @@ class Matmul(BuiltinFunctor):
     def __call__(self, args, meta_args=None):
         a = self.children[0](args, meta_args)
         b = self.children[1](args, meta_args)
-        if np.ndim(b) == 1:
-            b = np.array([b])
-        try:
-            r = a @ b
-        except ValueError:
+        # print("MATMUL_A", a.shape)
+        # print("MATMUL_B", b.shape)
+        if a.shape == (1, 1) and b.shape[0] != 1:
+            r = a[0] * b
+            # print(0)
+        elif a.shape[-1] == b.shape[0] and np.ndim(b) >= 2:
+            if b.shape[1] == 1:
+                r = b * a
+            else:
+                r = a @ b
+            # print(1)
+        elif a.shape[0] == b.shape[0]:
+            if np.ndim(b) == 1:
+                b = b[:, np.newaxis]
             r = b * a
+            # print(2)
+        elif np.ndim(b) == 1 and a.shape[-1] == b.shape[0]:
+            b = np.atleast_2d(b)
+            r = a @ b
+            # print(3)
+        elif a.shape[-1] == 1 and np.ndim(b) == 1:
+            b = np.atleast_2d(b)
+            r = a @ b
+        else:
+            # b = np.tile(b, (a.shape[-1], 1))
+            # print(b.shape)
+            # r = a @ b
+            r = np.tensordot(a.T,b, axes=0)
+            # print(4)
+
+        # print("R", r.shape)
         return r
 
     def derive(self, index, by_weights=True):

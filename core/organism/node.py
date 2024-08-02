@@ -108,7 +108,7 @@ class LinearTransformation(OptimizableOperand):
     def _derive_b(self):
         # The derivative of W * X + B with respect to B is 1.
         def dB(args):
-            return np.ones(1)
+            return np.ones(self.dim_out)
 
         return Function(1, dB, [PassThrough(1)])
 

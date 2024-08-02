@@ -139,7 +139,6 @@ class MSEMultivariate(MSE):
             for jacobian_results in m_jacobian_results
         ]
 
-
     def compute_multivariate_gradient(self, Y, jacobian_results, predicted):
         Y = np.array(Y)
         predicted = np.array(predicted)
@@ -147,17 +146,31 @@ class MSEMultivariate(MSE):
 
         predicted = predicted.reshape(Y.shape)
         diff = Y - predicted
-
-        if jacobian_results.ndim == 3 and diff.ndim == 3:
-            per_instance_grad = -2 * np.einsum('ijk,ik->ij', diff,
-                                               jacobian_results)
-        elif jacobian_results.ndim == 2 and diff.ndim == 2:
-            per_instance_grad = -2 * np.matmul(diff.T,
-                                               jacobian_results)
-        else:
-            diff = diff[:, :, np.newaxis]
-            per_instance_grad = -2 * diff * jacobian_results
+        # print("DIFF", diff.shape)
+        # print("JACOBIAN", jacobian_results.shape)
+        try:
+            if jacobian_results.ndim == 3 and diff.ndim == 3:
+                per_instance_grad = -2 * np.einsum('ijk,ik->ij', diff,
+                                                   jacobian_results)
+            elif jacobian_results.ndim == 2 and diff.ndim == 2:
+                per_instance_grad = -2 * np.matmul(diff.T,
+                                                   jacobian_results)
+            else:
+                diff = diff[:, :, np.newaxis]
+                per_instance_grad = -2 * diff * jacobian_results
+        except:
+            if jacobian_results.ndim == 4:
+                diff = diff[:, :, :, np.newaxis]
+                per_instance_grad = -2 * diff * jacobian_results
+                per_instance_grad = np.sum(per_instance_grad, axis=(1))
+                # print("AAAAAAAAAAAAAAAAAAAAAA", per_instance_grad.shape)
+            else:
+                jacobian_results = np.transpose(jacobian_results, axes=(0,2,1))
+                per_instance_grad = -2 * diff * jacobian_results
+                per_instance_grad = np.mean(per_instance_grad, axis=(1))
+                # print("HELL", per_instance_grad.shape)
         gradient = np.mean(per_instance_grad, axis=0)
+        # print("gradient", gradient.shape)
 
         if np.isnan(gradient).any() or np.isinf(gradient).any():
             gradient = np.zeros_like(gradient)

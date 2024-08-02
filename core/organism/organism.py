@@ -15,6 +15,7 @@ from core.organism.node import Node
 class Organism(Cell):
     def __init__(self, root, dim_in, depth=2, optimizer=None):
         super().__init__(root, 1, depth, optimizer)
+        self.optimizer = optimizer
         self.weight_cache = None
         self.dim_in = dim_in
 
@@ -66,33 +67,19 @@ class Organism(Cell):
                             optimizer)
         if spread_point == -1:
             spread_point = hidden_count + 1
-        for i in range(1, spread_point):
+        for i in range(1, hidden_count + 1):
             hidden_node = Node(1, dim_hidden, dim_hidden,
                                activation_function)
             organism.link(hidden_node)
-        spread_chain = []
-        for j in range(dim_out):
-            chain = None
-            for i in range(spread_point, hidden_count + 1):
-                if chain is None:
-                    chain = Node(1, dim_hidden, dim_hidden,
-                                 activation_function)
-                else:
-                    x = Node(1, dim_hidden, dim_hidden,
-                             activation_function)
-                    chain = Linker(x, chain, dim_in)
-            output_node = Node(1, dim_hidden, 1,
-                               activation_function)
-            if chain is None:
-                chain = output_node
-            else:
-                chain = Linker(output_node, chain, dim_in)
-            spread_chain.append(chain)
-        mtree = MultiTree(spread_chain, 1)
-        organism.link(mtree)
+
+        output_node = Node(1, dim_hidden, dim_out,
+                           activation_function)
+        organism.link(output_node)
+        print("KWAAA")
         return organism
 
     def optimize(self, args: OptimizationArgs):
+        print("DSDSSDSD")
         self.optimizer(self, args)
 
 
@@ -117,6 +104,7 @@ class OrganismOptimizer(Optimizer):
 
     def __call__(self, model, optimization_args):
         a = optimization_args
+        print("ASASAS")
         for epoch in range(a.epochs):
             epoch_loss = 0
             for X_batch, y_batch in a.batches():
@@ -126,9 +114,10 @@ class OrganismOptimizer(Optimizer):
                 optimization_args = OptimizationArgs(
                     inputs=input_data,
                     desired_output=desired_output,
-                    loss_function=a.loss,
+                    loss_function=a.loss_function,
                     learning_rate=a.learning_rate,
                     max_iter=a.max_iter,  # Iteration within a batch
                     min_error=sys.maxsize
                 )
-                epoch_loss += self.train(model, optimization_args)
+                self.train(model, optimization_args)
+                # epoch_loss += self.train(model, optimization_args)
