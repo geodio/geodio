@@ -2,6 +2,7 @@ import sys
 
 import numpy as np
 
+from core import log
 from core.cell.collections.functors import Functor, CollectionBasedFunctors
 from core.cell.operands.constant import Constant
 from core.cell.operands.operand import Operand
@@ -129,37 +130,29 @@ class Matmul(BuiltinFunctor):
     def __call__(self, args, meta_args=None):
         a = self.children[0](args, meta_args)
         b = self.children[1](args, meta_args)
-        # print("MATMUL_A", a.shape)
-        # print("MATMUL_B", b.shape)
+        # TODO VERIFY MATMUL ON SCALARS
+        if np.isscalar(a) and np.isscalar(b):
+            return a * b
         if a.shape == (1, 1) and b.shape[0] != 1:
             r = a[0] * b
-            # print(0)
         elif a.shape[-1] == b.shape[0] and np.ndim(b) >= 2:
-            if b.shape[1] == 1:
-                r = b * a
-            else:
-                r = a @ b
-            # print(1)
+            r = a @ b
         elif a.shape[0] == b.shape[0]:
             if np.ndim(b) == 1:
                 b = b[:, np.newaxis]
-            r = b * a
-            # print(2)
+            # TODO REMOVE TRY EXCEPT
+            try:
+                r = b * a
+            except ValueError:
+                r = b @ a
         elif np.ndim(b) == 1 and a.shape[-1] == b.shape[0]:
             b = np.atleast_2d(b)
             r = a @ b
-            # print(3)
         elif a.shape[-1] == 1 and np.ndim(b) == 1:
             b = np.atleast_2d(b)
             r = a @ b
         else:
-            # b = np.tile(b, (a.shape[-1], 1))
-            # print(b.shape)
-            # r = a @ b
-            r = np.tensordot(a.T,b, axes=0)
-            # print(4)
-
-        # print("R", r.shape)
+            r = np.tensordot(a.T, b, axes=0)
         return r
 
     def derive(self, index, by_weights=True):
@@ -348,6 +341,8 @@ class Transpose(OptimizableOperand):
 
     def __call__(self, args, meta_args=None):
         out = self.x(args, meta_args)
+        if np.isscalar(out):
+            return out
         if np.ndim(out) == 1:
             out = out[:, np.newaxis]
             return out

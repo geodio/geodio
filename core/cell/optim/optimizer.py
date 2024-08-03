@@ -1,8 +1,27 @@
+from core.log import logging
+
 import numpy as np
 
 from core.cell.operands.operand import Operand
 from core.cell.operands.utility import get_predicted
 from core.cell.optim.optimization_args import OptimizationArgs
+
+once_too_small = True
+once_too_large = True
+
+
+def warn_gradient_too_small():
+    global once_too_small
+    if once_too_small:
+        logging.warning("Gradient size is too small for weight")
+        once_too_small = False
+
+
+def debug_gradient_too_big():
+    global once_too_large
+    if once_too_large:
+        logging.debug("Gradient size is too big")
+        once_too_large = False
 
 
 class Optimization:
@@ -119,15 +138,15 @@ class Optimization:
         except ValueError:
             if gradient.size > weight.get().size:
                 gradient = np.sum(gradient, axis=0)
+                debug_gradient_too_big()
             else:
+                warn_gradient_too_small()
                 gradient = np.tile(gradient, (weight.get().shape[1], 1))
             gradient = gradient.reshape(weight.get().shape)
         # Regularization term for L2
         l2_term = self.l2_lambda * weight.get()
         new_weight = weight.get() - self.learning_rate * (
-                    gradient + ewc_term + l2_term)
-        # print("INSIDE OPTIMIZATION, __update_weight", weight.get(),
-        #       gradient, new_weight)
+                gradient + ewc_term + l2_term)
         weight.set(new_weight)
         y_pred = [self.cell(x_inst) for x_inst in self.input]
         self.cell.error = self.fit_func(self.desired_output, y_pred)
@@ -243,8 +262,8 @@ class Optimizer:
                        l2_lambda=0.0):
         optim_args = optim_args.clone()
         optimizer = Optimization(cell, optim_args, self.risk,
-                                        ewc_lambda=ewc_lambda,
-                                        l2_lambda=l2_lambda)
+                                 ewc_lambda=ewc_lambda,
+                                 l2_lambda=l2_lambda)
         return optimizer
 
     def clone(self):

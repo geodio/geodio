@@ -1,11 +1,11 @@
-from typing import Union, List
+from typing import Union
 
 import numpy as np
 
 from core.cell.collections.builtin_functors import Linker
 from core.cell.operands.function import Function, PassThrough
-from core.cell.optim.optimizable import OptimizableOperand
 from core.cell.operands.weight import AbsWeight, t_weight
+from core.cell.optim.optimizable import OptimizableOperand
 from core.organism.activation_function import ActivationFunction
 
 
@@ -70,7 +70,15 @@ class LinearTransformation(OptimizableOperand):
 
     def __call__(self, args, meta_args=None):
         X = np.array(args[0])
-        return np.dot(self.weight.get(), X) + self.bias.get()
+        try:
+            z = np.dot(self.weight.get(), X)
+        except ValueError:
+            z = np.dot(self.weight.get(), X[0])
+        try:
+            r = z + self.bias.get()
+        except ValueError:
+            r = z + self.bias.get()[:, np.newaxis]
+        return r
 
     def derive_unchained(self, index, by_weights=True):
         if by_weights:
@@ -79,7 +87,6 @@ class LinearTransformation(OptimizableOperand):
             elif index == self.bias.w_index:  # Derivative with respect to B
                 return self._derive_b()
             else:
-                # TODO
                 sw = ShapedWeight(
                     (self.dim_out, self.dim_out),
                     np.zeros((self.dim_out, self.dim_out))

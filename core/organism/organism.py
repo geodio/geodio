@@ -3,6 +3,7 @@ import sys
 
 import numpy as np
 
+from core import log
 from core.cell.cell import Cell
 from core.cell.collections.builtin_functors import Linker
 from core.cell.geoo import GeneExpressedOptimizableOperand
@@ -20,13 +21,11 @@ class Organism(Cell):
         self.dim_in = dim_in
 
     def derive_unchained(self, index, by_weights=True):
-        pass
+        return self.root.derive_unchained(index, by_weights)
 
     def get_weights_local(self):
         if self.weight_cache is None:
-            self.weight_cache = []
-            for node in self.children:
-                self.weight_cache.extend(node.get_weights_local())
+            self.weight_cache = self.root.get_weights_local()
         return self.weight_cache
 
     def __call__(self, args, meta_args=None):
@@ -75,18 +74,17 @@ class Organism(Cell):
         output_node = Node(1, dim_hidden, dim_out,
                            activation_function)
         organism.link(output_node)
-        print("KWAAA")
         return organism
 
     def optimize(self, args: OptimizationArgs):
-        print("DSDSSDSD")
         self.optimizer(self, args)
 
 
 class OrganismOptimization(Optimization):
     def calculate_gradients(self):
-        return self.fit_func.multi_gradient(self.cell, self.input,
-                                            self.desired_output, self.weights)
+        grd = self.fit_func.multi_gradient(self.cell, self.input,
+                                           self.desired_output, self.weights)
+        return grd
 
 
 class OrganismOptimizer(Optimizer):
@@ -104,9 +102,10 @@ class OrganismOptimizer(Optimizer):
 
     def __call__(self, model, optimization_args):
         a = optimization_args
-        print("ASASAS")
+        log.logging.debug("Organism Optimization Started.")
         for epoch in range(a.epochs):
             epoch_loss = 0
+            log.logging.debug(f"Epoch {epoch}")
             for X_batch, y_batch in a.batches():
                 input_data = [[np.array(x)] for x in X_batch]
                 desired_output = [[np.array([y[0]])] for y in y_batch]
@@ -120,4 +119,5 @@ class OrganismOptimizer(Optimizer):
                     min_error=sys.maxsize
                 )
                 self.train(model, optimization_args)
+                log.logging.debug(f"LOSS {model.error}")
                 # epoch_loss += self.train(model, optimization_args)

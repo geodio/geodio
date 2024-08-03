@@ -50,7 +50,7 @@ def make_nodes(dim_in, dim_out, hidden):
     model = Organism.create_simple_organism(
         dim_in,
         hidden,
-        6,
+        1,
         dim_out,
         activation,
         4
