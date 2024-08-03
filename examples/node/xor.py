@@ -11,7 +11,7 @@ from core.organism.organism import Organism
 
 
 def main():
-    dataset_name = 'xor_3'
+    dataset_name = 'iris'
     dataset = get_dataset(dataset_name)
     model_config = get_model_config(dataset_name)
 
@@ -88,11 +88,11 @@ def iris_sepal():
         [np.array([7.7, 3.8, 0])],  # virginica
     ]
     desired_output = [
-        [np.array([.5])],
-        [np.array([.5])],
-        [np.array([0])],
-        [np.array([0])],
-        [np.array([1])],
+        [np.array([0, 1, 0])],
+        [np.array([0, 1, 0])],
+        [np.array([1, 0, 0])],
+        [np.array([0, 0, 1])],
+        [np.array([0, 0, 1])],
     ]
     return desired_output, input_data
 
@@ -143,7 +143,7 @@ def get_model_config(dataset_name):
         'xor': {'dim_in': 2, 'dim_mid': 10, 'dim_out': 1, 'arity': 1},
         'xor_2': {'dim_in': 2, 'dim_mid': 10, 'dim_out': 1, 'arity': 1},
         'xor_3': {'dim_in': 3, 'dim_mid': 10, 'dim_out': 2, 'arity': 1},
-        'iris': {'dim_in': 3, 'dim_mid': 10, 'dim_out': 1, 'arity': 1},
+        'iris': {'dim_in': 3, 'dim_mid': 10, 'dim_out': 3, 'arity': 1},
         'dummy': {'dim_in': 2, 'dim_mid': 3, 'dim_out': 1, 'arity': 1,
                   'max_iter': 100},
     }

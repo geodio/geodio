@@ -129,11 +129,9 @@ class MSEMultivariate(MSE):
     def multi_gradient(self, cell, X, Y,
                        operands: List[Operand]):
         m_tree = multi_tree_derive(cell, operands)
-        Y_flat = [y[0][0] for y in Y]
-
+        Y_flat = [y[0] for y in Y]
         predicted = get_predicted(X, cell)
-        m_jacobian_results = [m_tree(np.array(x_i[0])) for x_i in
-                              X]
+        m_jacobian_results = [m_tree(np.array(x_i)) for x_i in X]
 
         transposed_tuples = list(zip(*m_jacobian_results))
         m_jacobian_results = [list(sublist) for sublist in transposed_tuples]

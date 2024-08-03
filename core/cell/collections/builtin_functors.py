@@ -2,12 +2,11 @@ import sys
 
 import numpy as np
 
-from core import log
 from core.cell.collections.functors import Functor, CollectionBasedFunctors
 from core.cell.operands.constant import Constant
 from core.cell.operands.operand import Operand
-from core.cell.optim.optimizable import OptimizableOperand
 from core.cell.operands.utility import verify_equal_children
+from core.cell.optim.optimizable import OptimizableOperand
 
 
 def clean_number(x):
@@ -27,17 +26,6 @@ class BuiltinFunctor(Functor):
         super().__init__(func_id, None, arity)
         self.children = children
         self.value = self
-
-    def get_output_dim(self):
-        # TODO consider tuple output
-        max_dim = 0
-        for child in self.children:
-            output_dim = child.get_output_dim()
-            if isinstance(output_dim, int):
-                max_dim = max(max_dim, output_dim)
-            elif isinstance(output_dim, tuple):
-                max_dim = max(max_dim, len(output_dim))
-        return max_dim
 
     def __eq__(self, other):
         if isinstance(other, BuiltinFunctor):
@@ -130,25 +118,27 @@ class Matmul(BuiltinFunctor):
     def __call__(self, args, meta_args=None):
         a = self.children[0](args, meta_args)
         b = self.children[1](args, meta_args)
-        # TODO VERIFY MATMUL ON SCALARS
         if np.isscalar(a) and np.isscalar(b):
             return a * b
-        if a.shape == (1, 1) and b.shape[0] != 1:
+        b_s_0 = b.shape[0]
+        a_s_m1 = a.shape[-1]
+        a_s_0 = a.shape[0]
+        if a.shape == (1, 1) and b_s_0 != 1:
             r = a[0] * b
-        elif a.shape[-1] == b.shape[0] and np.ndim(b) >= 2:
+        elif a_s_m1 == b_s_0 and np.ndim(b) >= 2:
             r = a @ b
-        elif a.shape[0] == b.shape[0]:
+        elif a_s_0 == b_s_0:
             if np.ndim(b) == 1:
                 b = b[:, np.newaxis]
-            # TODO REMOVE TRY EXCEPT
-            try:
+            b_s_m1 = b.shape[-1]
+            if b_s_m1 == 1 or a_s_m1 == b_s_m1 or a_s_m1 == 1:
                 r = b * a
-            except ValueError:
+            else:
                 r = b @ a
-        elif np.ndim(b) == 1 and a.shape[-1] == b.shape[0]:
-            b = np.atleast_2d(b)
+        elif np.ndim(b) == 1 and a_s_m1 == b_s_0:
+            b = b[:, np.newaxis]
             r = a @ b
-        elif a.shape[-1] == 1 and np.ndim(b) == 1:
+        elif a_s_m1 == 1 and np.ndim(b) == 1:
             b = np.atleast_2d(b)
             r = a @ b
         else:
@@ -359,7 +349,7 @@ class Transpose(OptimizableOperand):
     def to_python(self) -> str:
         return self.x.to_python() + ".T"
 
-    def get_sub_items(self):
+    def get_children(self):
         return [self.x]
 
 
@@ -429,5 +419,5 @@ class Linker(OptimizableOperand):
     def to_python(self) -> str:
         return "[λX.[" + self.f.to_python() + "]" + self.g.to_python() + "]"
 
-    def get_sub_items(self):
+    def get_children(self):
         return [self.g, self.f]

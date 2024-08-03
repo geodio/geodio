@@ -6,6 +6,7 @@ import seaborn as sns
 from sklearn.datasets import load_iris
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
 from core.cell.optim.loss import MSEMultivariate
 from core.cell.optim.optimization_args import OptimizationArgs
@@ -50,7 +51,7 @@ def make_nodes(dim_in, dim_out, hidden):
     model = Organism.create_simple_organism(
         dim_in,
         hidden,
-        1,
+        2,
         dim_out,
         activation,
         4
@@ -61,15 +62,15 @@ def make_nodes(dim_in, dim_out, hidden):
 def main():
     test_X, test_y, train_X, train_y, validation_X, validation_y = get_iris_dataset()
     classes = np.unique(train_y)
-    test_X = encapsulate(data_from_dict(test_X))
-    train_X = encapsulate(data_from_dict(train_X))
-    validation_X = encapsulate(data_from_dict(validation_X))
+    test_X = encapsulate(test_X)
+    train_X = encapsulate(train_X)
+    validation_X = encapsulate(validation_X)
     e_test_y = encapsulate(reverse_one_hot(test_y))
     e_train_y = encapsulate(reverse_one_hot(train_y))
     e_validation_y = encapsulate(reverse_one_hot(validation_y))
     dim_in = len(train_X[0][0])
     dim_out = 3
-    hidden = 5
+    hidden = 15
 
     model = make_nodes(dim_in, dim_out, hidden)
 
@@ -80,7 +81,7 @@ def main():
         desired_output=e_train_y,
         loss_function=loss,
         learning_rate=0.1,
-        max_iter=1,
+        max_iter=100,
         min_error=sys.maxsize,
         batch_size=5,
         epochs=250
@@ -140,6 +141,10 @@ def get_iris_dataset():
         ['sepal length (cm)', 'sepal width (cm)', 'petal length (cm)',
          'petal width (cm)']]
     test_y = test.Species
+    scaler = StandardScaler()
+    train_X = scaler.fit_transform(train_X)
+    test_X = scaler.transform(test_X)
+    validation_X = scaler.transform(validation_X)
     return test_X, test_y, train_X, train_y, validation_X, validation_y
 
 

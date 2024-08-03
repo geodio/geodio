@@ -129,7 +129,7 @@ class LinearTransformation(OptimizableOperand):
     def to_python(self) -> str:
         return f"{self.weight.to_python()} * x + {self.bias.to_python()}"
 
-    def get_sub_items(self):
+    def get_children(self):
         return [self.weight, self.bias]
 
 
@@ -167,7 +167,7 @@ class Node(OptimizableOperand):
         except ValueError:
             return self.activated_output
 
-    def get_sub_items(self):
+    def get_children(self):
         return [self.weight, self.bias]
 
     def to_python(self) -> str:

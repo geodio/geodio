@@ -54,7 +54,7 @@ class OptimizableOperand(Operand, Optimizable, metaclass=ABCMeta):
 
     def get_weights_local(self):
         weights = []
-        for child in self.get_sub_items():
+        for child in self.get_children():
             weights.extend(child.get_weights_local())
         return weights
 
@@ -64,9 +64,6 @@ class OptimizableOperand(Operand, Optimizable, metaclass=ABCMeta):
             new.set(past)
 
     def get_children(self):
-        return self.get_sub_items()
-
-    def get_sub_items(self):
         return self.children
 
     def derive(self, index, by_weights=True):

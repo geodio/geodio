@@ -44,17 +44,11 @@ class Organism(Cell):
         self.root = Linker(next_chain, self.root, self.dim_in)
         self.clean()
 
-    def replace(self, node_old, node_new):
-        pass
-
     def clean(self):
         self.derivative_cache.clear()
         if self.weight_cache is not None:
             self.weight_cache.clear()
             self.weight_cache = None
-
-    def randomly_replace(self, mutant_node):
-        pass
 
     @staticmethod
     def create_simple_organism(dim_in, dim_hidden, hidden_count, dim_out,
@@ -91,7 +85,7 @@ class OrganismOptimizer(Optimizer):
     def make_optimizer(self, cell, optim_args, ewc_lambda=0.0,
                        l2_lambda=0.0):
         optim_args = optim_args.clone()
-        optimizer = OrganismOptimization(cell, optim_args, self.risk,
+        optimizer = Optimization(cell, optim_args, self.risk,
                                          ewc_lambda=ewc_lambda,
                                          l2_lambda=l2_lambda)
         return optimizer
@@ -107,17 +101,18 @@ class OrganismOptimizer(Optimizer):
             epoch_loss = 0
             log.logging.debug(f"Epoch {epoch}")
             for X_batch, y_batch in a.batches():
-                input_data = [[np.array(x)] for x in X_batch]
-                desired_output = [[np.array([y[0]])] for y in y_batch]
+                input_data = [x for x in X_batch]
+                desired_output = [y for y in y_batch]
 
                 optimization_args = OptimizationArgs(
                     inputs=input_data,
                     desired_output=desired_output,
                     loss_function=a.loss_function,
                     learning_rate=a.learning_rate,
-                    max_iter=a.max_iter,  # Iteration within a batch
+                    max_iter=a.max_iter,
                     min_error=sys.maxsize
                 )
                 self.train(model, optimization_args)
-                log.logging.debug(f"LOSS {model.error}")
-                # epoch_loss += self.train(model, optimization_args)
+                epoch_loss += model.error
+            epoch_loss /= a.batch_size
+            log.logging.debug(f"LOSS {model.error}")

@@ -117,12 +117,6 @@ class AbsWeight(Operand, metaclass=ABCMeta):
 
     is_locked = property(lambda self: self._locked)
 
-    def get_output_dim(self):
-        if np.isscalar(self.get()):
-            return 0
-        else:
-            return self.get().shape
-
     def __eq__(self, other):
         if isinstance(other, AbsWeight):
             return (self.w_index == other.w_index and self.get() ==
