@@ -4,11 +4,8 @@ from typing import Union, List
 
 import numpy as np
 
-from core.cell.cell import Cell
-from core.cell.operands.collections import Prod, Add
-from core.cell.geoo import t_geoo
-from core.cell.operands.weight import Weight, t_weight
-from core.cell.optim.optimization_args import OptimizationArgs
+from core.cell import Cell, Prod, Add, t_geoo, Weight, t_weight, \
+                       OptimizationArgs
 from core.organism.router import Router
 
 

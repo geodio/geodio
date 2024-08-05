@@ -2,7 +2,7 @@ from typing import TypeVar, List, Iterable
 
 from core.cell.geoo import GeneExpressedOptimizableOperand
 from core.cell.operands.constant import ONE
-from core.cell.operands.operand import Operand
+from core.cell.operands import Operand
 from core.cell.optim.optimization_args import OptimizationArgs
 from core.genetic.pop_utils import ReproductionPolicy
 from core.cell.math import rnd

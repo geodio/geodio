@@ -2,8 +2,8 @@ import sys
 
 import numpy as np
 
-from core.cell.operands.collections import NEURONS
-from core.cell.optim.loss import CheckpointedMSE
+from core.cell import NEURONS
+from core.cell import CheckpointedMSE
 from core.genetic.generator import CellBankGenerator
 from core.genetic.pop_utils import PopulationProperties
 

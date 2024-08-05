@@ -32,13 +32,16 @@ def adapt_gradient(gradient, weight):
     try:
         gradient = gradient.reshape(weight.get().shape)
     except ValueError:
-        if gradient.size > weight.get().size:
-            gradient = np.sum(gradient, axis=0)
-            debug_gradient_too_big()
-        else:
-            warn_gradient_too_small()
-            gradient = np.tile(gradient, (weight.get().shape[1], 1))
-        gradient = gradient.reshape(weight.get().shape)
+        try:
+            if gradient.size > weight.get().size:
+                gradient = np.sum(gradient, axis=0)
+                debug_gradient_too_big()
+            else:
+                warn_gradient_too_small()
+                gradient = np.tile(gradient, (weight.get().shape[1], 1))
+            gradient = gradient.reshape(weight.get().shape)
+        except:
+            pass
     return gradient
 
 

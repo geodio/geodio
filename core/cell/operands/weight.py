@@ -1,6 +1,7 @@
 from abc import abstractmethod, ABCMeta
 from typing import Union
 
+import numba
 import numpy as np
 from typing_extensions import TypeVar
 
@@ -8,6 +9,7 @@ from core.cell.operands.constant import ONE, ZERO
 from core.cell.operands.operand import Operand
 
 
+@numba.jit
 def adapt_shape_and_apply(_w, *args):
     """
     Adapts the shape of _w to match the shape of the first argument in args if they differ.

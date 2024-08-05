@@ -2,9 +2,9 @@ import sys
 
 import numpy as np
 
-from core.cell.optim.loss import MSE
-from core.cell.operands.utility import get_predicted
-from core.cell.operands.collections import Sigmoid
+from core.cell import MSE
+from core.cell import get_predicted
+from core.cell import Sigmoid
 
 
 def main():
