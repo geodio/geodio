@@ -1,4 +1,4 @@
-from core.log import logging
+from core.logger import logging
 
 import numpy as np
 

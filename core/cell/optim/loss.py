@@ -4,7 +4,7 @@ from typing import List
 
 import numpy as np
 
-from core import log
+from core import logger
 from core.cell.operands.operand import Operand
 from core.cell.operands.stateful import Stateful
 from core.cell.operands.utility import get_predicted

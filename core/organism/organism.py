@@ -1,15 +1,11 @@
 # organism.py
 import sys
 
-import numpy as np
-
-from core import log
-from core.cell.cell import Cell
-from core.cell.collections.builtins import Linker
-from core.cell.geoo import GeneExpressedOptimizableOperand
-from core.cell.optim.optimizable import MultiTree, multi_tree_derive
-from core.cell.optim.optimization_args import OptimizationArgs
-from core.cell.optim.optimizer import Optimizer, Optimization
+from core import logger
+from core.cell import Cell
+from core.cell import Linker
+from core.cell import OptimizationArgs
+from core.cell import Optimizer, Optimization
 from core.organism.node import Node
 
 
@@ -96,10 +92,10 @@ class OrganismOptimizer(Optimizer):
 
     def __call__(self, model, optimization_args):
         a = optimization_args
-        log.logging.debug("Organism Optimization Started.")
+        logger.logging.debug("Organism Optimization Started.")
         for epoch in range(a.epochs):
             epoch_loss = 0
-            log.logging.debug(f"Epoch {epoch}")
+            logger.logging.debug(f"Epoch {epoch}")
             for X_batch, y_batch in a.batches():
                 input_data = [x for x in X_batch]
                 desired_output = [y for y in y_batch]
@@ -115,4 +111,4 @@ class OrganismOptimizer(Optimizer):
                 self.train(model, optimization_args)
                 epoch_loss += model.error
             epoch_loss /= a.batch_size
-            log.logging.debug(f"LOSS {model.error}")
+            logger.logging.debug(f"LOSS {model.error}")

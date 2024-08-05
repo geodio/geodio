@@ -5,7 +5,7 @@ from core.cell.operands.constant import ONE
 from core.cell.operands.operand import Operand
 from core.cell.optim.optimization_args import OptimizationArgs
 from core.genetic.pop_utils import ReproductionPolicy
-from core.math import rnd
+from core.cell.math import rnd
 
 
 class Cell(GeneExpressedOptimizableOperand):

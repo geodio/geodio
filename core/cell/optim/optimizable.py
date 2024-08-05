@@ -3,9 +3,6 @@ from abc import ABC, ABCMeta, abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional, List
 
-from networkx.generators import trees
-
-from core import log
 from core.cell.operands.constant import ZERO
 from core.cell.operands.operand import Operand
 from core.cell.operands.variable import Variable, MetaVariable

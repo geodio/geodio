@@ -1,10 +1,11 @@
 from abc import ABCMeta, abstractmethod
-from typing import Optional, List, Dict
+from typing import Optional
 
 import numpy as np
 
-from core.cell.operands.operand import Operand
 from core.cell.operands.constant import ONE, ZERO
+from core.cell.operands.operand import Operand
+from core.cell.math.hashy import HashLeaf
 
 
 class BaseVariable(Operand, metaclass=ABCMeta):
@@ -35,6 +36,9 @@ class BaseVariable(Operand, metaclass=ABCMeta):
         if by_weights:
             return self.d_w(index)
         return self.d(index)
+
+    def hash_tree(self):
+        return HashLeaf(self.value)
 
 
 class AdaptiveConstant(BaseVariable):

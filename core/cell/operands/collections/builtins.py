@@ -2,7 +2,7 @@ import sys
 
 import numpy as np
 
-from core.cell.collections.basefunctions import BaseFunction, \
+from core.cell.operands.collections.basefunctions import BaseFunction, \
     CollectionBasedBaseFunctions
 from core.cell.operands.constant import Constant
 from core.cell.operands.operand import Operand, GLOBAL_BUILTINS

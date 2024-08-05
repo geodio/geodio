@@ -1,13 +1,12 @@
 import sys
 import numpy as np
 
-from core.cell.collections.builtins import Linker
+from core.cell.operands.collections import Linker
 from core.cell.optim.loss import MSEMultivariate
 from core.cell.optim.optimization_args import OptimizationArgs
 from core.cell.optim.optimizer import Optimizer
 from core.organism.activation_function import SigmoidActivation
 from core.organism.node import Node
-from core.organism.organism import Organism
 
 
 def main():

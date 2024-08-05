@@ -1,6 +1,6 @@
 from abc import ABC
 
-from core.cell.collections.bank import Bank
+from core.cell.operands.collections.bank import Bank
 from core.cell.operands.function import Function
 
 

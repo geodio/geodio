@@ -3,8 +3,8 @@ import random
 import numpy as np
 
 from core.cell.cell import Cell
-from core.cell.collections.bank import CellBank
-from core.cell.collections.builtins import Div, Add, Power, Prod, Dot
+from core.cell.operands.collections.bank import CellBank
+from core.cell.operands.collections.builtins import Div, Add, Power, Prod, Dot
 from core.cell.operands.constant import ONE, E, MINUS_ONE
 from core.cell.operands.variable import Variable
 from core.cell.operands.weight import Weight

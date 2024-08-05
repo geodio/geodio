@@ -1,9 +1,10 @@
 import pickle
 import sys
-from abc import ABC, abstractmethod, ABCMeta
+from abc import abstractmethod, ABCMeta
 from typing import Optional, Dict, Any, Callable, Union
 
-from core.math.derivable import Derivable, WeightDerivable
+from core.cell.math.derivable import Derivable, WeightDerivable
+from core.cell.math.hashy import Hashable, HashTree, HashNode
 
 GLOBAL_BUILTINS: Dict[
     str,
@@ -14,7 +15,7 @@ GLOBAL_BUILTINS: Dict[
 ] = {}
 
 
-class Operand(ABC, Derivable, WeightDerivable, metaclass=ABCMeta):
+class Operand(Derivable, WeightDerivable, Hashable, metaclass=ABCMeta):
 
     def __init__(self, arity):
         self.arity = arity
@@ -132,22 +133,31 @@ class Operand(ABC, Derivable, WeightDerivable, metaclass=ABCMeta):
     def __eq__(self, other: "Operand") -> bool:
         return self == other
 
-    def __matmul__(self, other):
+    def __matmul__(self, other: "Operand"):
         return GLOBAL_BUILTINS["matmul"](self, other)
 
-    def __add__(self, other):
+    def __add__(self, other: "Operand"):
         return GLOBAL_BUILTINS["add"](self, other)
 
-    def __radd__(self, other):
+    def __radd__(self, other: "Operand"):
         return GLOBAL_BUILTINS["add"](self, other)
 
-    def __sub__(self, other):
+    def __sub__(self, other: "Operand"):
         return GLOBAL_BUILTINS["sub"](self, other)
 
-    def link(self, other):
+    def link(self, other: "Operand"):
         return GLOBAL_BUILTINS["link"](self, other)
 
-    def __pow__(self, power):
+    def __pow__(self, power: "Operand"):
         return GLOBAL_BUILTINS["pow"](self, power)
 
     T = property(lambda self: GLOBAL_BUILTINS["transpose"](self))
+
+    def hash_str(self):
+        return self.__name__
+
+    def hash_tree(self) -> HashTree:
+        return HashNode(
+            self.hash_str(),
+            [kid.hash_tree() for kid in self.get_children()]
+        )

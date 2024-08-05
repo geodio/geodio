@@ -2,11 +2,9 @@ import sys
 
 import numpy as np
 
-from core.cell.collections.builtins import BUILTIN_FUNCTORS
-from core.cell.collections.neurons import NEURONS
-from core.cell.optim.loss import MSE, CheckpointedMSE
-from core.genetic.generator import CellBankGenerator, \
-    RandomCellGenerator
+from core.cell.operands.collections import NEURONS
+from core.cell.optim.loss import CheckpointedMSE
+from core.genetic.generator import CellBankGenerator
 from core.genetic.pop_utils import PopulationProperties
 
 
