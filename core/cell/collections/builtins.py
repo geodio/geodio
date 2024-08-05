@@ -2,9 +2,10 @@ import sys
 
 import numpy as np
 
-from core.cell.collections.functors import Functor, CollectionBasedFunctors
+from core.cell.collections.basefunctions import BaseFunction, \
+    CollectionBasedBaseFunctions
 from core.cell.operands.constant import Constant
-from core.cell.operands.operand import Operand
+from core.cell.operands.operand import Operand, GLOBAL_BUILTINS
 from core.cell.operands.utility import verify_equal_children
 from core.cell.optim.optimizable import OptimizableOperand
 
@@ -20,7 +21,7 @@ def clean_number(x):
     return x
 
 
-class BuiltinFunctor(Functor):
+class BuiltinBaseFunction(BaseFunction):
     def __init__(self, children, func_id, arity):
         self.__name__ = func_id
         super().__init__(func_id, None, arity)
@@ -28,13 +29,13 @@ class BuiltinFunctor(Functor):
         self.value = self
 
     def __eq__(self, other):
-        if isinstance(other, BuiltinFunctor):
+        if isinstance(other, BuiltinBaseFunction):
             return self.func_id == other.func_id and verify_equal_children(
                 self, other)
         return False
 
 
-class Add(BuiltinFunctor):
+class Add(BuiltinBaseFunction):
     def __init__(self, children, arity):
         super().__init__(children, f"add_{arity}", arity)
 
@@ -54,7 +55,7 @@ class Add(BuiltinFunctor):
         return " + ".join(child.__repr__() for child in self.children)
 
 
-class Prod(BuiltinFunctor):
+class Prod(BuiltinBaseFunction):
     def __init__(self, children):
         super().__init__(children, "prod", 2)
 
@@ -85,7 +86,7 @@ class Prod(BuiltinFunctor):
         return str(self.children[0]) + " * " + str(self.children[1])
 
 
-class Dot(BuiltinFunctor):
+class Dot(BuiltinBaseFunction):
     def __init__(self, children):
         super().__init__(children, "dot_prod", 2)
 
@@ -111,7 +112,7 @@ class Dot(BuiltinFunctor):
         return Dot([child.clone() for child in self.children])
 
 
-class Matmul(BuiltinFunctor):
+class Matmul(BuiltinBaseFunction):
     def __init__(self, children):
         super().__init__(children, "matmul", 2)
 
@@ -160,7 +161,7 @@ class Matmul(BuiltinFunctor):
         return Matmul([child.clone() for child in self.children])
 
 
-class Max(BuiltinFunctor):
+class Max(BuiltinBaseFunction):
     def __init__(self, children, arity):
         super().__init__(children, f"max_{arity}", arity)
 
@@ -175,7 +176,7 @@ class Max(BuiltinFunctor):
         return Max([child.clone() for child in self.children], self.arity)
 
 
-class Power(BuiltinFunctor):
+class Power(BuiltinBaseFunction):
     def __init__(self, children):
         super().__init__(children, "power", 2)
 
@@ -226,7 +227,7 @@ class Power(BuiltinFunctor):
         return str(self.children[0]) + " ** (" + str(self.children[1]) + ")"
 
 
-class Sub(BuiltinFunctor):
+class Sub(BuiltinBaseFunction):
     def __init__(self, children):
         super().__init__(children, "sub", 2)
 
@@ -250,7 +251,7 @@ class Sub(BuiltinFunctor):
         return str(self.children[0]) + " - " + str(self.children[1])
 
 
-class Div(BuiltinFunctor):
+class Div(BuiltinBaseFunction):
     def __init__(self, children):
         super().__init__(children, "div", 2)
 
@@ -290,7 +291,7 @@ class Div(BuiltinFunctor):
                 + ")")
 
 
-class Log(BuiltinFunctor):
+class Log(BuiltinBaseFunction):
     def __init__(self, children):
         super().__init__(children, "log", 1)
 
@@ -312,7 +313,7 @@ class Log(BuiltinFunctor):
         return Log([child.clone() for child in self.children])
 
 
-BUILTIN_FUNCTORS = CollectionBasedFunctors()
+BUILTIN_FUNCTORS = CollectionBasedBaseFunctions()
 BUILTIN_FUNCTORS.add_functor(Add([], 2))
 BUILTIN_FUNCTORS.add_functor(Add([], 3))
 BUILTIN_FUNCTORS.add_functor(Add([], 4))
@@ -421,3 +422,34 @@ class Linker(OptimizableOperand):
 
     def get_children(self):
         return [self.g, self.f]
+
+
+def add(o1: Operand, o2: Operand):
+    return Add([o1, o2], 2)
+
+
+def power(o1: Operand, o2: Operand):
+    if not isinstance(o2, Operand):
+        o2 = Constant(o2)
+    return Power([o1, o2])
+
+
+def div(o1: Operand, o2: Operand):
+    return Div([o1, o2])
+
+
+def link(o1: Operand, o2: Operand):
+    return Linker(o2, o1)
+
+
+def sub(o1: Operand, o2: Operand):
+    return Sub([o1, o2])
+
+
+GLOBAL_BUILTINS["matmul"] = matmul_of
+GLOBAL_BUILTINS["transpose"] = transpose_of
+GLOBAL_BUILTINS["add"] = add
+GLOBAL_BUILTINS["power"] = power
+GLOBAL_BUILTINS["div"] = div
+GLOBAL_BUILTINS["link"] = link
+GLOBAL_BUILTINS["sub"] = sub

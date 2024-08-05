@@ -1,6 +1,6 @@
 import numpy as np
 
-from core.cell.collections.builtin_functors import BUILTIN_FUNCTORS
+from core.cell.collections.builtins import BUILTIN_FUNCTORS
 from core.cell.optim.loss import MSE
 from core.genetic.pop import Pop
 

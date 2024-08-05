@@ -24,6 +24,24 @@ def debug_gradient_too_big():
         once_too_large = False
 
 
+def adapt_gradient(gradient, weight):
+    if np.isscalar(weight.get()) and np.isscalar(gradient):
+        return gradient
+    if np.isscalar(weight.get()):
+        return np.sum(gradient)
+    try:
+        gradient = gradient.reshape(weight.get().shape)
+    except ValueError:
+        if gradient.size > weight.get().size:
+            gradient = np.sum(gradient, axis=0)
+            debug_gradient_too_big()
+        else:
+            warn_gradient_too_small()
+            gradient = np.tile(gradient, (weight.get().shape[1], 1))
+        gradient = gradient.reshape(weight.get().shape)
+    return gradient
+
+
 class Optimization:
     def __init__(
             self, cell, optim_args: OptimizationArgs,
@@ -133,16 +151,7 @@ class Optimization:
         ewc_term = self.ewc_lambda * self.ewc_importance[i] * (
                 weight.get() - self.prev_weights[i]
         )
-        try:
-            gradient = gradient.reshape(weight.get().shape)
-        except ValueError:
-            if gradient.size > weight.get().size:
-                gradient = np.sum(gradient, axis=0)
-                debug_gradient_too_big()
-            else:
-                warn_gradient_too_small()
-                gradient = np.tile(gradient, (weight.get().shape[1], 1))
-            gradient = gradient.reshape(weight.get().shape)
+        gradient = adapt_gradient(gradient, weight)
         # Regularization term for L2
         l2_term = self.l2_lambda * weight.get()
         new_weight = weight.get() - self.learning_rate * (

@@ -1,10 +1,17 @@
 import pickle
 import sys
 from abc import ABC, abstractmethod, ABCMeta
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Optional, List, Dict, Any
+from typing import Optional, Dict, Any, Callable, Union
 
 from core.math.derivable import Derivable, WeightDerivable
+
+GLOBAL_BUILTINS: Dict[
+    str,
+    Union[
+        Callable[["Operand"], "Operand"],
+        Callable[["Operand", "Operand"], "Operand"],
+    ]
+] = {}
 
 
 class Operand(ABC, Derivable, WeightDerivable, metaclass=ABCMeta):
@@ -124,3 +131,23 @@ class Operand(ABC, Derivable, WeightDerivable, metaclass=ABCMeta):
 
     def __eq__(self, other: "Operand") -> bool:
         return self == other
+
+    def __matmul__(self, other):
+        return GLOBAL_BUILTINS["matmul"](self, other)
+
+    def __add__(self, other):
+        return GLOBAL_BUILTINS["add"](self, other)
+
+    def __radd__(self, other):
+        return GLOBAL_BUILTINS["add"](self, other)
+
+    def __sub__(self, other):
+        return GLOBAL_BUILTINS["sub"](self, other)
+
+    def link(self, other):
+        return GLOBAL_BUILTINS["link"](self, other)
+
+    def __pow__(self, power):
+        return GLOBAL_BUILTINS["pow"](self, power)
+
+    T = property(lambda self: GLOBAL_BUILTINS["transpose"](self))

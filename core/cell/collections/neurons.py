@@ -4,7 +4,7 @@ import numpy as np
 
 from core.cell.cell import Cell
 from core.cell.collections.bank import CellBank
-from core.cell.collections.builtin_functors import Div, Add, Power, Prod, Dot
+from core.cell.collections.builtins import Div, Add, Power, Prod, Dot
 from core.cell.operands.constant import ONE, E, MINUS_ONE
 from core.cell.operands.variable import Variable
 from core.cell.operands.weight import Weight
@@ -63,6 +63,7 @@ class Sigmoid(Neuron):
         if isinstance(other, Sigmoid):
             return self.W == other.W and self.B == other.B
         return False
+
 
 NEURONS = CellBank()
 NEURONS.add_cell(Sigmoid(0.0))

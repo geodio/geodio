@@ -5,7 +5,7 @@ import numpy as np
 
 from core import log
 from core.cell.cell import Cell
-from core.cell.collections.builtin_functors import Linker
+from core.cell.collections.builtins import Linker
 from core.cell.geoo import GeneExpressedOptimizableOperand
 from core.cell.optim.optimizable import MultiTree, multi_tree_derive
 from core.cell.optim.optimization_args import OptimizationArgs

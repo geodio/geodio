@@ -2,7 +2,7 @@ import sys
 
 import numpy as np
 
-from core.cell.collections.builtin_functors import BUILTIN_FUNCTORS
+from core.cell.collections.builtins import BUILTIN_FUNCTORS
 from core.cell.collections.neurons import NEURONS
 from core.cell.optim.loss import MSE, CheckpointedMSE
 from core.genetic.generator import CellBankGenerator, \

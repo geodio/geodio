@@ -1,7 +1,7 @@
 import sys
 import numpy as np
 
-from core.cell.collections.builtin_functors import Linker
+from core.cell.collections.builtins import Linker
 from core.cell.optim.loss import MSEMultivariate
 from core.cell.optim.optimization_args import OptimizationArgs
 from core.cell.optim.optimizer import Optimizer

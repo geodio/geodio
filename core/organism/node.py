@@ -2,7 +2,7 @@ from typing import Union
 
 import numpy as np
 
-from core.cell.collections.builtin_functors import Linker
+from core.cell.collections.builtins import Linker
 from core.cell.operands.function import Function, PassThrough
 from core.cell.operands.weight import AbsWeight, t_weight
 from core.cell.optim.optimizable import OptimizableOperand
