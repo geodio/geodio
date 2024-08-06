@@ -2,7 +2,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from core.organism.node import LinearTransformation
+from core.cell import LinearTransformation
 
 
 class TestLinearTransformation(TestCase):
@@ -21,7 +21,7 @@ class TestLinearTransformation(TestCase):
         linear_transformation = LinearTransformation(dim_in, dim_out)
         input_data = [np.array([1, 1, 1, 1, 1])]
         derivative_w = linear_transformation.derive(0, by_weights=True)
-        expected_shape = (dim_out, dim_in)
+        expected_shape = (dim_in, )
         self.assertEqual(derivative_w(input_data).shape, expected_shape)
 
     def test_derivative_x(self):
@@ -39,7 +39,7 @@ class TestLinearTransformation(TestCase):
         linear_transformation = LinearTransformation(dim_in, dim_out)
         input_data = [np.array([1, 1, 1, 1, 1])]
         derivative_b = linear_transformation.derive(1, by_weights=True)
-        expected_shape = (dim_out,)
+        expected_shape = (dim_out, dim_out)
         self.assertEqual(derivative_b(input_data).shape, expected_shape)
 
     def test_value_1(self):
@@ -78,10 +78,10 @@ class TestLinearTransformation(TestCase):
 
         derivative = lt.derive(0, True)
         dx_r = derivative(input_data)
-        self.assertTrue(np.array_equal(np.array([dx_r[0]]), input_data),
-                        f"{np.array([dx_r[0]])} != {input_data}")
+        self.assertTrue(np.array_equal(dx_r, input_data[0]),
+                        f"{dx_r} != {input_data[0]}")
 
         derivative = lt.derive(1, True)
         dx_r = derivative(input_data)
-        self.assertTrue(np.array_equal(dx_r, np.array([0, 0, 0])),
-                        f"{dx_r} != [0, 0, 0]")
+        self.assertTrue(np.array_equal(dx_r[0], np.array([0, 0, 0])),
+                        f"{dx_r[0]} != [0, 0, 0]")

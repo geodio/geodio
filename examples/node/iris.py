@@ -10,8 +10,7 @@ from sklearn.preprocessing import StandardScaler
 
 from core.cell.optim.loss import MSEMultivariate
 from core.cell.optim.optimization_args import OptimizationArgs
-from core.organism.activation_function import SigmoidActivation, \
-    SoftmaxActivation
+from core.organism.activation_function import SigmoidActivation
 from core.organism.organism import Organism
 
 

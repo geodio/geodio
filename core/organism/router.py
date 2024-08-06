@@ -85,7 +85,7 @@ class Router(GeneExpressedOptimizableOperand):
         ])
         return to_python
 
-    def derive(self, index, by_weights=True):
+    def derive_uncached(self, index, by_weights=True):
         if not by_weights:
             return self
         inner_index = -1

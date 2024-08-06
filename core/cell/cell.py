@@ -57,7 +57,7 @@ class Cell(GeneExpressedOptimizableOperand):
     def set_weights(self, new_weights):
         self.root.set_weights(new_weights)
 
-    def derive_unchained(self, var_index, by_weights=True):
+    def derive_uncached(self, var_index, by_weights=True):
         derivative_root = self.root.derive(var_index, by_weights)
         derivative = Cell(derivative_root, self.arity, 0)
         return derivative

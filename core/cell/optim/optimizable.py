@@ -68,12 +68,12 @@ class OptimizableOperand(Operand, Optimizable, metaclass=ABCMeta):
     def derive(self, index, by_weights=True):
         derivative_id = f'{"W" if by_weights else "X"}_{index}'
         if derivative_id not in self.derivative_cache:
-            derivative = self.derive_unchained(index, by_weights)
+            derivative = self.derive_uncached(index, by_weights)
             self.derivative_cache[derivative_id] = derivative
         return self.derivative_cache[derivative_id]
 
     @abstractmethod
-    def derive_unchained(self, index, by_weights):
+    def derive_uncached(self, index, by_weights):
         pass
 
     def optimize(self, args: OptimizationArgs):
@@ -81,12 +81,25 @@ class OptimizableOperand(Operand, Optimizable, metaclass=ABCMeta):
 
 
 class BackpropagatableOperand(OptimizableOperand, metaclass=ABCMeta):
+
+    def __init__(self, arity, optimizer=None):
+        super().__init__(arity, optimizer)
+        self.input_data = 0
+
     @abstractmethod
     def get_gradients(self):
         pass
 
     @abstractmethod
     def backpropagation(self, dx: np.ndarray, meta_args=None) -> np.ndarray:
+        pass
+
+    def __call__(self, args, meta_args=None):
+        self.input_data = args[0]
+        return self.forward(self.input_data, meta_args)
+
+    @abstractmethod
+    def forward(self, x, meta_args=None):
         pass
 
 
@@ -96,7 +109,7 @@ class MultiTree(OptimizableOperand):
         super().__init__(arity, optimizer)
         self.children = trees
 
-    def derive_unchained(self, index, by_weights):
+    def derive_uncached(self, index, by_weights):
         non_independent_trees = list(filter(lambda x: x.is_independent_of(
             index, by_weights), self.children))
         if len(non_independent_trees) == 0:

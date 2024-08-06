@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from core.cell.cell import Cell
-from core.cell.operands.collections import Prod, Add, Power
+from core.cell import Prod, Add, Power
 from core.cell.operands.constant import Constant
 from core.cell.operands.variable import Variable
 from core.cell.operands.weight import Weight

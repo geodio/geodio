@@ -10,7 +10,7 @@ from core.organism.node import Node
 
 
 def main():
-    dataset_name = 'iris'
+    dataset_name = 'xor_3'
     dataset = get_dataset(dataset_name)
     model_config = get_model_config(dataset_name)
 

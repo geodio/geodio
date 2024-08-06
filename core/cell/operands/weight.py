@@ -172,3 +172,53 @@ class Weight(AbsWeight):
 
 ZERO_WEIGHT = Weight(0)
 t_weight = TypeVar('t_weight', bound=AbsWeight)
+
+
+class ShapedWeight(AbsWeight):
+    def __init__(self, shape, weight: Union[np.ndarray, float] = None):
+        super().__init__(adaptive_shape=False)
+        self.shape = shape
+        if weight is None:
+            self.__weight = np.zeros(shape)
+        else:
+            self.set(weight)
+
+    def set(self, weight: Union[np.ndarray, float, 't_weight']):
+        if isinstance(weight, AbsWeight):
+            weight = weight.get()
+        if isinstance(weight, np.ndarray):
+            if weight.shape != self.shape:
+                raise ValueError(f"Weight shape {weight.shape} does not "
+                                 f"match required shape {self.shape}.")
+            self.__weight = weight
+        else:
+            self.__weight = np.full(self.shape, weight)
+
+    def get(self) -> np.ndarray:
+        return self.__weight
+
+    def d(self, var_index):
+        derivative = ShapedWeight(self.shape, np.zeros(self.shape))
+        derivative.lock()
+        return derivative
+
+    def d_w(self, dw):
+        if self.w_index == dw:
+            derivative = ShapedWeight(self.shape, np.ones(self.shape))
+        else:
+            derivative = ShapedWeight(self.shape, np.zeros(self.shape))
+        derivative.lock()
+        return derivative
+
+    def derive(self, index, by_weights=True):
+        if by_weights:
+            return self.d_w(index)
+        return self.d(index)
+
+    def clone(self) -> 'ShapedWeight':
+        sw = ShapedWeight(self.shape, np.copy(self.__weight))
+        sw.w_index = self.w_index
+        return sw
+
+    def to_python(self) -> str:
+        return str(self.__weight.shape)

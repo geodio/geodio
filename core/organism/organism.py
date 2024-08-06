@@ -17,12 +17,12 @@ class Organism(BackpropagatableOperand):
         self.children = children
         self.root = None
 
-    def derive_unchained(self, index, by_weights=True):
+    def derive_uncached(self, index, by_weights=True):
         if self.root is None:
             self.root = self.children[0]
             for i in range(1, len(self.children)):
                 self.root = Linker(self.children[i], self.root)
-        return self.root.derive_unchained(index, by_weights)
+        return self.root.derive_uncached(index, by_weights)
 
     def get_weights_local(self):
         if self.weight_cache is None:
@@ -32,7 +32,8 @@ class Organism(BackpropagatableOperand):
             self.weight_cache = weights
         return self.weight_cache
 
-    def __call__(self, args, meta_args=None):
+    def forward(self, x, meta_args=None):
+        args = [x]
         for child in self.get_children():
             args = [child(args, meta_args)]
         return args[0]
@@ -87,6 +88,7 @@ class Organism(BackpropagatableOperand):
         children.append(output_node)
         organism = Organism(children, dim_in, 1,
                             optimizer)
+        organism.set_optimization_risk(True)
         return organism
 
     def optimize(self, args: OptimizationArgs):
