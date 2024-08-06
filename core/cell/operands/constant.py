@@ -18,7 +18,6 @@ class Constant(Operand):
         super().__init__(weight)
         self.__value = weight
 
-    @numba.jit
     def __call__(self, args, meta_args=None):
         return self.__value
 

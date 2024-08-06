@@ -2,30 +2,45 @@
 import sys
 
 from core import logger
-from core.cell import Cell
+from core.cell import BackpropagatableOperand, EpochedOptimizer
 from core.cell import Linker
 from core.cell import OptimizationArgs
 from core.cell import Optimizer, Optimization
 from core.organism.node import Node
 
 
-class Organism(Cell):
-    def __init__(self, root, dim_in, depth=2, optimizer=None):
-        super().__init__(root, 1, depth, optimizer)
-        self.optimizer = optimizer
+class Organism(BackpropagatableOperand):
+    def __init__(self, children, dim_in, arity, optimizer=None):
+        super().__init__(arity, optimizer)
         self.weight_cache = None
         self.dim_in = dim_in
+        self.children = children
+        self.root = None
 
     def derive_unchained(self, index, by_weights=True):
+        if self.root is None:
+            self.root = self.children[0]
+            for i in range(1, len(self.children)):
+                self.root = Linker(self.children[i], self.root)
         return self.root.derive_unchained(index, by_weights)
 
     def get_weights_local(self):
         if self.weight_cache is None:
-            self.weight_cache = self.root.get_weights_local()
+            weights = []
+            for child in self.get_children():
+                weights.extend(child.get_weights_local())
+            self.weight_cache = weights
         return self.weight_cache
 
     def __call__(self, args, meta_args=None):
-        return self.root(args, meta_args)
+        for child in self.get_children():
+            args = [child(args, meta_args)]
+        return args[0]
+
+    def backpropagation(self, dx, meta_args=None):
+        for child in self.get_children()[::-1]:
+            dx = child.backpropagation(dx, meta_args)
+        return dx
 
     def clone(self) -> "Organism":
         pass
@@ -33,11 +48,17 @@ class Organism(Cell):
     def to_python(self) -> str:
         pass
 
+    def get_gradients(self):
+        gradients = []
+        for child in self.get_children():
+            gradients.extend(child.get_gradients())
+        return gradients
+
     def nodes(self):
-        self.root.get_children()
+        self.get_children()
 
     def link(self, next_chain):
-        self.root = Linker(next_chain, self.root, self.dim_in)
+        self.children.append(next_chain)
         self.clean()
 
     def clean(self):
@@ -45,70 +66,28 @@ class Organism(Cell):
         if self.weight_cache is not None:
             self.weight_cache.clear()
             self.weight_cache = None
+        self.root = None
 
     @staticmethod
     def create_simple_organism(dim_in, dim_hidden, hidden_count, dim_out,
                                activation_function, spread_point=-1,
-                               optimizer=None):
-        input_node = Node(1, dim_in, dim_hidden, activation_function)
-        optimizer = optimizer or OrganismOptimizer()
-        organism = Organism(input_node, dim_in, hidden_count + 2,
-                            optimizer)
+                               optimizer=None, backprop=False):
+        input_node = Node(1, dim_in, dim_hidden, activation_function.clone())
+        optimizer = optimizer or EpochedOptimizer(backprop)
         if spread_point == -1:
             spread_point = hidden_count + 1
+        children = [input_node]
         for i in range(1, hidden_count + 1):
             hidden_node = Node(1, dim_hidden, dim_hidden,
-                               activation_function)
-            organism.link(hidden_node)
+                               activation_function.clone())
+            children.append(hidden_node)
 
         output_node = Node(1, dim_hidden, dim_out,
-                           activation_function)
-        organism.link(output_node)
+                           activation_function.clone())
+        children.append(output_node)
+        organism = Organism(children, dim_in, 1,
+                            optimizer)
         return organism
 
     def optimize(self, args: OptimizationArgs):
         self.optimizer(self, args)
-
-
-class OrganismOptimization(Optimization):
-    def calculate_gradients(self):
-        grd = self.fit_func.multi_gradient(self.cell, self.input,
-                                           self.desired_output, self.weights)
-        return grd
-
-
-class OrganismOptimizer(Optimizer):
-    def make_optimizer(self, cell, optim_args, ewc_lambda=0.0,
-                       l2_lambda=0.0):
-        optim_args = optim_args.clone()
-        optimizer = Optimization(cell, optim_args, self.risk,
-                                         ewc_lambda=ewc_lambda,
-                                         l2_lambda=l2_lambda)
-        return optimizer
-
-    def train(self, model, optimization_args):
-        optimizer = self.make_optimizer(model, optimization_args)
-        optimizer.optimize()
-
-    def __call__(self, model, optimization_args):
-        a = optimization_args
-        logger.logging.debug("Organism Optimization Started.")
-        for epoch in range(a.epochs):
-            epoch_loss = 0
-            logger.logging.debug(f"Epoch {epoch}")
-            for X_batch, y_batch in a.batches():
-                input_data = [x for x in X_batch]
-                desired_output = [y for y in y_batch]
-
-                optimization_args = OptimizationArgs(
-                    inputs=input_data,
-                    desired_output=desired_output,
-                    loss_function=a.loss_function,
-                    learning_rate=a.learning_rate,
-                    max_iter=a.max_iter,
-                    min_error=sys.maxsize
-                )
-                self.train(model, optimization_args)
-                epoch_loss += model.error
-            epoch_loss /= a.batch_size
-            logger.logging.debug(f"LOSS {model.error}")

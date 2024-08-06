@@ -112,6 +112,33 @@ class Dot(BuiltinBaseFunction):
         return Dot([child.clone() for child in self.children])
 
 
+def matmul_any(a, b):
+    b_s_0 = b.shape[0]
+    a_s_m1 = a.shape[-1]
+    a_s_0 = a.shape[0]
+    if a.shape == (1, 1) and b_s_0 != 1:
+        r = a[0] * b
+    elif a_s_m1 == b_s_0 and np.ndim(b) >= 2:
+        r = a @ b
+    elif a_s_0 == b_s_0:
+        if np.ndim(b) == 1:
+            b = b[:, np.newaxis]
+        b_s_m1 = b.shape[-1]
+        if b_s_m1 == 1 or a_s_m1 == b_s_m1 or a_s_m1 == 1:
+            r = b * a
+        else:
+            r = b @ a
+    elif np.ndim(b) == 1 and a_s_m1 == b_s_0:
+        b = b[:, np.newaxis]
+        r = a @ b
+    elif a_s_m1 == 1 and np.ndim(b) == 1:
+        b = np.atleast_2d(b)
+        r = a @ b
+    else:
+        r = np.tensordot(a.T, b, axes=0)
+    return r
+
+
 class Matmul(BuiltinBaseFunction):
     def __init__(self, children):
         super().__init__(children, "matmul", 2)
@@ -121,29 +148,7 @@ class Matmul(BuiltinBaseFunction):
         b = self.children[1](args, meta_args)
         if np.isscalar(a) and np.isscalar(b):
             return a * b
-        b_s_0 = b.shape[0]
-        a_s_m1 = a.shape[-1]
-        a_s_0 = a.shape[0]
-        if a.shape == (1, 1) and b_s_0 != 1:
-            r = a[0] * b
-        elif a_s_m1 == b_s_0 and np.ndim(b) >= 2:
-            r = a @ b
-        elif a_s_0 == b_s_0:
-            if np.ndim(b) == 1:
-                b = b[:, np.newaxis]
-            b_s_m1 = b.shape[-1]
-            if b_s_m1 == 1 or a_s_m1 == b_s_m1 or a_s_m1 == 1:
-                r = b * a
-            else:
-                r = b @ a
-        elif np.ndim(b) == 1 and a_s_m1 == b_s_0:
-            b = b[:, np.newaxis]
-            r = a @ b
-        elif a_s_m1 == 1 and np.ndim(b) == 1:
-            b = np.atleast_2d(b)
-            r = a @ b
-        else:
-            r = np.tensordot(a.T, b, axes=0)
+        r = matmul_any(a, b)
         return r
 
     def derive(self, index, by_weights=True):
@@ -453,3 +458,4 @@ GLOBAL_BUILTINS["power"] = power
 GLOBAL_BUILTINS["div"] = div
 GLOBAL_BUILTINS["link"] = link
 GLOBAL_BUILTINS["sub"] = sub
+matmul_any(np.array([0]), np.array([0]))

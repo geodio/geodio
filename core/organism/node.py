@@ -1,11 +1,11 @@
-from typing import Union
+from typing import Union, List
 
 import numpy as np
 
 from core.cell.operands.collections.builtins import Linker
 from core.cell.operands.function import Function, PassThrough
 from core.cell.operands.weight import AbsWeight, t_weight
-from core.cell.optim.optimizable import OptimizableOperand
+from core.cell import OptimizableOperand, BackpropagatableOperand
 from core.organism.activation_function import ActivationFunction
 
 
@@ -133,10 +133,12 @@ class LinearTransformation(OptimizableOperand):
         return [self.weight, self.bias]
 
 
-class Node(OptimizableOperand):
+class Node(BackpropagatableOperand):
     def __init__(self, arity, dim_in, dim_out, activ_fun: ActivationFunction,
                  optimizer=None):
         super().__init__(arity, optimizer)
+        self.db = None
+        self.dW = None
         self.arity = arity
         self.dim_in = dim_in
         self.dim_out = dim_out
@@ -166,6 +168,17 @@ class Node(OptimizableOperand):
             return self.activated_output
         except ValueError:
             return self.activated_output
+
+    def backpropagation(self, dx: np.ndarray, meta_args=None) -> np.ndarray:
+        dz = self.activ_fun.backpropagation(dx)
+        dr = dz.copy()
+        self.db = np.sum(dz, axis=1).reshape(-1, 1)
+        self.dW = np.matmul(dr, self.input_data.T)
+        dx = np.matmul(self.weight.get().T, dr)
+        return dx
+
+    def get_gradients(self) -> List[np.ndarray]:
+        return [self.dW, self.db]
 
     def get_children(self):
         return [self.weight, self.bias]

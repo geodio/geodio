@@ -3,6 +3,8 @@ from abc import ABC, ABCMeta, abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional, List
 
+import numpy as np
+
 from core.cell.operands.constant import ZERO
 from core.cell.operands.operand import Operand
 from core.cell.operands.variable import Variable, MetaVariable
@@ -76,6 +78,16 @@ class OptimizableOperand(Operand, Optimizable, metaclass=ABCMeta):
 
     def optimize(self, args: OptimizationArgs):
         self.optimizer(self, args)
+
+
+class BackpropagatableOperand(OptimizableOperand, metaclass=ABCMeta):
+    @abstractmethod
+    def get_gradients(self):
+        pass
+
+    @abstractmethod
+    def backpropagation(self, dx: np.ndarray, meta_args=None) -> np.ndarray:
+        pass
 
 
 class MultiTree(OptimizableOperand):

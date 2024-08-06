@@ -12,7 +12,8 @@ class OptimizationArgs:
                  min_error=sys.float_info.max,
                  batch_size=1,
                  epochs=1,
-                 scaler=None
+                 scaler=None,
+                 decay_rate=0
                  ):
         self.learning_rate = learning_rate
         self.max_iter = max_iter
@@ -24,6 +25,7 @@ class OptimizationArgs:
         self.batch_size = batch_size
         self.epochs = epochs
         self.scaler = scaler
+        self.decay_rate = decay_rate
 
     def clone(self):
         return OptimizationArgs(
@@ -36,7 +38,8 @@ class OptimizationArgs:
             min_error=self.min_error,
             batch_size=self.batch_size,
             epochs=self.epochs,
-            scaler=self.scaler
+            scaler=self.scaler,
+            decay_rate=self.decay_rate
         )
 
     def compute_error(self):

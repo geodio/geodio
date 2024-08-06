@@ -10,7 +10,8 @@ from sklearn.preprocessing import StandardScaler
 
 from core.cell.optim.loss import MSEMultivariate
 from core.cell.optim.optimization_args import OptimizationArgs
-from core.organism.activation_function import SigmoidActivation
+from core.organism.activation_function import SigmoidActivation, \
+    SoftmaxActivation
 from core.organism.organism import Organism
 
 
@@ -46,7 +47,7 @@ def encapsulate(y):
     return [[x] for x in y]
 
 
-def make_nodes(dim_in, dim_out, hidden):
+def make_nodes(dim_in, dim_out, hidden, backprop):
     activation = SigmoidActivation()
     model = Organism.create_simple_organism(
         dim_in,
@@ -54,12 +55,13 @@ def make_nodes(dim_in, dim_out, hidden):
         2,
         dim_out,
         activation,
-        4
+        4,
+        backprop=backprop
     )
     return model
 
 
-def main():
+def main(backprop=False):
     test_X, test_y, train_X, train_y, validation_X, validation_y = get_iris_dataset()
     classes = np.unique(train_y)
     test_X = encapsulate(test_X)
@@ -70,9 +72,9 @@ def main():
     e_validation_y = encapsulate(reverse_one_hot(validation_y))
     dim_in = len(train_X[0][0])
     dim_out = 3
-    hidden = 15
+    hidden = 50
 
-    model = make_nodes(dim_in, dim_out, hidden)
+    model = make_nodes(dim_in, dim_out, hidden, backprop)
 
     loss = MSEMultivariate()
 
@@ -80,11 +82,12 @@ def main():
         inputs=train_X,
         desired_output=e_train_y,
         loss_function=loss,
-        learning_rate=0.1,
-        max_iter=100,
+        learning_rate=1,
+        max_iter=1,
         min_error=sys.maxsize,
         batch_size=5,
-        epochs=250
+        epochs=100,
+        decay_rate=1e-4
     )
     starting_error = loss.evaluate(model, validation_X, e_validation_y)
     print("STARTING ERROR:", starting_error)
@@ -149,4 +152,4 @@ def get_iris_dataset():
 
 
 if __name__ == '__main__':
-    main()
+    main(True)

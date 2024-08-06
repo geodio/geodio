@@ -1,3 +1,7 @@
+import sys
+from abc import ABCMeta, abstractmethod
+
+from core import logger
 from core.logger import logging
 
 import numpy as np
@@ -10,10 +14,11 @@ once_too_small = True
 once_too_large = True
 
 
-def warn_gradient_too_small():
+def warn_gradient_too_small(actual, expected):
     global once_too_small
     if once_too_small:
-        logging.warning("Gradient size is too small for weight")
+        logging.warning(f"Gradient size is too small for weight."
+                        f" Expected: {expected}, Actual: {actual}")
         once_too_small = False
 
 
@@ -37,46 +42,36 @@ def adapt_gradient(gradient, weight):
                 gradient = np.sum(gradient, axis=0)
                 debug_gradient_too_big()
             else:
-                warn_gradient_too_small()
+                warn_gradient_too_small(gradient.shape, weight.get().shape)
                 gradient = np.tile(gradient, (weight.get().shape[1], 1))
             gradient = gradient.reshape(weight.get().shape)
-        except:
-            pass
+        except Exception as e:
+            logger.logging.error(e)
     return gradient
 
 
-class Optimization:
-    def __init__(
-            self, cell, optim_args: OptimizationArgs,
-            decay_rate=0.99999, risk=False, ewc_lambda=0.1, l2_lambda=0.0
-    ):
-        """
-        Initialize the Optimization object.
-
-        :param cell: The model or neural network cell to be optimized.
-        :param decay_rate: The rate at which the learning rate decays per
-        iteration.
-        :param ewc_lambda: The regularization strength for EWC.
-        :param l2_lambda: The regularization strength for L2 regularization.
-        """
-        self.risk = risk
-        self.cell = cell
-        self.fit_func = optim_args.loss_function
-        self.input = optim_args.inputs
+class BaseOptimization(metaclass=ABCMeta):
+    def __init__(self, cell, weights, optim_args: OptimizationArgs,
+                 decay_rate=0.99999, risk=False, ewc_lambda=0.1,
+                 l2_lambda=0.0):
         self.desired_output = optim_args.desired_output
-        self.max_iter = optim_args.max_iter
-        self.decay_rate = decay_rate
-        self.ewc_lambda = ewc_lambda
-        self.l2_lambda = l2_lambda
-        self.weights = cell.get_weights()
+        self.weights = weights
         self.prev_weights = [weight.get() for weight in self.weights]
-        self.prev_error = cell.error
+        self.l2_lambda = l2_lambda
+        self.max_iter = optim_args.max_iter
+        self.risk = risk
         self.learning_rate = optim_args.learning_rate
         self._initial_learning_rate = optim_args.learning_rate
+        self.ewc_lambda = ewc_lambda
         self._vanishing = set()
-        self._exploding = set()
-        # Initialize EWC importance
+        self.input = optim_args.inputs
+        self.fit_func = optim_args.loss_function
         self.ewc_importance = np.ones(len(self.weights))
+        self.prev_error = cell.error
+        self.decay_rate = decay_rate
+        self.cell = cell
+        self._exploding = set()
+        self.batch_size = optim_args.batch_size
 
     def optimize(self):
         """
@@ -116,30 +111,6 @@ class Optimization:
         )
         return gradient
 
-    def update_weights(self, gradients):
-        """
-        Update the weights based on the calculated gradients.
-
-        :param gradients: The calculated gradients for each weight.
-        """
-        for i, weight in enumerate(self.weights):
-            if weight.is_locked:
-                continue
-            gradient = gradients[i]
-            self.update_weight(i, gradient)
-
-    def update_weight(self, w_index, gradient):
-        """
-        Update the weight based on the calculated gradients.
-
-        :param w_index: The index of the weight.
-        :param gradient: The calculated gradient for the weight with index
-        w_index.
-        :return: None
-        """
-        gradient = self.__handle_exploding_vanishing(gradient, w_index)
-        self.__update_weight(gradient, w_index, self.weights[w_index])
-
     def __update_weight(self, gradient, i, weight):
         """
         Update a single weight and handle fitness evaluation and convergence
@@ -157,7 +128,8 @@ class Optimization:
         gradient = adapt_gradient(gradient, weight)
         # Regularization term for L2
         l2_term = self.l2_lambda * weight.get()
-        new_weight = weight.get() - self.learning_rate * (
+        niu = self.learning_rate / self.batch_size
+        new_weight = weight.get() - niu * (
                 gradient + ewc_term + l2_term)
         weight.set(new_weight)
         y_pred = [self.cell(x_inst) for x_inst in self.input]
@@ -169,6 +141,30 @@ class Optimization:
                 self.weights[i].set(self.prev_weights[i])
                 return self.__test_vanishing_exploding(gradient, i, weight)
         return True
+
+    def update_weight(self, w_index, gradient):
+        """
+        Update the weight based on the calculated gradients.
+
+        :param w_index: The index of the weight.
+        :param gradient: The calculated gradient for the weight with index
+        w_index.
+        :return: None
+        """
+        gradient = self.__handle_exploding_vanishing(gradient, w_index)
+        self.__update_weight(gradient, w_index, self.weights[w_index])
+
+    def update_weights(self, gradients):
+        """
+        Update the weights based on the calculated gradients.
+
+        :param gradients: The calculated gradients for each weight.
+        """
+        for i, weight in enumerate(self.weights):
+            if weight.is_locked:
+                continue
+            gradient = gradients[i]
+            self.update_weight(i, gradient)
 
     def __test_vanishing_exploding(self, gradient, i, weight):
         """
@@ -238,19 +234,29 @@ class Optimization:
         return ewc_loss
 
 
-class RollingOptimization(Optimization):
-    # TODO REMOVE
-    def optimize(self):
-        for w_index in range(len(self.weights)):
-            self.learning_rate = self._initial_learning_rate
-            if self.weights[w_index].is_locked:
-                continue
-            # print("OPTIMIZING WEIGHT WITH INDEX", w_index)
-            for iteration in range(self.max_iter):
-                gradient = self.calculate_gradient(w_index)
-                self.update_weight(w_index, gradient)
-                if self.cell.error < 1e-20:
-                    break
+class Optimization(BaseOptimization):
+    def __init__(self, cell, optim_args: OptimizationArgs,
+                 decay_rate=0.99999, risk=False, ewc_lambda=0.1,
+                 l2_lambda=0.0):
+        """
+        Initialize the Optimization object.
+
+        :param cell: The model or neural network cell to be optimized.
+        :param decay_rate: The rate at which the learning rate decays per
+        iteration.
+        :param ewc_lambda: The regularization strength for EWC.
+        :param l2_lambda: The regularization strength for L2 regularization.
+        """
+        super().__init__(cell, cell.get_weights(), optim_args, decay_rate,
+                         risk, ewc_lambda, l2_lambda)
+
+
+class PickyOptimization(BaseOptimization):
+    def __init__(self, cell, optim_args: OptimizationArgs, weights,
+                 decay_rate=0.99999, risk=False, ewc_lambda=0.1,
+                 l2_lambda=0.0):
+        super().__init__(cell, weights, optim_args, decay_rate,
+                         risk, ewc_lambda, l2_lambda)
 
 
 class Optimizer:
@@ -267,7 +273,6 @@ class Optimizer:
         :param args: The arguments used in the optimization.
         """
         optimizer = self.make_optimizer(cell, args)
-        # print("Under Optimization:", cell.id)
         optimizer.optimize()
 
     def make_optimizer(self, cell, optim_args, ewc_lambda=0.0,
@@ -336,3 +341,66 @@ class FisherOptimizer(Optimizer):
         cloned.risk = self.risk
         cloned.fisher_information = self.fisher_information
         return cloned
+
+
+class BackpropagationOptimization(Optimization):
+
+    def calculate_gradients(self):
+        X_batch = np.array([x[0] for x in self.input])
+        y_batch = np.array([y[0] for y in self.desired_output]).T
+        Z = X_batch.copy()
+        Z = [Z.T]
+        Z = self.cell(Z)
+        dZ = self.fit_func.compute_d_fitness(Z, y_batch)
+        self.cell.backpropagation(dZ)
+        gradients = self.cell.get_gradients()
+        return gradients
+
+
+class EpochedOptimizer(Optimizer):
+    def __init__(self, backprop=False):
+        super().__init__()
+        self.backprop = backprop
+
+    def make_optimizer(self, cell, optim_args, ewc_lambda=0.0,
+                       l2_lambda=0.0):
+        optim_args = optim_args.clone()
+        if not self.backprop:
+            optimizer = Optimization(cell, optim_args, self.risk,
+                                     ewc_lambda=ewc_lambda,
+                                     l2_lambda=l2_lambda)
+        else:
+            optimizer = BackpropagationOptimization(cell, optim_args, self.risk,
+                                     ewc_lambda=ewc_lambda,
+                                     l2_lambda=l2_lambda)
+        return optimizer
+
+    def train(self, model, optimization_args):
+        optimizer = self.make_optimizer(model, optimization_args)
+        optimizer.optimize()
+
+    def __call__(self, model, optimization_args):
+        a = optimization_args
+        niu = a.learning_rate
+        decay_rate = a.decay_rate
+        logger.logging.debug("Organism Optimization Started.")
+        for epoch in range(a.epochs):
+            epoch_loss = 0
+            its_debug_time = epoch % 25 == 0
+            if its_debug_time:
+                logger.logging.debug(f"Epoch {epoch}")
+            for X_batch, y_batch in a.batches():
+                input_data = X_batch
+                desired_output = y_batch
+
+                optimization_args = a.clone()
+                optimization_args.learning_rate = niu
+                optimization_args.inputs = input_data
+                optimization_args.desired_output = desired_output
+
+                self.train(model, optimization_args)
+                epoch_loss += model.error
+            epoch_loss /= a.batch_size
+            if its_debug_time:
+                logger.logging.debug(f"LOSS {model.error}")
+            niu -= niu * decay_rate

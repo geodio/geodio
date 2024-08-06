@@ -22,7 +22,8 @@ class Cell(GeneExpressedOptimizableOperand):
     def __call__(self, args, meta_args=None):
         if not isinstance(args, Iterable):
             args = [args]
-        return self.root(args, meta_args)
+        self.state = self.root(args, meta_args)
+        return self.state
 
     def replace(self, node_old, node_new):
         self.root.replace_child(node_old, node_new)

@@ -4,7 +4,7 @@ import numpy as np
 
 from core.cell.optim.loss import MSEMultivariate
 from core.cell.optim.optimization_args import OptimizationArgs
-from core.cell.optim.optimizer import Optimizer, RollingOptimization
+from core.cell.optim.optimizer import Optimizer
 from core.organism.activation_function import SigmoidActivation
 from core.organism.node import Node
 

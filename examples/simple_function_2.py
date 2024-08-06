@@ -33,7 +33,7 @@ def main2():
     max_depth = 3  # Maximum depth of the tree
 
     # Generate a random tree
-    pop_size = 50
+    pop_size = 500
     generations = 300
     fitness_mse = MSE()
     pop = Pop(pop_size, func_set, term_set, max_depth, var_count)
