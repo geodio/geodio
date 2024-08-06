@@ -172,8 +172,8 @@ class Node(BackpropagatableOperand):
     def backpropagation(self, dx: np.ndarray, meta_args=None) -> np.ndarray:
         dz = self.activ_fun.backpropagation(dx)
         dr = dz.copy()
-        self.db = np.sum(dz, axis=1).reshape(-1, 1)
-        self.dW = np.matmul(dr, self.input_data.T)
+        self.db = - np.sum(dz, axis=1).reshape(-1, 1)
+        self.dW = - np.matmul(dr, self.input_data.T)
         dx = np.matmul(self.weight.get().T, dr)
         return dx
 
