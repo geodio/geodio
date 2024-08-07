@@ -67,7 +67,9 @@ class Node(BackpropagatableOperand):
         z_function = LinearTransformation(self.dim_in, self.dim_out)
         z_function.weight = self.weight
         z_function.bias = self.bias
-        link = Linker(self.activ_fun, z_function, (self.dim_in,))
+        flag_original = self.dim_out == 1
+        link = Linker(self.activ_fun.clone(), z_function, (self.dim_in,),
+                      flag_original=flag_original)
         unchained = link.derive(index, by_weights)
         return unchained
 

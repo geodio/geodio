@@ -151,4 +151,4 @@ def get_iris_dataset():
 
 
 if __name__ == '__main__':
-    main(True)
+    main(False)
