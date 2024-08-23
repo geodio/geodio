@@ -1,22 +1,20 @@
 import numpy as np
 
+from core.cell.optim.optimizable import OptimizableOperand
 from core.cell.operands.function import PassThrough, Function
-from core.cell.optim.optimizable import BackpropagatableOperand
 from core.cell.operands.weight import ShapedWeight
 
 
-class LinearTransformation(BackpropagatableOperand):
+class LinearTransformation(OptimizableOperand):
     def __init__(self, dim_in, dim_out, optimizer=None):
         super().__init__(arity=1, optimizer=optimizer)
-        self.dW = None
-        self.db = None
         self.dim_in = dim_in
         self.dim_out = dim_out
         self.weight = ShapedWeight((dim_out, dim_in),
                                    np.random.randn(dim_out, dim_in))
         self.bias = ShapedWeight((dim_out,), np.zeros(dim_out))
 
-    def forward(self, x, meta_args=None):
+    def __call__(self, x, meta_args=None):
         try:
             z = np.dot(self.weight.get(), x)
         except ValueError:
@@ -78,12 +76,3 @@ class LinearTransformation(BackpropagatableOperand):
 
     def get_children(self):
         return [self.weight, self.bias]
-
-    def get_gradients(self):
-        return [self.dW, self.db]
-
-    def backpropagation(self, dz: np.ndarray, meta_args=None) -> np.ndarray:
-        self.db = - np.sum(dz, axis=1).reshape(-1, 1)
-        self.dW = - np.matmul(dz, self.input_data.T)
-        dx = np.matmul(self.weight.get().T, dz)
-        return dx

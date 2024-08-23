@@ -3,7 +3,7 @@ from typing import List, Dict
 from core.cell.cell import Cell
 from core.cell.optim.optimization_args import OptimizationArgs
 from prototypes.layer_2 import Layer, LayerType
-from core.organism.link import Link
+from prototypes.link import Link
 
 
 class Organism(Cell):

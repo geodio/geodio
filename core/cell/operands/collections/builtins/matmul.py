@@ -43,8 +43,13 @@ def matmul_any(a, b):
         r = a @ b
     # Default case: Use tensordot for other scenarios
     else:
+        b_s_m1 = b.shape[-1]
+        a_s_0 = a.shape[0]
         if a_s_0 == b_s_m1:
-            r = b @ a
+            try:
+                r = b @ a
+            except:
+                r = np.tensordot(a.T, b, axes=0)
         else:
             r = np.tensordot(a.T, b, axes=0)
 

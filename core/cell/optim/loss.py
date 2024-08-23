@@ -162,9 +162,15 @@ class MSEMultivariate(MSE):
                 per_instance_grad = -2 * diff * jacobian_results
         except:
             if jacobian_results.ndim == 4:
-                diff = diff[:, :, :, np.newaxis]
-                per_instance_grad = -2 * diff * jacobian_results
-                per_instance_grad = np.sum(per_instance_grad, axis=(1))
+                try:
+                    diff = diff[:, :, :, np.newaxis]
+                    per_instance_grad = -2 * diff * jacobian_results
+                    per_instance_grad = np.sum(per_instance_grad, axis=(1))
+                except:
+                    diff = np.array([(Y - predicted).T])
+                    diff = diff[:, :, np.newaxis, np.newaxis]
+                    per_instance_grad = -2 * diff * jacobian_results
+                    per_instance_grad = np.sum(per_instance_grad, axis=(1))
             else:
                 jacobian_results = np.transpose(jacobian_results,
                                                 axes=(0, 2, 1))

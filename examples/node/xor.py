@@ -9,12 +9,14 @@ from core.organism.activation_function import SigmoidActivation
 from core.organism.node import Node
 
 
-def main():
-    dataset_name = 'xor'
+def main(dataset_name=None, optimizer=None):
+    dataset_name = dataset_name or 'xor'
     dataset = get_dataset(dataset_name)
     model_config = get_model_config(dataset_name)
 
     model = create_model(model_config)
+    if optimizer:
+        model.optimizer = optimizer
     train_model(model, dataset, model_config)
 
 
@@ -159,8 +161,8 @@ def create_model(config):
     dim_mid = config['dim_mid']
     dim_out = config['dim_out']
 
-    node2 = make_node(activation_function, arity, dim_mid, dim_out)
-    node1 = make_node(activation_function, arity, dim_in, dim_mid)
+    node2 = make_node(activation_function.clone(), arity, dim_mid, dim_out)
+    node1 = make_node(activation_function.clone(), arity, dim_in, dim_mid)
     model = link_nodes(dim_in, node1, node2)
     return model
 

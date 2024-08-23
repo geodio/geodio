@@ -358,21 +358,15 @@ class BackpropagationOptimization(Optimization):
 
 
 class EpochedOptimizer(Optimizer):
-    def __init__(self, backprop=False):
+    def __init__(self):
         super().__init__()
-        self.backprop = backprop
 
     def make_optimizer(self, cell, optim_args, ewc_lambda=0.0,
                        l2_lambda=0.0):
         optim_args = optim_args.clone()
-        if not self.backprop:
-            optimizer = Optimization(cell, optim_args, self.risk,
-                                     ewc_lambda=ewc_lambda,
-                                     l2_lambda=l2_lambda)
-        else:
-            optimizer = BackpropagationOptimization(cell, optim_args, self.risk,
-                                     ewc_lambda=ewc_lambda,
-                                     l2_lambda=l2_lambda)
+        optimizer = Optimization(cell, optim_args, self.risk,
+                                 ewc_lambda=ewc_lambda,
+                                 l2_lambda=l2_lambda)
         return optimizer
 
     def train(self, model, optimization_args):
@@ -392,6 +386,7 @@ class EpochedOptimizer(Optimizer):
             for X_batch, y_batch in a.batches():
                 input_data = X_batch
                 desired_output = y_batch
+                # print("DESIRED", desired_output)
 
                 optimization_args = a.clone()
                 optimization_args.learning_rate = niu
@@ -404,3 +399,15 @@ class EpochedOptimizer(Optimizer):
             if its_debug_time:
                 logger.logging.debug(f"LOSS {model.error}")
             niu -= niu * decay_rate
+
+
+class ParasiteEpochedOptimizer(EpochedOptimizer):
+    def train(self, model, optimization_args):
+        optimization_args.inputs = [
+            np.array([x[0] for x in optimization_args.inputs]).T
+        ]
+        optimization_args.desired_output = [
+            [np.array([x[0] for x in optimization_args.desired_output]).T]
+        ]
+
+        model.root.optimize(optimization_args)

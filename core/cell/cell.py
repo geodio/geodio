@@ -1,5 +1,8 @@
-from typing import TypeVar, List, Iterable
+from typing import TypeVar, List, Iterable, Optional
 
+import numpy as np
+
+from core import logger
 from core.cell.geoo import GeneExpressedOptimizableOperand
 from core.cell.operands.constant import ONE
 from core.cell.operands import Operand
@@ -22,7 +25,10 @@ class Cell(GeneExpressedOptimizableOperand):
     def __call__(self, args, meta_args=None):
         if not isinstance(args, Iterable):
             args = [args]
-        self.state = self.root(args, meta_args)
+        return self.forward(args, meta_args)
+
+    def forward(self, x, meta_args=None):
+        self.state = self.root(x, meta_args)
         return self.state
 
     def replace(self, node_old, node_new):

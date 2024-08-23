@@ -1,7 +1,7 @@
 import sys
 from abc import ABC, ABCMeta, abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 import numpy as np
 
@@ -80,27 +80,22 @@ class OptimizableOperand(Operand, Optimizable, metaclass=ABCMeta):
         self.optimizer(self, args)
 
 
-class BackpropagatableOperand(OptimizableOperand, metaclass=ABCMeta):
+class Wrapper(OptimizableOperand):
+    def __init__(self, root, optimizer=None):
+        super().__init__(root.arity, optimizer=optimizer)
+        self.root = root
 
-    def __init__(self, arity, optimizer=None):
-        super().__init__(arity, optimizer)
-        self.input_data = 0
+    def derive_uncached(self, index, by_weights):
+        return self.root.derive_uncached(index, by_weights)
 
-    @abstractmethod
-    def get_gradients(self):
-        pass
+    def to_python(self) -> str:
+        return f"WRAP[{self.root.to_python}]"
 
-    @abstractmethod
-    def backpropagation(self, dx: np.ndarray, meta_args=None) -> np.ndarray:
-        pass
+    def __call__(self, args, meta_args: Optional[Dict[str, Any]] = None):
+        return self.root(args, meta_args)
 
-    def __call__(self, args, meta_args=None):
-        self.input_data = args[0]
-        return self.forward(self.input_data, meta_args)
-
-    @abstractmethod
-    def forward(self, x, meta_args=None):
-        pass
+    def clone(self) -> "Operand":
+        return Wrapper(self.root)
 
 
 class MultiTree(OptimizableOperand):

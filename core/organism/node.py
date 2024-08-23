@@ -3,11 +3,11 @@ from typing import List
 import numpy as np
 
 from core.cell import Linker, LinearTransformation, ShapedWeight
-from core.cell import BackpropagatableOperand
+from core.cell import OptimizableOperand
 from core.organism.activation_function import ActivationFunction
 
 
-class Node(BackpropagatableOperand):
+class Node(OptimizableOperand):
     def __init__(self, arity, dim_in, dim_out, activ_fun: ActivationFunction,
                  optimizer=None):
         super().__init__(arity, optimizer)
@@ -30,29 +30,17 @@ class Node(BackpropagatableOperand):
         self.activated_output = None
         self.output_dimensionality = dim_out
 
-    def forward(self, x, meta_args=None):
+    def __call__(self, x, meta_args=None):
         try:
-            ind = x
+            ind = x[0]
             biaas = self.bias.get()
             if np.ndim(ind) > 1:
                 biaas = biaas[:, np.newaxis]
-            self.input_data = ind
-            self.z = self.weight.get() @ self.input_data + biaas
+            self.z = self.weight.get() @ ind + biaas
             self.activated_output = self.activ_fun([self.z])
             return self.activated_output
         except ValueError:
             return self.activated_output
-
-    def backpropagation(self, dx: np.ndarray, meta_args=None) -> np.ndarray:
-        dz = self.activ_fun.backpropagation(dx)
-        dr = dz.copy()
-        self.db = - np.sum(dz, axis=1).reshape(-1, 1)
-        self.dW = - np.matmul(dz, self.input_data.T)
-        dx = np.matmul(self.weight.get().T, dr)
-        return dx
-
-    def get_gradients(self) -> List[np.ndarray]:
-        return [self.dW, self.db]
 
     def get_children(self):
         return [self.weight, self.bias]

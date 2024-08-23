@@ -4,19 +4,16 @@ from typing import List
 import numpy as np
 
 from core.cell.operands import Function, PassThrough
-from core.cell import BackpropagatableOperand, AdaptiveConstant, Operand
+from core.cell import AdaptiveConstant, Operand, OptimizableOperand
 
 
-class ActivationFunction(BackpropagatableOperand, ABC):
+class ActivationFunction(OptimizableOperand, ABC):
 
     def __init__(self):
         super().__init__(1)
 
     def __invert__(self):
         pass
-
-    def get_gradients(self) -> List[np.ndarray]:
-        return []
 
     def derive_uncached(self, index, by_weights=True) -> Operand:
         if by_weights or index != 0:
@@ -31,12 +28,6 @@ class ActivationFunction(BackpropagatableOperand, ABC):
     def get_derivative(self) -> Operand:
         pass
 
-    def backpropagation(self, dz: np.ndarray, meta_args=None) -> np.ndarray:
-        f_prime = self.d(0)(self.input_data)
-
-        dx = dz * f_prime
-        return dx
-
 
 class SigmoidActivation(ActivationFunction):
     def __init__(self):
@@ -45,13 +36,12 @@ class SigmoidActivation(ActivationFunction):
         def d_sigmoid(z):
             x = 1 / (1 + np.exp(-z[0]))
             deriv = x * (1 - x)
-            # print(deriv, z)
             return deriv
 
         self._derivative = Function(1, d_sigmoid, [PassThrough(1)])
 
-    def forward(self, x, meta_args=None):
-        return 1 / (1 + np.exp(-x))
+    def __call__(self, x, meta_args=None):
+        return 1 / (1 + np.exp(-x[0]))
 
     def clone(self) -> "SigmoidActivation":
         return SigmoidActivation()
@@ -72,7 +62,7 @@ class ReLUActivation(ActivationFunction):
 
         self._derivative = Function(1, d_relu, [PassThrough(1)])
 
-    def forward(self, x, meta_args=None):
+    def __call__(self, x, meta_args=None):
         return np.maximum(0, x)  # ReLU activation
 
     def clone(self):
@@ -126,7 +116,7 @@ class SoftmaxActivation(ActivationFunction):
 
         self._derivative = Function(1, d_softmax, [PassThrough(1)])
 
-    def forward(self, x, meta_args=None):
+    def __call__(self, x, meta_args=None):
         return softmax(x)
 
     def clone(self) -> "SoftmaxActivation":
@@ -137,10 +127,3 @@ class SoftmaxActivation(ActivationFunction):
 
     def get_derivative(self) -> Operand:
         return self._derivative
-
-    def backpropagation(self, dz: np.ndarray, meta_args=None) -> np.ndarray:
-        f_prime = self.d(0)(self.input_data)
-
-        dx = np.einsum('ijk,ik->ij', f_prime, dz)
-
-        return dx

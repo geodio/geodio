@@ -35,5 +35,6 @@ class TestLinker(TestCase):
         backprop_link = link.backpropagation(dx)
         gradients_link = link.get_gradients()
 
-        self.assertEqual(backprop_manual, backprop_link)
-        self.assertEqual(gradients_manual, gradients_link)
+        self.assertTrue((backprop_manual == backprop_link).all())
+        for manual, link in zip(gradients_manual, gradients_link):
+            self.assertTrue((manual == link).all())

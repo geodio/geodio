@@ -11,6 +11,7 @@ from sklearn.preprocessing import StandardScaler
 from core.cell.optim.loss import MSEMultivariate
 from core.cell.optim.optimization_args import OptimizationArgs
 from core.organism.activation_function import SigmoidActivation
+from core.organism.connect import Parasite
 from core.organism.organism import Organism
 
 
@@ -46,21 +47,30 @@ def encapsulate(y):
     return [[x] for x in y]
 
 
-def make_nodes(dim_in, dim_out, hidden, backprop):
+def make_nodes(dim_in, dim_out, hidden, parasitic=False):
     activation = SigmoidActivation()
-    model = Organism.create_simple_organism(
-        dim_in,
-        hidden,
-        2,
-        dim_out,
-        activation,
-        4,
-        backprop=backprop
-    )
+    if not parasitic:
+        model = Organism.create_simple_organism(
+            dim_in,
+            hidden,
+            2,
+            dim_out,
+            activation,
+            4,
+        )
+    else:
+        model = Parasite.create_parasitic_organism(
+            dim_in,
+            hidden,
+            2,
+            dim_out,
+            activation,
+            4,
+        )
     return model
 
 
-def main(backprop=False):
+def main(parasitic=False):
     test_X, test_y, train_X, train_y, validation_X, validation_y = get_iris_dataset()
     classes = np.unique(train_y)
     test_X = encapsulate(test_X)
@@ -73,7 +83,7 @@ def main(backprop=False):
     dim_out = 3
     hidden = 50
 
-    model = make_nodes(dim_in, dim_out, hidden, backprop)
+    model = make_nodes(dim_in, dim_out, hidden, parasitic)
 
     loss = MSEMultivariate()
 
@@ -151,4 +161,4 @@ def get_iris_dataset():
 
 
 if __name__ == '__main__':
-    main(False)
+    main(parasitic=False)

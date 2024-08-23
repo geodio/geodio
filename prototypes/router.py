@@ -129,3 +129,9 @@ class Router(GeneExpressedOptimizableOperand):
         for node in self.children:
             node.mark_checkpoint()
 
+    def get_gradients(self):
+        pass
+
+    def forward(self, x, meta_args=None):
+        pass
+

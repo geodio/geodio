@@ -66,7 +66,7 @@ class Stateful(ABC):
         self._previous_state = None
         self.__using_checkpoint = False
 
-    def get_state_weight(self):
+    def get_state_weight(self) -> "State":
         if self.state_weight is None:
             self.state_weight = State(self)
         return self.state_weight

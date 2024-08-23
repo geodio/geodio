@@ -6,7 +6,7 @@ import numpy as np
 
 from core.cell import Cell, Prod, Add, t_geoo, Weight, t_weight, \
                        OptimizationArgs
-from core.organism.router import Router
+from prototypes.router import Router
 
 
 class LinkException(Exception):

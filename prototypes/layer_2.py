@@ -10,7 +10,7 @@ from core.cell.operands.stateful import Stateful
 from core.cell.optim.optimizable import OptimizableOperand
 from core.cell.optim.optimization_args import OptimizationArgs
 from core.cell.optim.optimizer import FisherOptimizer
-from core.organism.link import Link
+from prototypes.link import Link
 
 
 class DistributionPolicy(IntEnum):

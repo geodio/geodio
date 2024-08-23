@@ -1,15 +1,12 @@
 # organism.py
-import sys
 
-from core import logger
-from core.cell import BackpropagatableOperand, EpochedOptimizer
+from core.cell import EpochedOptimizer, OptimizableOperand
 from core.cell import Linker
 from core.cell import OptimizationArgs
-from core.cell import Optimizer, Optimization
 from core.organism.node import Node
 
 
-class Organism(BackpropagatableOperand):
+class Organism(OptimizableOperand):
     def __init__(self, children, dim_in, arity, optimizer=None):
         super().__init__(arity, optimizer)
         self.weight_cache = None
@@ -32,28 +29,17 @@ class Organism(BackpropagatableOperand):
             self.weight_cache = weights
         return self.weight_cache
 
-    def forward(self, x, meta_args=None):
-        args = [x]
+    def __call__(self, x, meta_args=None):
+        args = x
         for child in self.get_children():
             args = [child(args, meta_args)]
         return args[0]
-
-    def backpropagation(self, dx, meta_args=None):
-        for child in self.get_children()[::-1]:
-            dx = child.backpropagation(dx, meta_args)
-        return dx
 
     def clone(self) -> "Organism":
         pass
 
     def to_python(self) -> str:
         pass
-
-    def get_gradients(self):
-        gradients = []
-        for child in self.get_children():
-            gradients.extend(child.get_gradients())
-        return gradients
 
     def nodes(self):
         self.get_children()
@@ -72,9 +58,9 @@ class Organism(BackpropagatableOperand):
     @staticmethod
     def create_simple_organism(dim_in, dim_hidden, hidden_count, dim_out,
                                activation_function, spread_point=-1,
-                               optimizer=None, backprop=False):
+                               optimizer=None):
         input_node = Node(1, dim_in, dim_hidden, activation_function.clone())
-        optimizer = optimizer or EpochedOptimizer(backprop)
+        optimizer = optimizer or EpochedOptimizer()
         if spread_point == -1:
             spread_point = hidden_count + 1
         children = [input_node]
@@ -90,6 +76,7 @@ class Organism(BackpropagatableOperand):
                             optimizer)
         organism.set_optimization_risk(True)
         return organism
+
 
     def optimize(self, args: OptimizationArgs):
         self.optimizer(self, args)
