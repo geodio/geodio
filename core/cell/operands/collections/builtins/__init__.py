@@ -38,6 +38,10 @@ def sub(o1: Operand, o2: Operand):
     return Sub([o1, o2])
 
 
+def prod(o1: Operand, o2: Operand):
+    return Prod([o1, o2])
+
+
 BUILTIN_FUNCTORS = CollectionBasedBaseFunctions()
 BUILTIN_FUNCTORS.add_functor(Add([], 2))
 BUILTIN_FUNCTORS.add_functor(Add([], 3))
@@ -56,3 +60,4 @@ GLOBAL_BUILTINS["power"] = power
 GLOBAL_BUILTINS["div"] = div
 GLOBAL_BUILTINS["link"] = link
 GLOBAL_BUILTINS["sub"] = sub
+GLOBAL_BUILTINS["prod"] = prod

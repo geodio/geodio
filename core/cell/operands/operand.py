@@ -136,7 +136,31 @@ class Operand(Derivable, WeightDerivable, Hashable, metaclass=ABCMeta):
     def __matmul__(self, other: "Operand"):
         return GLOBAL_BUILTINS["matmul"](self, other)
 
+    def __mul__(self, other: "Operand"):
+        """
+        Operand multiplication.
+
+        :param other: Operand to be multiplied.
+        :return: Prod operand, that multiplies the self with other operand.
+        """
+        return GLOBAL_BUILTINS["prod"](self, other)
+
+    def __truediv__(self, other: "Operand"):
+        """
+        Operand division.
+
+        :param other: Operand to be divided.
+        :return: Div operand, that divides the self with the other operand.
+        """
+        return GLOBAL_BUILTINS["div"](self, other)
+
     def __add__(self, other: "Operand"):
+        """
+        Operand addition.
+
+        :param other: Operand to be added.
+        :return: Add operand, that adds the other operand with the self.
+        """
         return GLOBAL_BUILTINS["add"](self, other)
 
     def __radd__(self, other: "Operand"):

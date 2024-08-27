@@ -1,8 +1,14 @@
+"""
+Module containing built-in addition operation.
+"""
 from core.cell.operands.collections.builtins.builtinbase import \
     BuiltinBaseFunction, clean_number
 
 
 class Add(BuiltinBaseFunction):
+    """
+    Built-in addition operation.
+    """
     def __init__(self, children, arity):
         super().__init__(children, f"add_{arity}", arity)
 
