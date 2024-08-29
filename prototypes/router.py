@@ -6,8 +6,8 @@ from core.cell.cell import HALLOW_CELL
 from core.cell.geoo import GeneExpressedOptimizableOperand, t_geoo
 from core.cell.operands.constant import ONE
 from core.cell.operands.weight import Weight, t_weight
-from core.cell.optim.optimization_args import OptimizationArgs
-from core.cell.optim.optimizer import FisherOptimizer
+from core.cell.train.optimization_args import OptimizationArgs
+from core.cell.train.optimizer import FisherOptimizer
 
 
 def rand_weight() -> Weight:

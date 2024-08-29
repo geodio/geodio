@@ -1,6 +1,6 @@
 import numpy as np
 
-from core.cell.optim.optimizable import OptimizableOperand, Operand
+from core.cell.train.optimizable import OptimizableOperand, Operand
 from core.cell.operands.collections.builtins.matmul import Matmul, matmul_of
 
 

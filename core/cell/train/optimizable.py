@@ -9,8 +9,8 @@ from core.cell.operands.constant import ZERO
 from core.cell.operands.operand import Operand
 from core.cell.operands.variable import Variable, MetaVariable
 from core.cell.operands.weight import AbsWeight
-from core.cell.optim.optimization_args import OptimizationArgs
-from core.cell.optim.optimizer import Optimizer
+from core.cell.train.optimization_args import OptimizationArgs
+from core.cell.train.optimizer import Optimizer
 
 
 class Optimizable(ABC, metaclass=ABCMeta):

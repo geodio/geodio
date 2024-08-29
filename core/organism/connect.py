@@ -1,13 +1,18 @@
 from typing import List
 
 from core.cell import Cell, Linker, State, Seq, OptimizationArgs, \
-    ParasiteEpochedOptimizer, Optimizer, Wrapper, transpose_of
+    ParasiteEpochedOptimizer, Optimizer
 from core.organism.node import Node
 
 
+class OCell(Cell):
+    def optimize(self, args: OptimizationArgs):
+        self.optimizer(self, args)
+
+
 def get_cell_node(activation_function, dim_in, dim_out):
-    return Cell(Node(1, dim_in, dim_out,
-                     activation_function.clone()), 1, 2)
+    return OCell(Node(1, dim_in, dim_out,
+                      activation_function.clone()), 1, 2)
 
 
 class ParasiticLinker(Linker):
@@ -22,9 +27,20 @@ class ParasiticLinker(Linker):
         r = self.f([x])
         return r
 
-    def derive_unchained_g(self, by_weight, index):
-        chain = Linker(self.f.derive(0, False), self.g)
-        return chain
+    def get_children(self):
+        return [self.f]
+
+    def derive_uncached(self, index, by_weight=True):
+        """
+        (f(g(x)))' = f'(g(x)) * g'(x)
+        :param index:
+        :param by_weight:
+        :return:
+        """
+        non_parasitic = self.f.link(self.host_state.cell)
+        derivative = non_parasitic.derive_uncached(index, by_weight=by_weight)
+        return derivative
+
 
 def make_parasitic_root(cell_host: Cell,
                         cell_parasite: Cell) -> ParasiticLinker:
@@ -60,16 +76,31 @@ class Parasite(Cell):
                          0, optimizer=optimizer)
 
     def optimize(self, args: OptimizationArgs):
-        n = self(args.inputs)  # Forward pass
+        self.optimizer(self, args)
+
+    def p_optimize(self, args: OptimizationArgs):
+        # print(args)
+        n = self(args.merged_inputs)  # Forward pass
         children = self.seq.children
         args_clone = args.clone()
 
         for child in reversed(children[1:]):
-            child.optimize(args_clone)
+            inputs = args.split_inputs(child.host_state.get())
+            args_clone.inputs = inputs
+            # print(args_clone)
+            child.parasite.optimize(args_clone)
             assert isinstance(child, ParasiticLinker), \
                 f"Child is not of type ParasiticLinker"
             args_clone = args_clone.clone()
-            args_clone.desired_output = [child.host_state.get()]
+            merged_state = [child.host_state.get()]
+            # print("MRGS)", np.shape(merged_state))
+            split_state = args.split_desired_output(merged_state)
+            args_clone.desired_output = split_state
+        child = children[0]
+        inputs = args.inputs
+        args_clone.inputs = inputs
+        # print(args_clone)
+        child.optimize(args_clone)
 
     @staticmethod
     def create_parasitic_organism(dim_in, dim_hidden, hidden_count, dim_out,
@@ -85,6 +116,6 @@ class Parasite(Cell):
 
         output_node = get_cell_node(activation_function, dim_hidden, dim_out)
         children.append(output_node)
-        organism = Wrapper(Parasite(children), optimizer=optimizer)
+        organism = Parasite(children, optimizer=optimizer)
         organism.set_optimization_risk(True)
         return organism

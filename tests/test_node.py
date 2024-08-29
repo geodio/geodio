@@ -2,7 +2,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from core.cell.optim.loss import MSEMultivariate
+from core.cell.train.loss import MSEMultivariate
 from core.organism.node import Node
 from core.organism.activation_function import SigmoidActivation
 

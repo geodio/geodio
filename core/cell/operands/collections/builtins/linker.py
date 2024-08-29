@@ -5,7 +5,7 @@ import numpy as np
 from core.cell.operands.collections.builtins.matmul import matmul_of, \
     Matmul
 from core.cell.operands.collections.builtins.transpose import transpose_of
-from core.cell.optim.optimizable import Operand, OptimizableOperand
+from core.cell.train.optimizable import Operand, OptimizableOperand
 
 
 def spread_original_operand(f):

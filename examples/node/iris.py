@@ -8,8 +8,8 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-from core.cell.optim.loss import MSEMultivariate
-from core.cell.optim.optimization_args import OptimizationArgs
+from core.cell.train.loss import MSEMultivariate
+from core.cell.train.optimization_args import OptimizationArgs
 from core.organism.activation_function import SigmoidActivation
 from core.organism.connect import Parasite
 from core.organism.organism import Organism
@@ -161,4 +161,4 @@ def get_iris_dataset():
 
 
 if __name__ == '__main__':
-    main(parasitic=False)
+    main(parasitic=True)

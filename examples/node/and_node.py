@@ -2,9 +2,9 @@ import sys
 
 import numpy as np
 
-from core.cell.optim.loss import MSEMultivariate
-from core.cell.optim.optimization_args import OptimizationArgs
-from core.cell.optim.optimizer import Optimizer
+from core.cell.train.loss import MSEMultivariate
+from core.cell.train.optimization_args import OptimizationArgs
+from core.cell.train.optimizer import Optimizer
 from core.organism.activation_function import SigmoidActivation
 from core.organism.node import Node
 

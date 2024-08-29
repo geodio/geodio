@@ -7,9 +7,9 @@ import numpy as np
 from core.cell.cell import Cell
 from core.cell.geoo import t_geoo
 from core.cell.operands.stateful import Stateful
-from core.cell.optim.optimizable import OptimizableOperand
-from core.cell.optim.optimization_args import OptimizationArgs
-from core.cell.optim.optimizer import FisherOptimizer
+from core.cell.train.optimizable import OptimizableOperand
+from core.cell.train.optimization_args import OptimizationArgs
+from core.cell.train.optimizer import FisherOptimizer
 from prototypes.link import Link
 
 

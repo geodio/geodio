@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from core import logger
 from core.cell.cell import Cell
-from core.cell.optim.loss import LossFunction
+from core.cell.train.loss import LossFunction
 from core.genetic.generator import RandomCellGenerator
 from core.genetic.pop_utils import PopulationProperties, ReproductionPolicy
 

@@ -4,7 +4,7 @@ from core.cell.cell import Cell
 from core.cell.operands.collections import Power, Add, Prod
 from core.cell.operands.constant import Constant
 from core.cell.operands.variable import Variable
-from core.cell.optim.optimizable import MultiTree
+from core.cell.train.optimizable import MultiTree
 
 
 class TestMultiTree(TestCase):

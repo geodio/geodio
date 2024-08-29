@@ -1,6 +1,6 @@
 import numpy as np
 
-from core.cell.optim.optimizable import OptimizableOperand
+from core.cell.train.optimizable import OptimizableOperand
 from core.cell.operands.function import PassThrough, Function
 from core.cell.operands.weight import ShapedWeight
 

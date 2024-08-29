@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from core.cell.cell import Cell
 from core.cell import Power, Add, Prod
-from core.cell.optim.loss import MSE
+from core.cell.train.loss import MSE
 from core.cell.operands.constant import Constant
 from core.cell.operands.variable import Variable
 from core.cell.operands.weight import Weight

@@ -1,7 +1,7 @@
 # organism.py
 from typing import List, Dict
 from core.cell.cell import Cell
-from core.cell.optim.optimization_args import OptimizationArgs
+from core.cell.train.optimization_args import OptimizationArgs
 from prototypes.layer_2 import Layer, LayerType
 from prototypes.link import Link
 
