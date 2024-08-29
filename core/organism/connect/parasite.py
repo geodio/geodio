@@ -1,14 +1,13 @@
-from core.cell import Cell, Linker, State, Seq, OptimizationArgs, \
-    ParasiteEpochedOptimizer, Optimizer, OCell
-from typing import List
+from core.cell import Cell, Seq, OptimizationArgs, \
+    ParasiteEpochedOptimizer, Optimizer
 
 from core.organism.connect import ParasiticLinker
 from core.organism.connect.utils import get_cell_node, connect
 
 
 class Parasite(Cell):
-    def __init__(self, cells: List[Cell], optimizer: Optimizer = None):
-        self.seq: Seq = connect(cells)
+    def __init__(self, seq: Seq, optimizer: Optimizer = None):
+        self.seq: Seq = seq
         super().__init__(self.seq, self.seq.first.arity,
                          0, optimizer=optimizer)
 
@@ -71,9 +70,8 @@ class Parasite(Cell):
 
         output_node = get_cell_node(activation_function, dim_hidden, dim_out)
         children.append(output_node)
-        organism = Parasite(children, optimizer=optimizer)
+        seq: Seq = connect(children)
+        organism = Parasite(seq, optimizer=optimizer)
         organism.set_optimization_risk(True)
         return organism
-
-
 

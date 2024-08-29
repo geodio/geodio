@@ -169,6 +169,30 @@ class Operand(Derivable, WeightDerivable, Hashable, metaclass=ABCMeta):
     def __sub__(self, other: "Operand"):
         return GLOBAL_BUILTINS["sub"](self, other)
 
+    def __and__(self, other):
+        return GLOBAL_BUILTINS["and"](self, other)
+
+    def __neg__(self):
+        return GLOBAL_BUILTINS["not"](self)
+
+    def __or__(self, other):
+        return GLOBAL_BUILTINS["or"](self, other)
+
+    def __gt__(self, other):
+        return GLOBAL_BUILTINS["greater_than"](self, other)
+
+    def __lt__(self, other):
+        return GLOBAL_BUILTINS["less_than"](self, other)
+
+    def __ge__(self, other):
+        return GLOBAL_BUILTINS["greater_than_or_equal"](self, other)
+
+    def __le__(self, other):
+        return GLOBAL_BUILTINS["less_than_or_equal"](self, other)
+
+    def equals(self, other):
+        return GLOBAL_BUILTINS["equals"](self, other)
+
     def link(self, other: "Operand"):
         return GLOBAL_BUILTINS["link"](self, other)
 

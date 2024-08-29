@@ -73,3 +73,6 @@ class ParasiticLinker(Linker):
         niu = args.learning_rate / args.batch_size
         new_state = initial_host_state + niu * mg
         self.host_state.set(new_state)
+
+        # TODO VERIFY IF OPTIMIZATION OF STATE IS WORKING
+        # CHECK IF THERE IS LOSS DESCENT

@@ -26,3 +26,13 @@ class Seq(BuiltinBaseFunction):
 
     first = property(lambda self: self.children[0])
     last = property(lambda self: self.children[-1])
+
+    def __len__(self) -> int:
+        return len(self.children)
+
+    def __iter__(self):
+        return iter(self.children)
+
+    def __getitem__(self, index):
+        return self.children[index]
+

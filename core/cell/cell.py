@@ -1,5 +1,6 @@
 from typing import TypeVar, List, Iterable
 
+from core.cell.operands.function import PassThrough
 from core.cell.geoo import GeneExpressedOptimizableOperand
 from core.cell.operands.constant import ONE
 from core.cell.operands import Operand
@@ -102,3 +103,13 @@ HALLOW_CELL.state = 1.0
 class OCell(Cell):
     def optimize(self, args: OptimizationArgs):
         self.optimizer(self, args)
+
+
+class EmptyCell(OCell):
+    def __init__(self, arity):
+        root = PassThrough(arity)
+        super().__init__(root, arity, -1)
+
+    def set_root(self, root: Operand):
+        self.root = root
+        return self

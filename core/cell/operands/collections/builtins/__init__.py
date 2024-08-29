@@ -13,6 +13,8 @@ from core.cell.operands.collections.builtins.transpose import *
 from core.cell.operands.collections.builtins.dot import *
 from core.cell.operands.collections.builtins.linear_transformation import *
 from core.cell.operands.collections.builtins.seq import *
+from core.cell.operands.collections.builtins.recseq import *
+from core.cell.operands.collections.builtins.conditionals import *
 from core.cell.operands.operand import *
 
 
