@@ -1,8 +1,5 @@
-from typing import TypeVar, List, Iterable, Optional
+from typing import TypeVar, List, Iterable
 
-import numpy as np
-
-from core import logger
 from core.cell.geoo import GeneExpressedOptimizableOperand
 from core.cell.operands.constant import ONE
 from core.cell.operands import Operand
@@ -100,3 +97,8 @@ t_cell = TypeVar('t_cell', bound=Cell)
 t_cell_list = TypeVar('t_cell_list', bound=List[Cell])
 HALLOW_CELL = Cell(ONE, 0, 1)
 HALLOW_CELL.state = 1.0
+
+
+class OCell(Cell):
+    def optimize(self, args: OptimizationArgs):
+        self.optimizer(self, args)

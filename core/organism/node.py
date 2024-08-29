@@ -1,5 +1,3 @@
-from typing import List
-
 import numpy as np
 
 from core.cell import Linker, LinearTransformation, ShapedWeight
@@ -33,10 +31,10 @@ class Node(OptimizableOperand):
     def __call__(self, x, meta_args=None):
         try:
             ind = x[0]
-            biaas = self.bias.get()
+            broadcast_bias = self.bias.get()
             if np.ndim(ind) > 1:
-                biaas = biaas[:, np.newaxis]
-            self.z = self.weight.get() @ ind + biaas
+                broadcast_bias = broadcast_bias[:, np.newaxis]
+            self.z = self.weight.get() @ ind + broadcast_bias
             self.activated_output = self.activ_fun([self.z])
             return self.activated_output
         except ValueError:

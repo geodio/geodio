@@ -4,39 +4,39 @@ from typing import List
 import numpy as np
 
 from core.cell.operands.operand import Operand
-from core.cell.train.optimizable import multi_tree_derive
+from core.cell.train.forest import forest_derive
 from core.cell.operands.utility import get_predicted
 from core.cell.train.loss.mse import MSE
 
 
 class MSEMultivariate(MSE):
-    def compute_fitness(self, Y, predicted):
-        Y = np.array(Y)
+    def compute_fitness(self, desired_output, predicted):
+        desired_output = np.array(desired_output)
         predicted = np.array(predicted)
-        squared_diff = (Y - predicted) ** 2
+        squared_diff = (desired_output - predicted) ** 2
         mse = np.mean(squared_diff)
         if np.isnan(mse) or np.isinf(mse):
             mse = sys.maxsize / 2
         return mse
 
-    def gradient(self, cell: Operand, X, Y, index, by_weight=True):
+    def gradient(self, cell: Operand, inputs, desired_output, index, by_weight=True):
         # Flatten the nested input_data and desired_output for processing
-        Y_flat = [y[0] for y in Y]
+        Y_flat = [y[0] for y in desired_output]
 
-        predicted = get_predicted(X, cell)
+        predicted = get_predicted(inputs, cell)
         delta_f_w_j = cell.derive(index, by_weight)
-        jacobian_results = np.array([delta_f_w_j(x_i) for x_i in X])
+        jacobian_results = np.array([delta_f_w_j(x_i) for x_i in inputs])
 
         result = self.compute_multivariate_gradient(Y_flat, jacobian_results,
                                                     predicted)
         return result
 
-    def multi_gradient(self, cell, X, Y,
+    def multi_gradient(self, cell, inputs, desired_outputs,
                        operands: List[Operand]):
-        m_tree = multi_tree_derive(cell, operands)
-        Y_flat = [y[0] for y in Y]
-        predicted = get_predicted(X, cell)
-        m_jacobian_results = [m_tree(np.array(x_i)) for x_i in X]
+        m_tree = forest_derive(cell, operands)
+        Y_flat = [y[0] for y in desired_outputs]
+        predicted = get_predicted(inputs, cell)
+        m_jacobian_results = [m_tree(np.array(x_i)) for x_i in inputs]
 
         transposed_tuples = list(zip(*m_jacobian_results))
         m_jacobian_results = [list(sublist) for sublist in transposed_tuples]
