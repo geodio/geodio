@@ -97,3 +97,7 @@ class MetaVariable(Operand):
         return
 
     meta_id = property(lambda self: self.__meta_id)
+
+
+def var(value: int) -> Variable:
+    return Variable(value)

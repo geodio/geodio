@@ -1,3 +1,5 @@
+from typing import Any
+
 import numba
 import numpy as np
 
@@ -46,3 +48,7 @@ ONE = Constant(1)
 MINUS_ONE = Constant(-1)
 E = Constant(np.e)
 PI = Constant(np.pi)
+
+
+def const(x: Any) -> Constant:
+    return Constant(x)
