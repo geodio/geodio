@@ -30,6 +30,7 @@ import sys
 from abc import abstractmethod, ABCMeta
 from typing import Optional, Dict, Any, Callable, Union
 
+import core
 from core.cell.math.derivable import Derivable, WeightDerivable
 from core.cell.math.hashy import Hashable, HashTree, HashNode
 
@@ -80,7 +81,7 @@ class Operand(Derivable, WeightDerivable, Hashable, metaclass=ABCMeta):
         Evaluates the operand using the provided arguments.
 
         Args:
-            args (list): A list of arguments to evaluate the operand.
+            args (Iterable): A list of arguments to evaluate the operand.
             meta_args (Optional[Dict[str, Any]]): Additional metadata arguments, if any.
 
         Returns:
@@ -323,7 +324,7 @@ class Operand(Derivable, WeightDerivable, Hashable, metaclass=ABCMeta):
     def equals(self, other):
         return GLOBAL_BUILTINS["equals"](self, other)
 
-    def link(self, other: "Operand"):
+    def link(self, other: "Operand") -> "core.cell.Linker":
         """
         Links the current operand with another operand to form a composite
         function.
@@ -340,7 +341,7 @@ class Operand(Derivable, WeightDerivable, Hashable, metaclass=ABCMeta):
             other (Operand): The operand to link with.
 
         Returns:
-            Operand: The linked operand representing f(g(x)) where f is the
+            Linker: The linked operand representing f(g(x)) where f is the
             current operand, and g is the other operand.
         """
         return GLOBAL_BUILTINS["link"](self, other)

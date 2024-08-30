@@ -1,5 +1,6 @@
 from abc import ABC
-from typing import Union, TypeVar
+from collections import deque
+from typing import Union, TypeVar, Deque
 
 import numpy as np
 
@@ -60,10 +61,11 @@ class State(AbsWeight):
 
 
 class Stateful(ABC):
-    def __init__(self):
+    def __init__(self, max_checkpoints: int = 100):
         self.__current_state = self.state = 0.0
         self.state_weight = None
-        self._previous_state = None
+        # Deque for storing multiple states
+        self._checkpoints: Deque = deque(maxlen=max_checkpoints)
         self.__using_checkpoint = False
 
     def get_state_weight(self) -> "State":
@@ -72,34 +74,55 @@ class Stateful(ABC):
         return self.state_weight
 
     def mark_checkpoint(self):
-        self._previous_state = self.state
+        # Append the current state to the checkpoints
+        self._checkpoints.append(self.state)
 
-    checkpoint = property(lambda self: self._previous_state)
+    def get_checkpoint(self, index: int = -1):
+        """
+        Retrieve a checkpoint by index, defaulting to the last one (-1).
+        """
+        try:
+            return self._checkpoints[index]
+        except IndexError:
+            raise ValueError(f"No checkpoint at index {index}")
 
-    def use_checkpoint(self):
-        if self.__using_checkpoint:
-            return
+    def use_checkpoint(self, index: int = -1):
+        """
+        Use a specific checkpoint by index, defaulting to the last one.
+        """
         self.__using_checkpoint = True
         self.__current_state = self.state
-        self.state = self._previous_state
+        self.state = self.get_checkpoint(index)
 
     def use_current(self):
         if not self.__using_checkpoint:
             return
         self.state = self.__current_state
+        self.__using_checkpoint = False
 
     def update(self, new_state):
         self.__current_state = self.state = new_state
 
-    def revert(self):
+    def revert(self, index: int = -1):
         """
-        Revert the current state to the stored checkpoint.
-        :return:
+        Revert the current state to a specific checkpoint.
+        :param index: The index of the checkpoint to revert to, defaults to the
+        last one.
         """
         self.__using_checkpoint = False
-        self.state = self._previous_state
+        self.state = self.get_checkpoint(index)
 
-    has_checkpoint = property(lambda self: self._previous_state is not None)
+    def clear_checkpoints(self, keep_last: int = 1):
+        """
+        Clear all checkpoints except for the last 'keep_last' ones.
+        :param keep_last: Number of checkpoints to keep from the end.
+        """
+        if keep_last >= len(self._checkpoints):
+            return
+        for _ in range(len(self._checkpoints) - keep_last):
+            self._checkpoints.popleft()
+
+    has_checkpoint = property(lambda self: len(self._checkpoints) > 0)
 
 
 t_stateful = TypeVar('t_stateful', bound=Stateful)

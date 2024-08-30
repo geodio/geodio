@@ -2,7 +2,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from core.cell import EmptyCell, Variable, RecSeq, Constant
+from core.cell import EmptyCell, Variable, RecSeq, Constant, Stateful
 from core.cell.operands.collections.builtins.conditionals.if_cond import \
     if_cond
 
@@ -39,3 +39,22 @@ class TestRecSeq(TestCase):
             expected *= arg
         actual = rec_seq(args)
         self.assertEqual(expected, actual)
+
+    def test_summation_states(self):
+        cell = EmptyCell(1)
+        cell.set_root(cell.get_state_weight() + Variable(0))
+
+        rec_seq = RecSeq(cell)
+
+        args = [1, 2, 3, 4]
+        expected = sum(args)
+        actual = rec_seq(args)
+        self.assertEqual(expected, actual)
+        acc = 0
+
+        for i, op in enumerate(rec_seq):
+            print(i)
+            acc += args[i]
+            self.assertTrue(isinstance(op, Stateful))
+            op: Stateful = op
+            self.assertEqual(op.state, acc)
