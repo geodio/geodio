@@ -1,19 +1,24 @@
 from abc import ABC, abstractmethod
-from typing import List
 
 import numpy as np
 
+from core.cell import AdaptiveConstant, Operand, OptimizableOperand, \
+    Backpropagatable
 from core.cell.operands import Function, PassThrough
-from core.cell import AdaptiveConstant, Operand, OptimizableOperand
 
 
-class ActivationFunction(OptimizableOperand, ABC):
+class ActivationFunction(OptimizableOperand, Backpropagatable, ABC):
 
     def __init__(self):
         super().__init__(1)
+        self.X = None
 
     def __invert__(self):
         pass
+
+    def __call__(self, x, meta_args=None):
+        args = x[0]
+        return self.forward(args, meta_args=meta_args)
 
     def derive_uncached(self, index, by_weights=True) -> Operand:
         if by_weights or index != 0:
@@ -28,6 +33,23 @@ class ActivationFunction(OptimizableOperand, ABC):
     def get_derivative(self) -> Operand:
         pass
 
+    def backpropagation(self, dz: np.ndarray, meta_args=None) -> np.ndarray:
+        f_prime = self.d(0)([self.X])
+
+        dx = dz * f_prime
+        return dx
+
+    def forward(self, x, meta_args=None):
+        self.X = x
+        return self.actual_forward(x, meta_args=meta_args)
+
+    @abstractmethod
+    def actual_forward(self, x, meta_args=None) -> np.ndarray:
+        pass
+
+    def get_gradients(self):
+        return []
+
 
 class SigmoidActivation(ActivationFunction):
     def __init__(self):
@@ -40,8 +62,8 @@ class SigmoidActivation(ActivationFunction):
 
         self._derivative = Function(1, d_sigmoid, [PassThrough(1)])
 
-    def __call__(self, x, meta_args=None):
-        return 1 / (1 + np.exp(-x[0]))
+    def actual_forward(self, x, meta_args=None):
+        return 1 / (1 + np.exp(-x))
 
     def clone(self) -> "SigmoidActivation":
         return SigmoidActivation()
@@ -63,7 +85,7 @@ class LinearActivation(ActivationFunction):
 
         self._derivative = Function(1, d_linear, [PassThrough(1)])
 
-    def __call__(self, x, meta_args=None):
+    def actual_forward(self, x, meta_args=None):
         return x[0]
 
     def clone(self) -> "LinearActivation":
@@ -85,7 +107,7 @@ class ReLUActivation(ActivationFunction):
 
         self._derivative = Function(1, d_relu, [PassThrough(1)])
 
-    def __call__(self, x, meta_args=None):
+    def actual_forward(self, x, meta_args=None):
         return np.maximum(0, x)  # ReLU activation
 
     def clone(self):
@@ -139,7 +161,7 @@ class SoftmaxActivation(ActivationFunction):
 
         self._derivative = Function(1, d_softmax, [PassThrough(1)])
 
-    def __call__(self, x, meta_args=None):
+    def actual_forward(self, x, meta_args=None):
         return softmax(x)
 
     def clone(self) -> "SoftmaxActivation":

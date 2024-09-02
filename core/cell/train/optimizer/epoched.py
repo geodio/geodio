@@ -5,16 +5,8 @@ from core.cell.train.optimizer.optimization.default_optimization import \
 
 
 class EpochedOptimizer(Optimizer):
-    def __init__(self):
-        super().__init__()
-
-    def make_optimizer(self, cell, optim_args, ewc_lambda=0.0,
-                       l2_lambda=0.0):
-        optim_args = optim_args.clone()
-        optimizer = Optimization(cell, optim_args, self.risk,
-                                 ewc_lambda=ewc_lambda,
-                                 l2_lambda=l2_lambda)
-        return optimizer
+    def __init__(self, optimization=None):
+        super().__init__(optimization)
 
     def train(self, model, optimization_args):
         optimizer = self.make_optimizer(model, optimization_args)

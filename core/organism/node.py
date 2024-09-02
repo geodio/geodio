@@ -1,11 +1,14 @@
+from typing import List
+
 import numpy as np
 
 from core.cell import Linker, LinearTransformation, ShapedWeight
 from core.cell import OptimizableOperand
+from core.cell.math.backpropagation import Backpropagatable
 from core.organism.activation_function import ActivationFunction
 
 
-class Node(OptimizableOperand):
+class Node(OptimizableOperand, Backpropagatable):
     def __init__(self, arity, dim_in, dim_out, activ_fun: ActivationFunction,
                  optimizer=None, scalar_output=False):
         super().__init__(arity, optimizer)
@@ -36,17 +39,32 @@ class Node(OptimizableOperand):
             except IndexError:
                 ind = x
             if np.isscalar(ind):
-                ind = [ind]
-            broadcast_bias = self.bias.get()
-            if np.ndim(ind) > 1:
-                broadcast_bias = broadcast_bias[:, np.newaxis]
-            self.z = self.weight.get() @ ind + broadcast_bias
-            self.activated_output = self.activ_fun([self.z])
-            if self.scalar_output:
-                self.activated_output = self.activated_output[0]
-            return self.activated_output
+                ind = np.array([ind])
+            self.input_data = ind
+            self.forward(self.input_data)
         except ValueError:
             return self.activated_output
+
+    def forward(self, x: np.ndarray, meta_args=None) -> np.ndarray:
+        broadcast_bias = self.bias.get()
+        if np.ndim(x) > 1:
+            broadcast_bias = broadcast_bias[:, np.newaxis]
+        self.z = self.weight.get() @ x + broadcast_bias
+        self.activated_output = self.activ_fun([self.z])
+        if self.scalar_output:
+            self.activated_output = self.activated_output[0]
+        return self.activated_output
+
+    def backpropagation(self, dx: np.ndarray, meta_args=None) -> np.ndarray:
+        dz = self.activ_fun.backpropagation(dx)
+        dr = dz.copy()
+        self.db = np.sum(dz, axis=1).reshape(-1, 1)
+        self.dW = np.matmul(dr, self.input_data.T)
+        dx = np.matmul(self.weight.get().T, dr)
+        return dx
+
+    def get_gradients(self) -> List[np.ndarray]:
+        return [self.dW, self.db]
 
     def get_children(self):
         return [self.weight, self.bias]

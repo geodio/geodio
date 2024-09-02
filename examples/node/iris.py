@@ -161,4 +161,4 @@ def get_iris_dataset():
 
 
 if __name__ == '__main__':
-    main(parasitic=True)
+    main(parasitic=False)

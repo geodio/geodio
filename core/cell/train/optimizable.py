@@ -1,6 +1,6 @@
 import sys
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Protocol, T, TypeVar
 
 from core.cell.operands.operand import Operand
 from core.cell.train.optimization_args import OptimizationArgs

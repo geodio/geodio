@@ -35,6 +35,14 @@ class Organism(OptimizableOperand):
             args = [child(args, meta_args)]
         return args[0]
 
+    def forward(self, x, meta_args=None):
+        raise NotImplementedError('Not implemented yet')
+
+    def backpropagation(self, dx, meta_args=None):
+        for child in self.get_children()[::-1]:
+            dx = child.backpropagation(dx, meta_args)
+        return dx
+
     def clone(self) -> "Organism":
         pass
 
@@ -77,6 +85,11 @@ class Organism(OptimizableOperand):
         organism.set_optimization_risk(True)
         return organism
 
-
     def optimize(self, args: OptimizationArgs):
         self.optimizer(self, args)
+
+    def get_gradients(self):
+        gradients = []
+        for child in self.get_children():
+            gradients.extend(child.get_gradients())
+        return gradients
