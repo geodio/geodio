@@ -4,6 +4,7 @@ from typing import Union, TypeVar, Deque
 
 import numpy as np
 
+from core.cell.operands.operand import Operand
 from core.cell.operands.constant import ZERO, ONE
 from core.cell.operands.weight import AbsWeight, Weight, t_weight
 
@@ -48,7 +49,7 @@ class State(AbsWeight):
         else:
             self.cell.state = weight
 
-    def get(self) -> Union[np.ndarray, float]:
+    def get(self, **kwargs) -> Union[np.ndarray, float]:
         return self.cell.state
 
     def get_children(self):
@@ -62,6 +63,7 @@ class State(AbsWeight):
 
 class Stateful(ABC):
     def __init__(self, max_checkpoints: int = 100):
+        self.__current_checkpoint = None
         self.__current_state = self.state = 0.0
         self.state_weight = None
         # Deque for storing multiple states
@@ -84,7 +86,7 @@ class Stateful(ABC):
         try:
             return self._checkpoints[index]
         except IndexError:
-            raise ValueError(f"No checkpoint at index {index}")
+            return 0.0
 
     def use_checkpoint(self, index: int = -1):
         """
@@ -92,6 +94,7 @@ class Stateful(ABC):
         """
         self.__using_checkpoint = True
         self.__current_state = self.state
+        self.__current_checkpoint = index
         self.state = self.get_checkpoint(index)
 
     def use_current(self):
@@ -99,6 +102,7 @@ class Stateful(ABC):
             return
         self.state = self.__current_state
         self.__using_checkpoint = False
+        self.__current_checkpoint = None
 
     def update(self, new_state):
         self.__current_state = self.state = new_state

@@ -7,7 +7,7 @@ from core.cell.geoo import GeneExpressedOptimizableOperand, t_geoo
 from core.cell.operands.constant import ONE
 from core.cell.operands.weight import Weight, t_weight
 from core.cell.train.optimization_args import OptimizationArgs
-from core.cell.train.optimizer import FisherOptimizer
+from core.cell.train.optimizer import Optimizer
 
 
 def rand_weight() -> Weight:
@@ -19,7 +19,7 @@ class Router(GeneExpressedOptimizableOperand):
                  nodes: List[t_geoo] = None,
                  weights: Optional[Dict[int, t_weight]] = None,
                  optimizer=None):
-        optimizer = optimizer or FisherOptimizer()
+        optimizer = optimizer or Optimizer()
         super().__init__(0, 2, optimizer=optimizer)
         self.children = [] if nodes is None else nodes
         self.weights = weights or self._initialize_weights()
@@ -112,7 +112,7 @@ class Router(GeneExpressedOptimizableOperand):
         self._validate_weights()
 
     def get_weights_local(self):
-        weights = [node.get_state_weight() for node in self.children]
+        weights: List[t_weight] = [node.get_state_weight() for node in self.children]
         weights.extend(self.weights.values())
         return weights
 
@@ -128,10 +128,3 @@ class Router(GeneExpressedOptimizableOperand):
     def mark_checkpoint(self):
         for node in self.children:
             node.mark_checkpoint()
-
-    def get_gradients(self):
-        pass
-
-    def forward(self, x, meta_args=None):
-        pass
-

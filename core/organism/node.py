@@ -7,7 +7,7 @@ from core.organism.activation_function import ActivationFunction
 
 class Node(OptimizableOperand):
     def __init__(self, arity, dim_in, dim_out, activ_fun: ActivationFunction,
-                 optimizer=None):
+                 optimizer=None, scalar_output=False):
         super().__init__(arity, optimizer)
         self.db = None
         self.dW = None
@@ -27,15 +27,23 @@ class Node(OptimizableOperand):
         self.z = None
         self.activated_output = None
         self.output_dimensionality = dim_out
+        self.scalar_output = scalar_output
 
     def __call__(self, x, meta_args=None):
         try:
-            ind = x[0]
+            try:
+                ind = x[0]
+            except IndexError:
+                ind = x
+            if np.isscalar(ind):
+                ind = [ind]
             broadcast_bias = self.bias.get()
             if np.ndim(ind) > 1:
                 broadcast_bias = broadcast_bias[:, np.newaxis]
             self.z = self.weight.get() @ ind + broadcast_bias
             self.activated_output = self.activ_fun([self.z])
+            if self.scalar_output:
+                self.activated_output = self.activated_output[0]
             return self.activated_output
         except ValueError:
             return self.activated_output

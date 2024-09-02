@@ -1,8 +1,11 @@
-from core.cell import Cell, Seq, OptimizationArgs, \
-    ParasiteEpochedOptimizer, Optimizer
+import numpy as np
 
+from core.cell import Cell, Seq, OptimizationArgs, \
+    ParasiteEpochedOptimizer, Optimizer, Operand, MSE
+from core.organism.activation_function import LinearActivation
 from core.organism.connect import ParasiticLinker
 from core.organism.connect.utils import get_cell_node, connect
+from core.organism.node import Node
 
 
 class Parasite(Cell):
@@ -17,10 +20,10 @@ class Parasite(Cell):
     def p_optimize(self, args: OptimizationArgs):
         # print(args)
         self(args.merged_inputs)  # Forward pass
-        children = self.seq.children
         args_clone = args.clone()
-
-        for child in reversed(children[1:]):
+        n = len(self.seq)
+        for i in range(n - 1, 0, -1):
+            child = self.seq[i]
             # Verify child
             assert isinstance(child, ParasiticLinker), \
                 f"Child is not of type ParasiticLinker"
@@ -38,7 +41,7 @@ class Parasite(Cell):
             args_clone.desired_output = split_state
 
         # Prepare inputs for input node
-        child = children[0]
+        child = self.seq[0]
         inputs = args.inputs
         args_clone.inputs = inputs
 
@@ -75,3 +78,34 @@ class Parasite(Cell):
         organism.set_optimization_risk(True)
         return organism
 
+    @staticmethod
+    def create_recursive_parasitic_organism(root: Operand,
+                                            optimizer=None):
+        return NotImplemented
+
+
+def main():
+    ns = np.arange(start=1, stop=81, step=3)
+    args = [np.arange(n) for n in ns]
+    desired = [[n * (n + 1) / 2] for n in ns]
+
+    root = Node(1, 2, 1, LinearActivation(), scalar_output=True)
+    parasite = Parasite.create_recursive_parasitic_organism(root)
+    opt_args = OptimizationArgs(
+        max_iter=1,
+        loss_function=MSE(),
+        inputs=args,
+        desired_output=desired,
+        batch_size=5,
+        epochs=100
+    )
+
+    for arg in args:
+        print(parasite(arg))
+    parasite.optimize(opt_args)
+    for arg in args:
+        print(parasite(arg))
+
+
+if __name__ == '__main__':
+    main()

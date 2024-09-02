@@ -7,6 +7,12 @@ from core.cell.operands.collections.builtins.builtinbase import \
 
 
 def matmul_any(a, b):
+    if np.ndim(a) == 0 or np.ndim(b) == 0:
+        return np.dot(a, b)
+    if isinstance(a, list):
+        a = np.array(a)
+    if isinstance(b, list):
+        b = np.array(b)
     # Get dimensions of a and b
     a_s_0, a_s_m1 = a.shape[0], a.shape[-1]
     b_s_0, b_s_m1 = b.shape[0], b.shape[-1]

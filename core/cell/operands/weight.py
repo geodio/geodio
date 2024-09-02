@@ -72,7 +72,7 @@ class AbsWeight(Operand, metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get(self) -> Union[np.ndarray, float]:
+    def get(self, **kwargs) -> Union[np.ndarray, float]:
         pass
 
     def __call__(self, args, meta_args=None):
@@ -160,7 +160,7 @@ class Weight(AbsWeight):
     def to_python(self) -> str:
         return str(self.__weight)
 
-    def get(self):
+    def get(self, **kwargs):
         return self.__weight
 
     def set(self, weight: Union[np.ndarray, float, 't_weight']):
@@ -194,7 +194,7 @@ class ShapedWeight(AbsWeight):
         else:
             self.__weight = np.full(self.shape, weight)
 
-    def get(self) -> np.ndarray:
+    def get(self, **kwargs) -> np.ndarray:
         return self.__weight
 
     def d(self, var_index):

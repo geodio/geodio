@@ -31,6 +31,7 @@ class RecSeq(Seq):
 
         if self._is_stateful:
             self._operand.clear_checkpoints(0)
+            self._operand.update(0)
         self._last_args = args
         n = len(self._last_args)
         for i in range(n - 1):

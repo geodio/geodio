@@ -15,9 +15,9 @@ def debug_gradient_too_big():
 
 
 def adapt_gradient(gradient, weight):
-    if np.isscalar(weight.get()) and np.isscalar(gradient):
+    if np.ndim(gradient) == 0:
         return gradient
-    if np.isscalar(weight.get()):
+    if np.ndim(weight.get()) == 0:
         return np.sum(gradient)
     try:
         gradient = gradient.reshape(weight.get().shape)

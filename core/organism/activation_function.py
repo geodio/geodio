@@ -53,6 +53,29 @@ class SigmoidActivation(ActivationFunction):
         return self._derivative
 
 
+class LinearActivation(ActivationFunction):
+    def __init__(self):
+        super().__init__()
+
+        def d_linear(z):
+
+            return np.ones_like(z[0])
+
+        self._derivative = Function(1, d_linear, [PassThrough(1)])
+
+    def __call__(self, x, meta_args=None):
+        return x[0]
+
+    def clone(self) -> "LinearActivation":
+        return LinearActivation()
+
+    def to_python(self) -> str:
+        return "linear"
+
+    def get_derivative(self) -> Operand:
+        return self._derivative
+
+
 class ReLUActivation(ActivationFunction):
     def __init__(self):
         super().__init__()

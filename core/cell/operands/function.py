@@ -14,9 +14,6 @@ class Function(Operand):
         func_args = [child(args, meta_args) for child in self.children]
         return self.value(*func_args)
 
-    def d(self, var_index) -> Optional[Operand]:
-        return None
-
     def __invert__(self):
         return None  # Replace with actual inversion logic
 
@@ -79,3 +76,33 @@ class PassThrough(Operand):
 
     def __eq__(self, other):
         return isinstance(other, PassThrough)
+
+
+class Collector(Operand):
+    def __init__(self, arity, children):
+        super().__init__(arity)
+        self.children = children
+
+    def __call__(self, args, meta_args=None):
+        r = [child(args, meta_args) for child in self.children]
+        return r
+
+    def derive(self, index, by_weight=True):
+        return Collector(self.arity, [child.derive(index, by_weight) for child
+                         in (
+                self.children)])
+
+    def set_weights(self, new_weights):
+        raise NotImplementedError
+
+    def clone(self):
+        return Collector(self.arity, [child.clone() for child in self.children])
+
+    def __invert__(self):
+        raise NotImplementedError
+
+    def to_python(self) -> str:
+        return "[" + ', '.join(self.children) + "]"
+
+    def __eq__(self, other):
+        raise NotImplementedError

@@ -1,6 +1,6 @@
 import numpy as np
 
-from core.cell import Linker, Cell, State, OptimizationArgs, MSEMultivariate
+from core.cell import Linker, Cell, State, OptimizationArgs
 from core.cell.locker import Locker
 
 
@@ -63,8 +63,8 @@ class ParasiticLinker(Linker):
         jacobian_results = self.parasite.d(0)([initial_host_state])
         predicted = self(args.inputs)
         diff = (
-            np.array(args.desired_output)[:, 0, :] -
-            np.array(predicted).T
+                np.array(args.desired_output)[:, 0, :] -
+                np.array(predicted).T
         )
         diff = diff[:, :, np.newaxis]
         per_instance_grad = diff * jacobian_results
