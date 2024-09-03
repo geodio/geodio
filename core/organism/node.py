@@ -40,12 +40,12 @@ class Node(OptimizableOperand, Backpropagatable):
                 ind = x
             if np.isscalar(ind):
                 ind = np.array([ind])
-            self.input_data = ind
-            self.forward(self.input_data)
+            return self.forward(ind, meta_args)
         except ValueError:
             return self.activated_output
 
     def forward(self, x: np.ndarray, meta_args=None) -> np.ndarray:
+        self.input_data = x
         broadcast_bias = self.bias.get()
         if np.ndim(x) > 1:
             broadcast_bias = broadcast_bias[:, np.newaxis]

@@ -1,18 +1,18 @@
 # organism.py
 
-from core.cell import EpochedOptimizer, OptimizableOperand
+from core.cell import EpochedOptimizer, OptimizableOperand, Backpropagatable
 from core.cell import Linker
-from core.cell import OptimizationArgs
 from core.organism.node import Node
 
 
-class Organism(OptimizableOperand):
+class Organism(OptimizableOperand, Backpropagatable):
     def __init__(self, children, dim_in, arity, optimizer=None):
         super().__init__(arity, optimizer)
         self.weight_cache = None
         self.dim_in = dim_in
         self.children = children
         self.root = None
+        self.X = None
 
     def derive_uncached(self, index, by_weights=True):
         if self.root is None:
@@ -29,14 +29,14 @@ class Organism(OptimizableOperand):
             self.weight_cache = weights
         return self.weight_cache
 
-    def __call__(self, x, meta_args=None):
-        args = x
-        for child in self.get_children():
-            args = [child(args, meta_args)]
-        return args[0]
+    def __call__(self, args, meta_args=None):
+        x = args[0]
+        return self.forward(x, meta_args)
 
     def forward(self, x, meta_args=None):
-        raise NotImplementedError('Not implemented yet')
+        for child in self.get_children():
+            x = child.forward(x, meta_args)
+        return x
 
     def backpropagation(self, dx, meta_args=None):
         for child in self.get_children()[::-1]:
@@ -84,9 +84,6 @@ class Organism(OptimizableOperand):
                             optimizer)
         organism.set_optimization_risk(True)
         return organism
-
-    def optimize(self, args: OptimizationArgs):
-        self.optimizer(self, args)
 
     def get_gradients(self):
         gradients = []
