@@ -9,8 +9,8 @@ from core.utils import flatten
 
 
 def verify_equal_children(operand_a: Operand, operand_b: Operand) -> bool:
-    children_a = operand_a.get_children()
-    children_b = operand_b.get_children()
+    children_a = operand_a.get_sub_operands()
+    children_b = operand_b.get_sub_operands()
     if len(children_a) != len(children_b):
         return False
     for a, b in zip(children_a, children_b):
@@ -47,7 +47,7 @@ class MetaAssignment(Operand):
         # TODO
         pass
 
-    def get_children(self):
+    def get_sub_operands(self):
         return [self.original_operand, self.attache]
 
     def __eq__(self, other):
@@ -85,7 +85,7 @@ def reduce(operand: Operand) -> Operand:
         return meta_variables, meta_assignments
 
     # Recursively reduce the children first
-    children = operand.get_children()
+    children = operand.get_sub_operands()
     meta_variables, meta_assignments = collect_equal_children(children)
 
     # Create new children with MetaVariables

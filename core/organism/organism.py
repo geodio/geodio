@@ -1,7 +1,9 @@
 # organism.py
 
-from core.cell import EpochedOptimizer, OptimizableOperand, Backpropagatable
+from core.cell import EpochedOptimizer, OptimizableOperand, Backpropagatable, \
+    LinearTransformation, b_var
 from core.cell import Linker
+from core.organism.activation_function import ActivationFunction
 from core.organism.node import Node
 
 
@@ -24,7 +26,7 @@ class Organism(OptimizableOperand, Backpropagatable):
     def get_weights_local(self):
         if self.weight_cache is None:
             weights = []
-            for child in self.get_children():
+            for child in self.get_sub_operands():
                 weights.extend(child.get_weights_local())
             self.weight_cache = weights
         return self.weight_cache
@@ -34,23 +36,26 @@ class Organism(OptimizableOperand, Backpropagatable):
         return self.forward(x, meta_args)
 
     def forward(self, x, meta_args=None):
-        for child in self.get_children():
+        for child in self.get_sub_operands():
             x = child.forward(x, meta_args)
         return x
 
     def backpropagation(self, dx, meta_args=None):
-        for child in self.get_children()[::-1]:
+        for child in self.get_sub_operands()[::-1]:
             dx = child.backpropagation(dx, meta_args)
         return dx
 
     def clone(self) -> "Organism":
         pass
 
+    def get_local_gradients(self) -> list:
+        pass
+
     def to_python(self) -> str:
         pass
 
     def nodes(self):
-        self.get_children()
+        self.get_sub_operands()
 
     def link(self, next_chain):
         self.children.append(next_chain)
@@ -65,28 +70,34 @@ class Organism(OptimizableOperand, Backpropagatable):
 
     @staticmethod
     def create_simple_organism(dim_in, dim_hidden, hidden_count, dim_out,
-                               activation_function, spread_point=-1,
+                               activation_function: ActivationFunction,
+                               spread_point=-1,
                                optimizer=None):
-        input_node = Node(1, dim_in, dim_hidden, activation_function.clone())
-        optimizer = optimizer or EpochedOptimizer()
-        if spread_point == -1:
-            spread_point = hidden_count + 1
-        children = [input_node]
-        for i in range(1, hidden_count + 1):
-            hidden_node = Node(1, dim_hidden, dim_hidden,
-                               activation_function.clone())
-            children.append(hidden_node)
+        # TODO THIS HAS NOTHING TO DO WITH ORGANISM
+        organism = activation_function.clone()
+        organism.optimizer = optimizer or EpochedOptimizer()
+        dummy = b_var()
 
-        output_node = Node(1, dim_hidden, dim_out,
-                           activation_function.clone())
-        children.append(output_node)
-        organism = Organism(children, dim_in, 1,
-                            optimizer)
+        class Link:
+            # TODO THIS IS A DEMO FOR THE BLUEPRINT GENERATION
+            # WHERE THE BLUEPRINT IS OBTAINED FROM THE GENES
+
+            def __init__(self, org):
+                self.last_operand = org
+
+            def __call__(self, next_op):
+                self.last_operand.set_child(next_op)
+                self.last_operand = next_op
+
+        link = Link(organism)
+        link(LinearTransformation(dim_hidden, dim_out, [dummy]))
+
+        for i in range(1, hidden_count + 1):
+            link(activation_function.clone())
+            link(LinearTransformation(dim_hidden, dim_hidden, [dummy]))
+
+        link(activation_function.clone())
+        link(LinearTransformation(dim_in, dim_hidden, [dummy]))
+
         organism.set_optimization_risk(True)
         return organism
-
-    def get_gradients(self):
-        gradients = []
-        for child in self.get_children():
-            gradients.extend(child.get_gradients())
-        return gradients

@@ -29,7 +29,7 @@ class Transpose(OptimizableOperand):
     def to_python(self) -> str:
         return self.x.to_python() + ".T"
 
-    def get_children(self):
+    def get_sub_operands(self):
         return [self.x]
 
 

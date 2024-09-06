@@ -22,7 +22,8 @@ class OptimizationArgs:
                  batch_size=1,
                  epochs=1,
                  scaler=None,
-                 decay_rate=0
+                 decay_rate=0,
+                 **props
                  ):
         self.learning_rate = learning_rate
         self.max_iter = max_iter
@@ -37,6 +38,11 @@ class OptimizationArgs:
         self.decay_rate = decay_rate
         self._merged_inputs = None
         self._merged_desired_output = None
+        self.props = props
+        if not props.get('backpropagation'):
+            self.props['backpropagation'] = False
+        if not props.get('optimizer_strategy'):
+            self.props['optimizer_strategy'] = 'adam'
 
     def clone(self):
         return OptimizationArgs(
@@ -50,7 +56,8 @@ class OptimizationArgs:
             batch_size=self.batch_size,
             epochs=self.epochs,
             scaler=self.scaler,
-            decay_rate=self.decay_rate
+            decay_rate=self.decay_rate,
+            **self.props.copy()
         )
 
     def compute_error(self):
@@ -117,3 +124,8 @@ class OptimizationArgs:
             f"decay_rate={self.decay_rate}"
             f")"
         )
+
+    backpropagation = property(lambda self: self.props.get('backpropagation'))
+    optimizer_strategy = property(
+        lambda self: self.props.get['optimizer_strategy']
+    )

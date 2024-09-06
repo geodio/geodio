@@ -2,41 +2,35 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from core.cell import AdaptiveConstant, Operand, OptimizableOperand, \
-    Backpropagatable
-from core.cell.operands import Function, PassThrough
+from core.cell import Operand, matmul_of, transpose_of
+from core.cell.operands import Function
+from core.cell.train import BOO
 
 
-class ActivationFunction(OptimizableOperand, Backpropagatable, ABC):
+class ActivationFunction(BOO, ABC):
 
-    def __init__(self):
-        super().__init__(1)
+    def __init__(self, children, optimizer=None):
+        super().__init__(children, optimizer)
         self.X = None
-
-    def __invert__(self):
-        pass
-
-    def __call__(self, x, meta_args=None):
-        args = x[0]
-        return self.forward(args, meta_args=meta_args)
+        self._derivative = None
 
     def derive_uncached(self, index, by_weights=True) -> Operand:
-        if by_weights or index != 0:
-            return AdaptiveConstant(0, 0)
-        return self.get_derivative()
+        local_derivative = self.get_local_derivative()
+        chained = self.children[0].derive(index, by_weights)
+        derivative = matmul_of(transpose_of(local_derivative), chained)
+        return derivative
 
     @abstractmethod
     def clone(self) -> "ActivationFunction":
         pass
 
-    @abstractmethod
-    def get_derivative(self) -> Operand:
-        pass
+    def get_local_derivative(self) -> Operand:
+        return Function(1, self._derivative, self.children)
 
     def backpropagation(self, dz: np.ndarray, meta_args=None) -> np.ndarray:
-        f_prime = self.d(0)([self.X])
-
+        f_prime = self._derivative(self.X)
         dx = dz * f_prime
+        dx = self.children[0].backpropagation(dx, meta_args)
         return dx
 
     def forward(self, x, meta_args=None):
@@ -47,74 +41,67 @@ class ActivationFunction(OptimizableOperand, Backpropagatable, ABC):
     def actual_forward(self, x, meta_args=None) -> np.ndarray:
         pass
 
-    def get_gradients(self):
+    def get_local_gradients(self):
         return []
 
 
 class SigmoidActivation(ActivationFunction):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, children, optimizer=None):
+        super().__init__(children, optimizer)
 
         def d_sigmoid(z):
-            x = 1 / (1 + np.exp(-z[0]))
-            deriv = x * (1 - x)
-            return deriv
+            x = 1 / (1 + np.exp(-z))
+            derivative = x * (1 - x)
+            return derivative
 
-        self._derivative = Function(1, d_sigmoid, [PassThrough(1)])
+        self._derivative = d_sigmoid
 
     def actual_forward(self, x, meta_args=None):
         return 1 / (1 + np.exp(-x))
 
     def clone(self) -> "SigmoidActivation":
-        return SigmoidActivation()
+        return SigmoidActivation([child.clone for child in self.children],
+                                 optimizer=self.optimizer.clone())
 
     def to_python(self) -> str:
         return "sigmoid"
 
-    def get_derivative(self) -> Operand:
-        return self._derivative
-
 
 class LinearActivation(ActivationFunction):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, children, optimizer=None):
+        super().__init__(children, optimizer)
 
         def d_linear(z):
+            return np.ones_like(z)
 
-            return np.ones_like(z[0])
-
-        self._derivative = Function(1, d_linear, [PassThrough(1)])
+        self._derivative = d_linear
 
     def actual_forward(self, x, meta_args=None):
         return x[0]
 
     def clone(self) -> "LinearActivation":
-        return LinearActivation()
+        return LinearActivation([child.clone for child in self.children],
+                                optimizer=self.optimizer.clone())
 
     def to_python(self) -> str:
         return "linear"
 
-    def get_derivative(self) -> Operand:
-        return self._derivative
-
 
 class ReLUActivation(ActivationFunction):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, children, optimizer=None):
+        super().__init__(children, optimizer)
 
         def d_relu(z):
-            return np.where(z[0] > 0, 1, 0)
+            return np.where(z > 0, 1, 0)
 
-        self._derivative = Function(1, d_relu, [PassThrough(1)])
+        self._derivative = d_relu
 
     def actual_forward(self, x, meta_args=None):
         return np.maximum(0, x)  # ReLU activation
 
     def clone(self):
-        return ReLUActivation()
-
-    def get_derivative(self):
-        return self._derivative
+        return ReLUActivation([child.clone for child in self.children],
+                              optimizer=self.optimizer.clone())
 
     def to_python(self) -> str:
         return "relu"
@@ -131,8 +118,8 @@ def softmax(x):
     z = x - np.max(x, axis=-1, keepdims=True)
     numerator = np.exp(z)
     denominator = np.sum(numerator, axis=-1, keepdims=True)
-    softmax = numerator / denominator
-    return softmax
+    softmax_r = numerator / denominator
+    return softmax_r
 
 
 def d_softmax(x):
@@ -143,7 +130,6 @@ def d_softmax(x):
     where 'm' is the number of samples (in case of batch gradient descent of size m)
     and 'd' is the number of features
     """
-    x = x[0]
     if len(x.shape) == 1:
         x = np.array(x).reshape(1, -1)
     else:
@@ -156,19 +142,17 @@ def d_softmax(x):
 
 
 class SoftmaxActivation(ActivationFunction):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, children, optimizer=None):
+        super().__init__(children, optimizer)
 
-        self._derivative = Function(1, d_softmax, [PassThrough(1)])
+        self._derivative = d_softmax
 
     def actual_forward(self, x, meta_args=None):
         return softmax(x)
 
     def clone(self) -> "SoftmaxActivation":
-        return SoftmaxActivation()
+        return SoftmaxActivation([child.clone for child in self.children],
+                                 optimizer=self.optimizer.clone())
 
     def to_python(self) -> str:
         return "softmax"
-
-    def get_derivative(self) -> Operand:
-        return self._derivative

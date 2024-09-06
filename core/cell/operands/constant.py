@@ -17,6 +17,10 @@ class Constant(Operand):
         return f"{self.__value}"
 
     def __init__(self, weight):
+        """
+
+        :param weight: the value stored by this constant.
+        """
         super().__init__(weight)
         self.__value = weight
 

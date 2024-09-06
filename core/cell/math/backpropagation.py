@@ -12,6 +12,9 @@ class Backpropagatable(ABC):
     def forward(self, x: np.ndarray, meta_args=None) -> np.ndarray:
         pass
 
-    @abstractmethod
     def get_gradients(self):
+        return self.get_local_gradients()
+
+    @abstractmethod
+    def get_local_gradients(self) -> list:
         pass

@@ -1,7 +1,3 @@
-from itertools import chain
-
-import numpy as np
-
 from core.cell.operands.collections.builtins.matmul import matmul_of, \
     Matmul
 from core.cell.operands.collections.builtins.transpose import transpose_of
@@ -68,5 +64,32 @@ class Linker(OptimizableOperand):
     def to_python(self) -> str:
         return "[λX.[" + self.f.to_python() + "]" + self.g.to_python() + "]"
 
-    def get_children(self):
+    def get_sub_operands(self):
         return [self.g, self.f]
+
+
+def link_derivation(f, g, index, by_weight=True, flag_original=False):
+    """
+    (f(g(x)))' = f'(g(x)) * g'(x)
+    :param index:
+    :param by_weight:
+    :return:
+    """
+    if by_weight and g.is_independent_of(index):
+        derivative = __derive_chained_f(f, g, index)
+    else:
+        derivative = derive_unchained_g(f, g, by_weight, index, flag_original)
+    return derivative
+
+
+def __derive_chained_f(f, g, index):
+    self_double = Linker(f.derive(index, True), g)
+    return self_double
+
+
+def derive_unchained_g(f, g, by_weight, index, flag_original=False):
+    chain = Linker(f.derive(0, False), g)
+    chained = g.derive(index, by_weight)
+    derivative = matmul_of(transpose_of(chain), chained,
+                           flag_original)
+    return derivative

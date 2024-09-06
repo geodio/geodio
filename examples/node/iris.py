@@ -8,6 +8,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
+from core.cell import b_var
 from core.cell.train.loss import MSEMultivariate
 from core.cell.train.optimization_args import OptimizationArgs
 from core.organism.activation_function import SigmoidActivation
@@ -48,7 +49,7 @@ def encapsulate(y):
 
 
 def make_nodes(dim_in, dim_out, hidden, parasitic=False):
-    activation = SigmoidActivation()
+    activation = SigmoidActivation([b_var()])
     if not parasitic:
         model = Organism.create_simple_organism(
             dim_in,
@@ -96,7 +97,8 @@ def main(parasitic=False):
         min_error=sys.maxsize,
         batch_size=5,
         epochs=100,
-        decay_rate=1e-4
+        decay_rate=1e-4,
+        backpropagation=True
     )
     starting_error = loss.evaluate(model, validation_X, e_validation_y)
     print("STARTING ERROR:", starting_error)

@@ -28,7 +28,7 @@ Globals:
 import pickle
 import sys
 from abc import abstractmethod, ABCMeta
-from typing import Optional, Dict, Any, Callable, Union
+from typing import Optional, Dict, Any, Callable, Union, List
 
 import core
 from core.cell.math.derivable import Derivable, WeightDerivable
@@ -257,7 +257,13 @@ class Operand(Derivable, WeightDerivable, Hashable, metaclass=ABCMeta):
         for i, weight in enumerate(weights):
             weight.w_index = i
 
-    def get_children(self):
+    def get_sub_operands(self) -> "List[Operand]":
+        """
+        The operands that are used by this operand.
+        They are the children of the operand and any potential hidden children.
+
+        :return: the list of sub-operand of this operand.
+        """
         return self.children
 
     def __eq__(self, other: "Operand") -> bool:
@@ -409,5 +415,5 @@ class Operand(Derivable, WeightDerivable, Hashable, metaclass=ABCMeta):
         """
         return HashNode(
             self.hash_str(),
-            [kid.hash_tree() for kid in self.get_children()]
+            [kid.hash_tree() for kid in self.get_sub_operands()]
         )

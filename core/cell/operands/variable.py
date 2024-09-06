@@ -6,6 +6,7 @@ import numpy as np
 from core.cell.operands.constant import ONE, ZERO
 from core.cell.operands.operand import Operand
 from core.cell.math.hashy import HashLeaf
+from core.cell.math.backpropagation import Backpropagatable
 
 
 class BaseVariable(Operand, metaclass=ABCMeta):
@@ -75,6 +76,26 @@ class Variable(BaseVariable):
         return self.zero
 
 
+class BackpropagatableVariable(Variable, Backpropagatable):
+
+    def __init__(self):
+        super().__init__(0)
+        self.one = AdaptiveConstant(0, 1.0)
+        self.zero = AdaptiveConstant(0, 0.0)
+
+    def clone(self) -> "BackpropagatableVariable":
+        return BackpropagatableVariable()
+
+    def backpropagation(self, dx: np.ndarray, meta_args=None) -> np.ndarray:
+        return dx
+
+    def forward(self, x: np.ndarray, meta_args=None) -> np.ndarray:
+        return x
+
+    def get_local_gradients(self):
+        return []
+
+
 class MetaVariable(Operand):
     def __init__(self, meta_id):
         super().__init__(0)
@@ -101,3 +122,7 @@ class MetaVariable(Operand):
 
 def var(value: int) -> Variable:
     return Variable(value)
+
+
+def b_var() -> BackpropagatableVariable:
+    return BackpropagatableVariable()

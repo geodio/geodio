@@ -56,7 +56,7 @@ class Sigmoid(Neuron):
         clone_sigmoid.B.set(random.random())
         return clone_sigmoid
 
-    def get_children(self):
+    def get_sub_operands(self):
         return [self.activation_function]
 
     def __eq__(self, other):

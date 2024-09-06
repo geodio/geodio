@@ -17,7 +17,7 @@ class ParasiticLinker(Linker):
         r = self.f([x])
         return r
 
-    def get_children(self):
+    def get_sub_operands(self):
         return [self.f]
 
     def derive_uncached(self, index, by_weight=True):

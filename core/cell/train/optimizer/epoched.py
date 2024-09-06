@@ -14,6 +14,8 @@ class EpochedOptimizer(Optimizer):
 
     def __call__(self, model, optimization_args):
         a = optimization_args
+        if optimization_args.backpropagation:
+            self.optimization = "backpropagation"
         niu = a.learning_rate
         decay_rate = a.decay_rate
         logger.logging.debug("Organism Optimization Started.")

@@ -7,7 +7,7 @@ from core.cell import OptimizableOperand
 from core.cell.math.backpropagation import Backpropagatable
 from core.organism.activation_function import ActivationFunction
 
-
+# TODO REMOVE AND REFACTOR ALL THAT ARE USING THE NODE
 class Node(OptimizableOperand, Backpropagatable):
     def __init__(self, arity, dim_in, dim_out, activ_fun: ActivationFunction,
                  optimizer=None, scalar_output=False):
@@ -66,7 +66,7 @@ class Node(OptimizableOperand, Backpropagatable):
     def get_gradients(self) -> List[np.ndarray]:
         return [self.dW, self.db]
 
-    def get_children(self):
+    def get_sub_operands(self):
         return [self.weight, self.bias]
 
     def to_python(self) -> str:

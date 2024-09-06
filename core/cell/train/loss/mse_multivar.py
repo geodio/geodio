@@ -55,32 +55,33 @@ class MSEMultivariate(MSE):
 
         predicted = predicted.reshape(Y.shape)
         diff = Y - predicted
-        try:
-            if jacobian_results.ndim == 3 and diff.ndim == 3:
-                per_instance_grad = -2 * np.einsum('ijk,ik->ij', diff,
-                                                   jacobian_results)
-            elif jacobian_results.ndim == 2 and diff.ndim == 2:
-                per_instance_grad = -2 * np.matmul(diff.T,
-                                                   jacobian_results)
-            else:
-                diff = diff[:, :, np.newaxis]
-                per_instance_grad = -2 * diff * jacobian_results
-        except:
-            if jacobian_results.ndim == 4:
-                try:
-                    diff = diff[:, :, :, np.newaxis]
-                    per_instance_grad = -2 * diff * jacobian_results
-                    per_instance_grad = np.sum(per_instance_grad, axis=(1))
-                except:
-                    diff = np.array([(Y - predicted).T])
-                    diff = diff[:, :, np.newaxis, np.newaxis]
-                    per_instance_grad = -2 * diff * jacobian_results
-                    per_instance_grad = np.sum(per_instance_grad, axis=(1))
-            else:
-                jacobian_results = np.transpose(jacobian_results,
-                                                axes=(0, 2, 1))
-                per_instance_grad = -2 * diff * jacobian_results
-                per_instance_grad = np.mean(per_instance_grad, axis=(1))
+        per_instance_grad = -2 * diff[:, :, np.newaxis] * jacobian_results
+        # try:
+        #     if jacobian_results.ndim == 3 and diff.ndim == 3:
+        #         per_instance_grad = -2 * np.einsum('ijk,ik->ij', diff,
+        #                                            jacobian_results)
+        #     elif jacobian_results.ndim == 2 and diff.ndim == 2:
+        #         per_instance_grad = -2 * np.matmul(diff.T,
+        #                                            jacobian_results)
+        #     else:
+        #         diff = diff[:, :, np.newaxis]
+        #         per_instance_grad = -2 * diff * jacobian_results
+        # except:
+        #     if jacobian_results.ndim == 4:
+        #         try:
+        #             diff = diff[:, :, :, np.newaxis]
+        #             per_instance_grad = -2 * diff * jacobian_results
+        #             per_instance_grad = np.sum(per_instance_grad, axis=(1))
+        #         except:
+        #             diff = np.array([(Y - predicted).T])
+        #             diff = diff[:, :, np.newaxis, np.newaxis]
+        #             per_instance_grad = -2 * diff * jacobian_results
+        #             per_instance_grad = np.sum(per_instance_grad, axis=(1))
+        #     else:
+        #         jacobian_results = np.transpose(jacobian_results,
+        #                                         axes=(0, 2, 1))
+        #         per_instance_grad = -2 * diff * jacobian_results
+        #         per_instance_grad = np.mean(per_instance_grad, axis=(1))
         gradient = np.mean(per_instance_grad, axis=0)
 
         if np.isnan(gradient).any() or np.isinf(gradient).any():

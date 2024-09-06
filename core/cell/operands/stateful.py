@@ -52,7 +52,7 @@ class State(AbsWeight):
     def get(self, **kwargs) -> Union[np.ndarray, float]:
         return self.cell.state
 
-    def get_children(self):
+    def get_sub_operands(self):
         return []
 
     def __eq__(self, other):
