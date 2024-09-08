@@ -1,12 +1,13 @@
 import sys
 import numpy as np
 
-from core.cell import Linker
+from core.cell import Linker, b_var
 from core.cell import MSEMultivariate
 from core.cell import OptimizationArgs
 from core.cell import Optimizer
 from core.organism.activation_function import SigmoidActivation
 from core.organism.node import Node
+from core.organism.organism import Organism
 
 
 def main(dataset_name=None, optimizer=None):
@@ -155,12 +156,20 @@ def get_model_config(dataset_name):
 
 
 def create_model(config):
-    activation_function = SigmoidActivation()
+    activation_function = SigmoidActivation([b_var()])
     arity = config['arity']
     dim_in = config['dim_in']
     dim_mid = config['dim_mid']
     dim_out = config['dim_out']
 
+    # model = Organism.create_simple_organism(
+    #     dim_in=dim_in,
+    #     dim_hidden=dim_mid,
+    #     hidden_count=1,
+    #     dim_out=dim_out,
+    #     activation_function=activation_function,
+    #     optimizer=Optimizer()
+    # )
     node2 = make_node(activation_function.clone(), arity, dim_mid, dim_out)
     node1 = make_node(activation_function.clone(), arity, dim_in, dim_mid)
     model = link_nodes(dim_in, node1, node2)
@@ -179,6 +188,6 @@ def make_node(activation_function, arity, dim_in, dim_out):
     node.set_optimization_risk(True)
     return node
 
-
+# TODO
 if __name__ == "__main__":
     main()

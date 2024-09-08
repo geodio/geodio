@@ -30,6 +30,8 @@ class BaseGradReg:
         :param gradient: The calculated gradient to be regularized.
         :param cell: The computational unit (e.g., neural network).
         """
+        # print("WEIGHT", self.weight.get().shape)
+        # print("GRADIENT", gradient.shape)
         # Apply EWC regularization
         ewc_term = self.optim_args.ewc_lambda * self.ewc_importance * (
                 self.weight.get() - self.prev_weight

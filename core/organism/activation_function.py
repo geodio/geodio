@@ -60,7 +60,7 @@ class SigmoidActivation(ActivationFunction):
         return 1 / (1 + np.exp(-x))
 
     def clone(self) -> "SigmoidActivation":
-        return SigmoidActivation([child.clone for child in self.children],
+        return SigmoidActivation([child.clone() for child in self.children],
                                  optimizer=self.optimizer.clone())
 
     def to_python(self) -> str:
@@ -80,7 +80,7 @@ class LinearActivation(ActivationFunction):
         return x[0]
 
     def clone(self) -> "LinearActivation":
-        return LinearActivation([child.clone for child in self.children],
+        return LinearActivation([child.clone() for child in self.children],
                                 optimizer=self.optimizer.clone())
 
     def to_python(self) -> str:
@@ -100,7 +100,7 @@ class ReLUActivation(ActivationFunction):
         return np.maximum(0, x)  # ReLU activation
 
     def clone(self):
-        return ReLUActivation([child.clone for child in self.children],
+        return ReLUActivation([child.clone() for child in self.children],
                               optimizer=self.optimizer.clone())
 
     def to_python(self) -> str:
@@ -151,7 +151,7 @@ class SoftmaxActivation(ActivationFunction):
         return softmax(x)
 
     def clone(self) -> "SoftmaxActivation":
-        return SoftmaxActivation([child.clone for child in self.children],
+        return SoftmaxActivation([child.clone() for child in self.children],
                                  optimizer=self.optimizer.clone())
 
     def to_python(self) -> str:

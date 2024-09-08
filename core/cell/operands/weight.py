@@ -5,7 +5,7 @@ import numba
 import numpy as np
 from typing_extensions import TypeVar
 
-from core.cell.operands.constant import ONE, ZERO
+from core.cell.operands.constant import ONE, ZERO, Constant
 from core.cell.operands.operand import Operand
 
 

@@ -5,9 +5,11 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-from core.cell import Linker, MSEMultivariate, OptimizationArgs, Optimizer
+from core.cell import Linker, MSEMultivariate, OptimizationArgs, Optimizer, \
+    b_var
 from core.organism.activation_function import SigmoidActivation
 from core.organism.node import Node
+from core.organism.organism import Organism
 
 
 def load_iris_dataset(filename):
@@ -26,14 +28,14 @@ def create_batches(X, y, batch_size):
 
 
 def get_model(dim_in, dim_mid, dim_out, hidden_layer_count, activation_function):
-    input_node = Node(1, dim_in, dim_mid, activation_function, Optimizer())
-    output_node = Node(1, dim_mid, dim_out, activation_function, Optimizer())
-    model = input_node
-    for i in range(hidden_layer_count):
-        hl = Node(1, dim_mid, dim_mid, activation_function, Optimizer())
-        model = Linker(hl, model, dim_in)
-    model = Linker(output_node, model, dim_out)
-    model.set_optimization_risk(True)
+    model = Organism.create_simple_organism(
+        dim_in=dim_in,
+        dim_hidden=dim_mid,
+        dim_out=dim_out,
+        activation_function=activation_function,
+        hidden_count=hidden_layer_count,
+        optimizer=Optimizer()
+    )
     return model
 
 
@@ -42,9 +44,9 @@ def main():
     dim_mid = 10
     dim_out = 1
     arity = 1
-    hiddens = 1
+    hiddens = 2
 
-    activation_function = SigmoidActivation()
+    activation_function = SigmoidActivation([b_var()])
 
     model = get_model(dim_in, dim_mid, dim_out, hiddens, activation_function)
 
@@ -71,7 +73,8 @@ def main():
                 loss_function=loss,
                 learning_rate=learning_rate,
                 max_iter=1,  # Iteration within a batch
-                min_error=sys.maxsize
+                min_error=sys.maxsize,
+                risk=True
             )
             epoch_loss += train(model, optimization_args)
         learning_rate -= decay

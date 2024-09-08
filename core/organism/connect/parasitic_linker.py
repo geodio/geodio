@@ -47,7 +47,7 @@ class ParasiticLinker(Linker):
         self.parasite.optimize(args)
 
         # Optimize host state
-        self.optimize_host_state(args)
+        # self.optimize_host_state(args)
 
     def optimize_host_state(self, args: OptimizationArgs):
         """
@@ -62,14 +62,22 @@ class ParasiticLinker(Linker):
         initial_host_state = self.host_state.get().copy()
         jacobian_results = self.parasite.d(0)([initial_host_state])
         predicted = self(args.inputs)
+        # TODO DOES NOT WORK ANYMORE
+        # print('jacobian_results', np.shape(jacobian_results))
+        # print('initial_host_state', np.shape(initial_host_state))
+        # print('desired_output', np.shape(args.desired_output))
+        # print('predicted', np.shape(predicted))
+
         diff = (
-                np.array(args.desired_output)[:, 0, :] -
-                np.array(predicted).T
+                np.array(args.desired_output)[:, 0, :].T -
+                np.array(predicted)
         )
-        diff = diff[:, :, np.newaxis]
+        # diff = diff[:, :, np.newaxis]
         per_instance_grad = diff * jacobian_results
-        per_instance_grad = np.mean(per_instance_grad, axis=1)
-        mg = per_instance_grad.T
+        per_instance_grad = np.mean(per_instance_grad, axis=0)
+        k = initial_host_state.shape[0]
+        per_instance_grad = np.tile(per_instance_grad, (k, 1))
+        mg = per_instance_grad
         niu = args.learning_rate / args.batch_size
         new_state = initial_host_state + niu * mg
         self.host_state.set(new_state)

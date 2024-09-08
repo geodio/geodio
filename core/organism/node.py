@@ -2,10 +2,11 @@ from typing import List
 
 import numpy as np
 
-from core.cell import Linker, LinearTransformation, ShapedWeight
+from core.cell import Linker, LinearTransformation, ShapedWeight, var, b_var
 from core.cell import OptimizableOperand
 from core.cell.math.backpropagation import Backpropagatable
 from core.organism.activation_function import ActivationFunction
+
 
 # TODO REMOVE AND REFACTOR ALL THAT ARE USING THE NODE
 class Node(OptimizableOperand, Backpropagatable):
@@ -63,7 +64,7 @@ class Node(OptimizableOperand, Backpropagatable):
         dx = np.matmul(self.weight.get().T, dr)
         return dx
 
-    def get_gradients(self) -> List[np.ndarray]:
+    def get_local_gradients(self) -> List[np.ndarray]:
         return [self.dW, self.db]
 
     def get_sub_operands(self):
@@ -76,7 +77,7 @@ class Node(OptimizableOperand, Backpropagatable):
         ) + "\n)"
 
     def derive_uncached(self, index, by_weights=True):
-        z_function = LinearTransformation(self.dim_in, self.dim_out)
+        z_function = LinearTransformation(self.dim_in, self.dim_out, [b_var()])
         z_function.weight = self.weight
         z_function.bias = self.bias
         flag_original = self.dim_out == 1

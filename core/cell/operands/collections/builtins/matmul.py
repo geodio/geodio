@@ -5,7 +5,6 @@ from core.cell.operands.collections.builtins.add import Add
 from core.cell.operands.collections.builtins.builtinbase import \
     BuiltinBaseFunction
 
-
 def matmul_any(a, b):
     if np.ndim(a) == 0 or np.ndim(b) == 0:
         return np.dot(a, b)
