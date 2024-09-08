@@ -6,11 +6,15 @@ from core.cell.train.optimizer.optimization.default_optimization import \
 
 class EpochedOptimizer(Optimizer):
     def __init__(self, optimization=None):
+        self.optimizer = None
         super().__init__(optimization)
 
     def train(self, model, optimization_args):
-        optimizer = self.make_optimizer(model, optimization_args)
-        optimizer.optimize()
+        if self.optimizer is None:
+            self.optimizer = self.make_optimizer(model, optimization_args)
+        else:
+            self.optimizer.update_optim_args(optimization_args)
+        self.optimizer.optimize()
 
     def __call__(self, model, optimization_args):
         a = optimization_args

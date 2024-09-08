@@ -19,9 +19,10 @@ class FisherOptimizer(Optimizer):
         :param cell: The model or neural network cell to be optimized.
         :param args: The arguments used in the optimization.
         """
-        optimizer = self.make_optimizer(
-            cell, opt, ewc_lambda=0.05, l2_lambda=0.001
-        )
+        opt.props["ewc_lambda"] = 0.05
+        opt.props["l2_lambda"] = 0.01
+        opt.props["risk"] = self.risk
+        optimizer = self.make_optimizer(cell, opt)
         if self.fisher_information is None:
             self.fisher_information = np.ones(len(cell.get_weights()))
         else:

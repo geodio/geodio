@@ -20,21 +20,18 @@ class Optimizer:
         :param cell: The model or neural network cell to be optimized.
         :param args: The arguments used in the optimization.
         """
+        args.props["ewc_lambda"] = 0.00
+        args.props["l2_lambda"] = 0.00
+        args.props['risk'] = self.risk
         optimizer = self.make_optimizer(cell, args)
         optimizer.optimize()
 
-    def make_optimizer(self, cell, optim_args, ewc_lambda=0.0,
-                       l2_lambda=0.0):
+    def make_optimizer(self, cell, optim_args):
         optim_args = optim_args.clone()
         if self.optimization == "backpropagation":
-            optimizer = BackpropagationOptimization(cell, optim_args,
-                                                    self.risk,
-                                                    ewc_lambda=ewc_lambda,
-                                                    l2_lambda=l2_lambda)
+            optimizer = BackpropagationOptimization(cell, optim_args)
         else:
-            optimizer = Optimization(cell, optim_args, self.risk,
-                                     ewc_lambda=ewc_lambda,
-                                     l2_lambda=l2_lambda)
+            optimizer = Optimization(cell, optim_args)
         return optimizer
 
     def clone(self):
