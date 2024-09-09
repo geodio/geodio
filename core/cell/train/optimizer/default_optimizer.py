@@ -1,7 +1,7 @@
 from core.cell.train.optimization_args import OptimizationArgs
-from core.cell.train.optimizer.optimization.default_optimization import \
+from core.cell.train.optimization.default_optimization import \
     Optimization
-from core.cell.train.optimizer.optimization.backprop_optimization import \
+from core.cell.train.optimization import \
     BackpropagationOptimization
 from core.cell.operands.operand import Operand
 

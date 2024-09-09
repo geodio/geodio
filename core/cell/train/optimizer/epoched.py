@@ -1,7 +1,5 @@
 from core import logger
 from core.cell.train.optimizer.default_optimizer import Optimizer
-from core.cell.train.optimizer.optimization.default_optimization import \
-    Optimization
 
 
 class EpochedOptimizer(Optimizer):

@@ -2,7 +2,7 @@ import numpy as np
 
 from core.cell.train.optimizer.utils import adapt_gradient
 from core.cell.operands.weight import t_weight
-from core.cell.train.optimizer.optimization.regularization.base_grad_reg \
+from core.cell.train.optimization.regularization.base_grad_reg \
     import (BaseGradReg)
 
 

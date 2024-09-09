@@ -1,5 +1,5 @@
 from core.cell.train.optimization_args import OptimizationArgs
-from core.cell.train.optimizer.optimization.base_optimization import \
+from core.cell.train.optimization.base_optimization import \
     BaseOptimization
 
 

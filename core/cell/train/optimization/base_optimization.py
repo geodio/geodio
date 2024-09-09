@@ -3,7 +3,7 @@ from typing import Callable
 
 from core.cell.operands.utility import get_predicted
 from core.cell.train.optimization_args import OptimizationArgs
-from core.cell.train.optimizer.optimization.regularization \
+from core.cell.train.optimization.regularization \
     import BaseGradReg, AdamGradReg
 from core.cell.operands.weight import t_weight
 

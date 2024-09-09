@@ -1,18 +1,22 @@
-from typing import Optional
-
 from core.cell.operands.operand import Operand
 from core.cell.operands.utility import verify_equal_children
 
 
 class Function(Operand):
-    def __init__(self, arity, value, children=None):
+    def __init__(self, arity, value, children=None, is_childless=False):
         super().__init__(arity)
         self.value = value
-        self.children = children if children is not None else []
+        if is_childless:
+            self.children = None
+        else:
+            self.children = children if children is not None else []
+        self.is_childless = is_childless
 
     def __call__(self, args, meta_args=None):
-        func_args = [child(args, meta_args) for child in self.children]
-        return self.value(*func_args)
+        if not self.is_childless:
+            func_args = [child(args, meta_args) for child in self.children]
+            return self.value(*func_args)
+        return self.value(*args)
 
     def __invert__(self):
         return None  # Replace with actual inversion logic

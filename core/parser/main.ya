@@ -1,0 +1,12 @@
+op k (x, y):
+    op func(z):
+        z + 2
+    x + func(y)
+
+const o = k(4, 2)
+r = [4, 3]
+
+other_func = () => 2
+wtf = () => r * o + other_func()
+
+r = [wtf]

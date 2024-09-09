@@ -1,6 +1,6 @@
 import numpy as np
 
-from core.cell.train.optimizer.optimization.default_optimization \
+from core.cell.train.optimization.default_optimization \
     import Optimization
 
 
