@@ -19,3 +19,5 @@ def handle_reserved(func_name, args):
         return LinearTransformation(int(args[0]), int(args[0]), dummy)
     if func_name == "Sigmoid":
         return SigmoidActivation(dummy)
+    if func_name == 'print':
+        return lambda w: Function(len(args), print, args)

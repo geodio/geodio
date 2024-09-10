@@ -7,10 +7,10 @@ class Seq(BuiltinBaseFunction):
 
     def __call__(self, args, meta_args=None):
         for child in self.children[:-1]:
-            child(args, meta_args)
+            child(args, meta_args=meta_args)
         if not self.children:
             return None
-        r = self.children[-1](args, meta_args)
+        r = self.children[-1](args, meta_args=meta_args)
         return r
 
     def derive(self, index, by_weights=True):

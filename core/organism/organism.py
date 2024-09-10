@@ -3,9 +3,7 @@
 from core.cell import EpochedOptimizer, OptimizableOperand, Backpropagatable, \
     LinearTransformation, b_var
 from core.cell import Linker
-from core.organism.activation_function import ActivationFunction
-from core.organism.node import Node
-
+from core.cell import ActivationFunction
 
 class Organism(OptimizableOperand, Backpropagatable):
     def __init__(self, children, dim_in, arity, optimizer=None):

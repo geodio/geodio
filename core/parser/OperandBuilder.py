@@ -1,4 +1,7 @@
-from core.cell import MetaVariable, PassThrough
+import numpy as np
+
+from core.cell import MetaVariable, PassThrough, MetaArgumented, \
+    MetaAssignment, MetaCall, If, Weight
 from core.parser.builtins import handle_reserved
 from core.parser.tmp import YaguarParser, YaguarListener
 from core.cell.operands import Add, Sub, Prod, Div, Power, Constant, Variable, \
@@ -6,42 +9,55 @@ from core.cell.operands import Add, Sub, Prod, Div, Power, Constant, Variable, \
     Seq, Equals, Operand, Function, Collector
 
 reserved = [
-    "linear",
-    "sigmoid",
-    "weight"
+    "Linear",
+    "Sigmoid",
+    "weight",
+    "print"
 ]
+NULL = Constant(None)
 
 
 class OperandBuilder(YaguarListener):
     def __init__(self):
-        self.variables = {}  # Store variables
-        self.functions = {}  # Store function definitions
-        self.constants = {}  # Store constants
+        pass
+
+    def visitIfStatement(self, ctx: YaguarParser.IfStatementContext):
+        if_stmt: YaguarParser.If_statementContext = ctx.if_statement()
+        prev = None
+        for condition in if_stmt.condition():
+            condition: YaguarParser.ConditionContext
+            cond = self.visit(condition.expr())
+            true_case = self.visit(condition.blockOrExpr())
+            new = If(cond, [true_case, NULL])
+            if prev is not None:
+                prev.children[-1] = new
+            prev = new
+
+        default = if_stmt.default()
+        if default is not None:
+            visited_default = self.visit(default.blockOrExpr())
+            prev.children[-1] = visited_default
+        return prev
+
+    def visitBlockOrExpr(self, ctx: YaguarParser.BlockOrExprContext):
+        block = ctx.block()
+        if block is None:
+            expr = ctx.expr()
+            return self.visit(expr)
+        children = [self.visit(stmt) for stmt in block.statement()]
+        operand = Seq(children)
+        return operand
 
     def visitAssignmentStatement(self,
                                  ctx: YaguarParser.AssignmentStatementContext):
         var_name = ctx.ID().getText()
-        if var_name in self.constants:
-            raise ValueError(
-                f"Constant {var_name} cannot be re-assigned to a variable")
         value = self.visit(ctx.expr())
-        self.variables[var_name] = value
-        return value
+        operand = MetaAssignment(var_name, value)
+        return operand
 
     def visitExprStatement(self, ctx: YaguarParser.ExprStatementContext):
         op = self.visit(ctx.expr())
         return op
-
-    def visitConstAssignment(self, ctx: YaguarParser.ConstAssignmentContext):
-        const_name = ctx.ID().getText()
-
-        if const_name in self.constants:
-            raise ValueError(
-                f"Constant {const_name} has already been defined.")
-
-        value = self.visit(ctx.expr())
-        self.constants[const_name] = value
-        return value
 
     def visitFuncCallExpr(self, ctx: YaguarParser.FuncCallExprContext):
         func_name = ctx.funcCall().ID().getText()
@@ -50,25 +66,17 @@ class OperandBuilder(YaguarListener):
             args = [self.visit(arg) for arg in arguments.expr()]
         else:
             args = []
-        if func_name in self.functions:
-            return self.functions[func_name](*args)
         if func_name in reserved:
-            return handle_reserved(func_name, args)(args)
-        if func_name in self.constants:
-            func = self.constants[func_name]
-            return func(args)
-        if func_name in self.variables:
-            func = self.variables[func_name]
-            return func(args)
-
-        raise ValueError(f"Undefined function {func_name}")
+            x = handle_reserved(func_name, args)(args)
+            return x
+        operand = MetaCall(func_name, args)
+        return operand
 
     def visitFunctionDeclaration(self,
                                  ctx: YaguarParser.FunctionDeclarationContext):
         func_name = ctx.ID().getText()
-        closure, param_names = self.get_closure(ctx)
-        self.functions[func_name] = closure
-        operand = Function(0, closure, is_childless=True)
+        closure = self.get_closure(ctx)
+        operand = MetaAssignment(func_name, closure)
         return operand
 
     def get_closure(self, ctx):
@@ -77,20 +85,20 @@ class OperandBuilder(YaguarListener):
             param_names = [param.getText() for param in ctx.params().ID()]
         else:
             param_names = []
-        frozen_context = (self.variables.copy(), self.functions.copy(),
-                          self.constants.copy())
         if hasattr(ctx, 'block'):
             body = ctx.block()
+            children = [self.visit(stmt) for stmt in body.statement()]
         else:
             body = ctx.expr()
-        closure = lambda *args: self._invoke_function(body, param_names,
-                                                      args, frozen_context)
-        return closure, param_names
+            children = [self.visit(body)]
+
+        func = Seq(children)
+        closure = MetaArgumented(param_names, func)
+        return closure
 
     def visitLambdaExpr(self, ctx: YaguarParser.LambdaExprContext):
-        closure, param_names = self.get_closure(ctx)
-        operand = Function(0, closure, is_childless=True)
-        return operand
+        closure = self.get_closure(ctx)
+        return closure
 
     def visitArrayExpr(self, ctx: YaguarParser.ArrayExprContext):
         arguments = ctx.expr()
@@ -99,14 +107,11 @@ class OperandBuilder(YaguarListener):
             args = [self.visit(arg) for arg in arguments]
         return handle_reserved("weight", args)(args)
 
-    def _invoke_function(self, body, param_names, args, frozen_context):
+    def _invoke_function(self, body, param_names, args):
         # Save current variable state
-        saved_vars = self.variables.copy()
-        saved_functions = self.functions.copy()
-        saved_constants = self.constants.copy()
-        self.variables, self.functions, self.constants = frozen_context
+        saved_meta_args = self.meta_args.copy()
         # Set new variables
-        self.variables.update(zip(param_names, args))
+        self.meta_args.update(zip(param_names, args))
         # Evaluate the function body
         result = None
         if hasattr(body, 'statement'):
@@ -115,9 +120,7 @@ class OperandBuilder(YaguarListener):
         else:
             result = self.visit(body)
         # Restore the previous variable state
-        self.variables = saved_vars
-        self.functions = saved_functions
-        self.constants = saved_constants
+        self.meta_args = saved_meta_args
         return result
 
     def visitAddSub(self, ctx: YaguarParser.AddSubContext):
@@ -147,10 +150,6 @@ class OperandBuilder(YaguarListener):
 
     def visitVariable(self, ctx: YaguarParser.VariableContext):
         var_name = ctx.getText()
-        if var_name in self.variables:
-            return self.variables[var_name]
-        if var_name in self.constants:
-            return self.constants[var_name]
         return MetaVariable(var_name)
 
     def visitCompare(self, ctx: YaguarParser.CompareContext):

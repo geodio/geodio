@@ -11,7 +11,7 @@ from sklearn.preprocessing import StandardScaler
 from core.cell import b_var
 from core.cell.train.loss import MSEMultivariate
 from core.cell.train.optimization_args import OptimizationArgs
-from core.organism.activation_function import SigmoidActivation
+from core.cell import SigmoidActivation
 from core.organism.connect import Parasite
 from core.organism.organism import Organism
 

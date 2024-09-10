@@ -2,10 +2,9 @@ import numpy as np
 
 from core.cell import Cell, Seq, OptimizationArgs, \
     ParasiteEpochedOptimizer, Optimizer, Operand, MSE
-from core.organism.activation_function import LinearActivation
+from core.cell import LinearActivation
 from core.organism.connect import ParasiticLinker
 from core.organism.connect.utils import get_cell_node, connect
-from core.organism.node import Node
 
 
 class Parasite(Cell):

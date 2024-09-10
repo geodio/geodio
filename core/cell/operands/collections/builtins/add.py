@@ -13,8 +13,11 @@ class Add(BuiltinBaseFunction):
         super().__init__(children, f"add_{arity}", arity)
 
     def __call__(self, args, meta_args=None):
-        return clean_number(
-            sum([child(args, meta_args) for child in self.children]))
+        executed_children = [child(args, meta_args) for child in self.children]
+
+        result = sum(executed_children)
+        clean_result = clean_number(result)
+        return clean_result
 
     def derive(self, index, by_weights=True):
         return Add(

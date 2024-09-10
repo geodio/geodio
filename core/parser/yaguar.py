@@ -29,22 +29,12 @@ def parse_input(input_stream):
 
 
 def main(argv):
-    # input_expr = """
-    # const w = weight(2, 2);
-    # const W = weight(w, weight(3, 4));
-    # def kaka(x) {
-    #     z = x + 1;
-    #     z * W;
-    # }
-    # const D = kaka(8);
-    # o = (x) => [x, D];
-    # o(D);
-    # k = [];
-    # """
+    # input_expr = ""
     # input_stream = InputStream(input_expr)
     input_stream = FileStream(argv[1])
     operand = parse_input(input_stream)
-    print(operand([]))
+    meta_args = {}
+    print(operand([3, 4], meta_args))
 
 
 if __name__ == "__main__":

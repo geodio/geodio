@@ -28,7 +28,8 @@ NL: ('\r'? '\n' ' '*); // For tabs just switch out ' '* with '\t'*
 
 SPACES : [ \t]+ -> skip ;
 
-CONST : 'const' ;
+COMMENT: '!>' ~[\r\n]* -> skip ;
+
 OP    : 'op' ;
 
 // Parser rules
@@ -36,11 +37,22 @@ OP    : 'op' ;
 prog: ( statement )* ;
 
 statement:
-    expr NL                          # ExprStatement
-    | ID '=' expr NL                 # AssignmentStatement
-    | CONST ID '=' expr NL           # ConstAssignment
-    | OP ID '(' params? ')' ':' block         # FunctionDeclaration
+    expr NL                           # ExprStatement
+    | ID '=' expr NL                  # AssignmentStatement
+    | OP ID '(' params? ')' ':' block # FunctionDeclaration
+    | if_statement                    # IfStatement
     ;
+
+if_statement:
+    condition+ default? ;
+
+condition:
+    expr '?' blockOrExpr;
+
+default:
+    '??' blockOrExpr;
+
+blockOrExpr: block | expr NL;
 
 params:
     ID (',' ID)* ;
@@ -48,6 +60,22 @@ params:
 block:
     INDENT statement+ DEDENT
     ;
+
+//// New rule for defining types and their state
+//type_declaration:
+//    ID ':state:' INDENT type_body DEDENT;
+//
+//type_body:
+//    (type_member NL)* ;
+//
+//type_member:
+//    ID ':' ID  # TypedMember
+//    | ID       # SimpleMember
+//    ;
+//
+//// Method declaration for types
+//method_declaration:
+//    ID '::' ID '(' params? ')' ':' block;
 
 expr:
     expr op=('*'|'/') expr                # MulDiv
@@ -69,17 +97,5 @@ funcCall:
 args:
     expr (',' expr)* ;
 
-NUMBER : [0-9]+ ('.' [0-9]+)? ;
+NUMBER : '-'? [0-9]+ ('.' [0-9]+)? ;
 ID     : [a-zA-Z_][a-zA-Z_0-9]* ;
-//NEWLINE : ( '\r'? '\n' | '\r' ) {
-//    if (pendingDent) { setChannel(HIDDEN); }
-//    pendingDent = true;
-//    indentCount = 0;
-//    initialIndentToken = null;
-//} ;
-//WS : [ \t]+ {
-//setChannel(HIDDEN);
-//if (pendingDent) { indentCount += getText().length(); }
-//} ;
-//BlockComment : '/*' ( BlockComment | . )*? '*/' -> channel(HIDDEN) ;   // allow nesting comments
-//LineComment : '//' ~[\r\n]* -> channel(HIDDEN) ;

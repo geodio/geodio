@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Any
 
-from core.cell.operands.variable import MetaVariable
+from core.cell.operands.variable import MetaVariable, MetaAssignment
 
 import uuid
 
@@ -17,45 +17,6 @@ def verify_equal_children(operand_a: Operand, operand_b: Operand) -> bool:
         if a != b:
             return False
     return True
-
-
-class MetaAssignment(Operand):
-    def __init__(self, meta_variable: str,
-                 original_operand: Operand, attache: Operand):
-        super().__init__(attache.arity)
-        self.meta_variable = meta_variable
-        self.original_operand = original_operand
-        self.attache = attache
-
-    def __call__(self, args, meta_args: Optional[Dict[str, Any]] = None):
-        meta_args[self.meta_variable] = self.original_operand(args, meta_args)
-        return self.attache(args, meta_args)
-
-    def __invert__(self):
-        pass
-
-    def clone(self) -> "Operand":
-        pass
-
-    def to_python(self) -> str:
-        return f"""
-        M{self.meta_variable} = {self.original_operand.to_python()}
-        return {self.attache.to_python()}
-        """
-
-    def derive(self, index, by_weights=True):
-        # TODO
-        pass
-
-    def get_sub_operands(self):
-        return [self.original_operand, self.attache]
-
-    def __eq__(self, other):
-        if isinstance(other, MetaAssignment):
-            return (self.meta_variable == other.meta_variable
-                    and self.original_operand == other.original_operand
-                    and self.attache == other.attache)
-        return False
 
 
 def reduce(operand: Operand) -> Operand:
@@ -79,7 +40,7 @@ def reduce(operand: Operand) -> Operand:
                     meta_var = MetaVariable(meta_var_id)
                     for idx in equal_children:
                         meta_variables[children[idx]] = meta_var
-                    meta_assignment = MetaAssignment(meta_var, reduced_child)
+                    meta_assignment = MetaAssignment(meta_var_id, reduced_child)
                     meta_assignments.append(meta_assignment)
 
         return meta_variables, meta_assignments

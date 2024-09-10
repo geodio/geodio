@@ -2,7 +2,6 @@ from typing import List
 
 from core.cell import OCell, Cell, Seq, State
 from core.organism.connect import ParasiticLinker
-from core.organism.node import Node
 
 
 def get_cell_node(activation_function, dim_in, dim_out):

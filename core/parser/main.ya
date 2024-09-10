@@ -1,12 +1,23 @@
-op k (x, y):
-    op func(z):
-        z + 2
-    x + func(y)
+True = 1
+False = 0
+op is_negative(x):
+    x < 0 ?
+        True
+    ?? False
 
-const o = k(4, 2)
-r = [4, 3]
+x = 2
+y = 3
+y = x * x
 
-other_func = () => 2
-wtf = () => r * o + other_func()
+op sum(start, end):
+    op qwerty(current, total):
+        current >= end ? total
+        ?? qwerty(current + 1, current + total)
+    qwerty(start, 0)
 
-r = [wtf]
+
+print(sum(1, 10)) !> prints 45
+
+x = weight(1, 2, 3)
+x * 2
+l =
