@@ -15,4 +15,5 @@ class BackpropagationOptimization(Optimization):
         dZ = self.optim_args.loss_function.compute_d_fitness(Z, y_batch)
         self.cell.backpropagation(dZ)
         gradients = self.cell.get_gradients()
+        # print(gradients)
         return gradients

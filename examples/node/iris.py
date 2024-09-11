@@ -8,12 +8,13 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-from core.cell import b_var
+from core.cell import b_var, EpochedOptimizer
 from core.cell.train.loss import MSEMultivariate
 from core.cell.train.optimization_args import OptimizationArgs
 from core.cell import SigmoidActivation
 from core.organism.connect import Parasite
 from core.organism.organism import Organism
+from core.parser import yaguar
 
 
 def reverse_one_hot(y):
@@ -49,25 +50,24 @@ def encapsulate(y):
 
 
 def make_nodes(dim_in, dim_out, hidden, parasitic=False):
-    activation = SigmoidActivation([b_var()])
-    if not parasitic:
-        model = Organism.create_simple_organism(
-            dim_in,
-            hidden,
-            2,
-            dim_out,
-            activation,
-            4,
-        )
-    else:
-        model = Parasite.create_parasitic_organism(
-            dim_in,
-            hidden,
-            2,
-            dim_out,
-            activation,
-            4,
-        )
+    expr = \
+        f"""
+op make_model():
+    nn = Sigmoid() >>
+    Linear({hidden - dim_out}, {dim_out}) >>
+    Sigmoid() >>
+    Linear({hidden}, {hidden - dim_out}) >>
+    Sigmoid() >>
+    Linear({hidden - dim_in}, {hidden}) >>
+    Sigmoid() >>
+    Linear({dim_in}, {hidden - dim_in})
+make_model()
+
+"""
+    model = yaguar.operand(expr)((), {})
+    print(model)
+    model.optimizer = EpochedOptimizer()
+    print(model([np.ones(dim_in)]))
     return model
 
 
@@ -82,28 +82,34 @@ def main(parasitic=False):
     e_validation_y = encapsulate(reverse_one_hot(validation_y))
     dim_in = len(train_X[0][0])
     dim_out = 3
-    hidden = 50
+    hidden = 20
 
     model = make_nodes(dim_in, dim_out, hidden, parasitic)
 
     loss = MSEMultivariate()
 
+    starting_error = loss.evaluate(model, validation_X, e_validation_y)
+    print("STARTING ERROR:", starting_error)
+    def closure():
+        get_accuracy_validation(classes, model, validation_X, validation_y)
+        get_accuracy_training(classes, model, train_X, train_y)
     optimization_args = OptimizationArgs(
         inputs=train_X,
         desired_output=e_train_y,
         loss_function=loss,
-        learning_rate=1,
+        learning_rate=0.01,
         max_iter=1,
         min_error=sys.maxsize,
         batch_size=5,
-        epochs=100,
-        decay_rate=1e-4,
-        backpropagation=True
+        epochs=250,
+        decay_rate=0,
+        ewc_lambda=0.000,
+        grad_reg='adam',
+        backpropagation=True,
+        extra_action=closure
     )
-    starting_error = loss.evaluate(model, validation_X, e_validation_y)
-    print("STARTING ERROR:", starting_error)
-    get_accuracy_validation(classes, model, validation_X, validation_y)
-    get_accuracy_training(classes, model, train_X, train_y)
+
+
     model.optimize(optimization_args)
 
     ending_error = loss.evaluate(model, validation_X, e_validation_y)

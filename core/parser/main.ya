@@ -16,8 +16,59 @@ op sum(start, end):
     qwerty(start, 0)
 
 
-print(sum(1, 10)) !> prints 45
+print(sum(1, 10)) !> prints 45(
 
-x = weight(1, 2, 3)
-x * 2
-l =
+x = [
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9]
+]
+print(x * 2)
+
+l = Sigmoid() >> Linear(1, 2) >> Sigmoid() >> Linear(2, 1)
+print(l([1, 2]))
+print({2, 3, 4, 5, 6})
+nn = Sigmoid() >> {
+    Linear(3, 1) >>
+    Sigmoid() >>
+    Linear(4, 3) >>
+    Sigmoid() >>
+    Linear(2, 4)
+}
+nn([1, 0])
+
+in = [
+    [[10, 10]],
+        [[10, 10]],
+    [[10, 0]],
+        [[10, 0]],
+    [[0, 10]],
+        [[0, 10]],
+    [[0, 0]],
+        [[0, 0]]
+]
+
+out = [
+    [[0]],
+        [[0]],
+    [[1]],
+        [[1]],
+    [[1]],
+        [[1]],
+    [[0]],
+        [[0]]
+]
+
+print([0, 0, 0, 0, 0, 0, 0, 0, 0])
+print(nn([10, 10]))
+print(nn([10, 0]))
+print(nn([0, 0]))
+print(nn([0, 10]))
+
+train(nn, in, out)
+
+print([0, 0, 0, 0, 0, 0, 0, 0, 0])
+print(nn([10, 10]))
+print(nn([10, 0]))
+print(nn([0, 0]))
+print(nn([0, 10]))

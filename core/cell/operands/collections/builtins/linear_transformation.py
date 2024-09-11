@@ -6,6 +6,11 @@ from core.cell.operands.weight import ShapedWeight
 from core.cell.train import BOO
 
 
+def xavier_init(dim_in, dim_out):
+    limit = np.sqrt(6 / (dim_in + dim_out))
+    return np.random.uniform(-limit, limit, size=(dim_out, dim_in))
+
+
 class LinearTransformation(BOO):
     def __init__(self, dim_in, dim_out, children, optimizer=None):
         super().__init__(children, optimizer=optimizer)

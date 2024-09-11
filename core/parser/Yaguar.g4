@@ -85,13 +85,22 @@ expr:
     | expr '^' expr                       # Power
     | '(' expr ')'                        # Parens
     | funcCall                            # FuncCallExpr
-    | '[' (expr (',' expr)*)? ']'         # ArrayExpr
+
+    | '[' NL? INDENT* DEDENT*
+        (expr (',' NL? INDENT* DEDENT* expr)*)?
+        NL? INDENT* DEDENT* ']'           # ArrayExpr
+
+    | '{' NL? INDENT* DEDENT*
+        (expr (',' NL? INDENT* DEDENT* expr)*)?
+        NL? INDENT* DEDENT* '}'           # GrpExpr
+
     | '(' params? ')' '=>' expr           # LambdaExpr
     | ID                                  # Variable
     | NUMBER                              # Number
+    | expr ('>>' NL? INDENT* DEDENT* expr)    # ChainExpr
     ;
 
-funcCall:
+    funcCall:
     ID '(' args? ')' ;
 
 args:

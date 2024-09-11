@@ -1,18 +1,17 @@
-import numpy as np
-
-from core.cell import MetaVariable, PassThrough, MetaArgumented, \
-    MetaAssignment, MetaCall, If, Weight
+from core.cell import MetaVariable, MetaArgumented, \
+    MetaAssignment, MetaCall, If
+from core.cell.operands import Add, Sub, Prod, Div, Power, Constant, And, Or, \
+    GreaterThan, SmallerThan, GreaterThanOrEqual, SmallerThanOrEqual, \
+    Seq, Equals, Operand
 from core.parser.builtins import handle_reserved
 from core.parser.tmp import YaguarParser, YaguarListener
-from core.cell.operands import Add, Sub, Prod, Div, Power, Constant, Variable, \
-    And, Or, GreaterThan, SmallerThan, GreaterThanOrEqual, SmallerThanOrEqual, \
-    Seq, Equals, Operand, Function, Collector
 
 reserved = [
     "Linear",
     "Sigmoid",
     "weight",
-    "print"
+    "print",
+    "train"
 ]
 NULL = Constant(None)
 
@@ -20,6 +19,20 @@ NULL = Constant(None)
 class OperandBuilder(YaguarListener):
     def __init__(self):
         pass
+
+    def visitChainExpr(self, ctx: YaguarParser.ChainExprContext):
+        first = ctx.expr(0)
+        second = ctx.expr(1)
+        v_1 = self.visit(first)
+        v_2 = self.visit(second)
+        if isinstance(second, YaguarParser.GrpExprContext):
+            v_1.children = v_2([])
+        else:
+            v_1.children = [v_2]
+        return v_1
+
+    def visitGrpExpr(self, ctx: YaguarParser.GrpExprContext):
+        return Constant([self.visit(expr) for expr in ctx.expr()])
 
     def visitIfStatement(self, ctx: YaguarParser.IfStatementContext):
         if_stmt: YaguarParser.If_statementContext = ctx.if_statement()

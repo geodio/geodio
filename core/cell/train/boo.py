@@ -11,6 +11,7 @@ class BOO(OptimizableOperand, Backpropagatable, ABC):
     Backpropagatable Optimizable Operand.
     """
     def __init__(self, children, optimizer=None):
+        # 1 represents the arity of the operand.
         super().__init__(1, optimizer)
         if len(children) != 1:
             raise ValueError(f"Children of {self.__name__} must have exactly "

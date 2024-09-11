@@ -1,6 +1,7 @@
 import sys
 from antlr4 import *
 
+from core.cell import Operand
 from core.parser.OperandBuilder import OperandBuilder
 from core.parser.tmp.YaguarLexer import YaguarLexer
 from core.parser.tmp.YaguarParser import YaguarParser
@@ -26,6 +27,11 @@ def parse_input(input_stream):
     operand = builder.visit(tree)
 
     return operand
+
+
+def operand(str_expr: str) -> Operand:
+    input_stream = InputStream(str_expr)
+    return parse_input(input_stream)
 
 
 def main(argv):

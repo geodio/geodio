@@ -16,6 +16,7 @@ class EpochedOptimizer(Optimizer):
 
     def __call__(self, model, optimization_args):
         a = optimization_args
+        extra = a.extra_action
         if optimization_args.backpropagation:
             self.optimization = "backpropagation"
         niu = a.learning_rate
@@ -34,10 +35,11 @@ class EpochedOptimizer(Optimizer):
                 optimization_args.learning_rate = niu
                 optimization_args.inputs = input_data
                 optimization_args.desired_output = desired_output
-
                 self.train(model, optimization_args)
                 epoch_loss += model.error
             epoch_loss /= a.batch_size
             if its_debug_time:
                 logger.logging.debug(f"LOSS {model.error}")
+                if extra:
+                    extra()
             niu -= niu * decay_rate
