@@ -30,7 +30,17 @@ SPACES : [ \t]+ -> skip ;
 
 COMMENT: '!>' ~[\r\n]* -> skip ;
 
-OP    : 'op' ;
+STRING : '"' ('\\' . | ~["\\])* '"' ;
+
+YES    :
+    [Yy] [Ee] [Ss]
+    | [Tt] [Rr] [Uu] [Ee]?;
+NO     :
+    [Nn] [Oo]
+    | [Ff] [Aa] [Ll] [Ss] [Ee]?;
+
+OP    :
+    'yay';
 
 // Parser rules
 
@@ -78,33 +88,33 @@ block:
 //    ID '::' ID '(' params? ')' ':' block;
 
 expr:
-    expr op=('*'|'/') expr                # MulDiv
-    | expr op=('+'|'-') expr              # AddSub
-    | expr op=('<'|'>'|'=='|'<='|'>=') expr # Compare
-    | expr op=('&&'|'||') expr            # Logic
-    | expr '^' expr                       # Power
-    | '(' expr ')'                        # Parens
-    | funcCall                            # FuncCallExpr
-
-    | '[' NL? INDENT* DEDENT*
-        (expr (',' NL? INDENT* DEDENT* expr)*)?
-        NL? INDENT* DEDENT* ']'           # ArrayExpr
-
-    | '{' NL? INDENT* DEDENT*
-        (expr (',' NL? INDENT* DEDENT* expr)*)?
-        NL? INDENT* DEDENT* '}'           # GrpExpr
-
-    | '(' params? ')' '=>' expr           # LambdaExpr
-    | ID                                  # Variable
-    | NUMBER                              # Number
-    | expr ('>>' NL? INDENT* DEDENT* expr)    # ChainExpr
+    expr op=('*'|'/') expr                     # MulDiv
+    | expr op=('+'|'-') expr                   # AddSub
+    | expr op=('<'|'>'|'=='|'<='|'>=') expr    # Compare
+    | expr op=('&&'|'||') expr                 # Logic
+    | expr '^' expr                            # Power
+    | expr '>>' NL? INDENT* DEDENT* expr       # ChainExpr
+    | '(' expr ')'                             # Parens
+    | funcCall                                 # FuncCallExpr
+    | '['  exprList? ']'                       # ArrayExpr
+    | '{'  exprList? '}'                       # GrpExpr
+    | '(' params? ')' '=>' expr                # LambdaExpr
+    | ID                                       # Variable
+    | NUMBER                                   # Number
+    | STRING                                   # String
+    | YES                                      # Yes
+    | NO                                       # No
     ;
 
-    funcCall:
-    ID '(' args? ')' ;
+exprList:
+    NL? INDENT* DEDENT* expr (',' NL? INDENT* DEDENT* expr)* NL? INDENT* DEDENT*;
 
-args:
-    expr (',' expr)* ;
+
+
+
+
+    funcCall:
+    ID '(' exprList? ')' ;
 
 NUMBER : '-'? [0-9]+ ('.' [0-9]+)? ;
 ID     : [a-zA-Z_][a-zA-Z_0-9]* ;

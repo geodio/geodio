@@ -21,18 +21,18 @@ class OperandBuilder(YaguarListener):
         pass
 
     def visitChainExpr(self, ctx: YaguarParser.ChainExprContext):
-        first = ctx.expr(0)
-        second = ctx.expr(1)
-        v_1 = self.visit(first)
-        v_2 = self.visit(second)
-        if isinstance(second, YaguarParser.GrpExprContext):
-            v_1.children = v_2([])
+        child = ctx.expr(0)
+        parent = ctx.expr(1)
+        v_child = self.visit(child)
+        v_parent = self.visit(parent)
+        if isinstance(v_child, YaguarParser.GrpExprContext):
+            v_parent.children = v_child([])
         else:
-            v_1.children = [v_2]
-        return v_1
+            v_parent.children = [v_child]
+        return v_parent
 
     def visitGrpExpr(self, ctx: YaguarParser.GrpExprContext):
-        return Constant([self.visit(expr) for expr in ctx.expr()])
+        return Constant([self.visit(expr) for expr in ctx.exprList().expr()])
 
     def visitIfStatement(self, ctx: YaguarParser.IfStatementContext):
         if_stmt: YaguarParser.If_statementContext = ctx.if_statement()
@@ -74,7 +74,7 @@ class OperandBuilder(YaguarListener):
 
     def visitFuncCallExpr(self, ctx: YaguarParser.FuncCallExprContext):
         func_name = ctx.funcCall().ID().getText()
-        arguments = ctx.funcCall().args()
+        arguments = ctx.funcCall().exprList()
         if arguments:
             args = [self.visit(arg) for arg in arguments.expr()]
         else:
@@ -114,7 +114,7 @@ class OperandBuilder(YaguarListener):
         return closure
 
     def visitArrayExpr(self, ctx: YaguarParser.ArrayExprContext):
-        arguments = ctx.expr()
+        arguments = ctx.exprList().expr()
         args = []
         if arguments:
             args = [self.visit(arg) for arg in arguments]
@@ -159,6 +159,16 @@ class OperandBuilder(YaguarListener):
 
     def visitNumber(self, ctx: YaguarParser.NumberContext):
         value = float(ctx.getText())
+        return Constant(value)
+
+    def visitYes(self, ctx: YaguarParser.YesContext):
+        return Constant(True)
+
+    def visitNo(self, ctx: YaguarParser.NoContext):
+        return Constant(False)
+
+    def visitString(self, ctx: YaguarParser.StringContext):
+        value = str(ctx.getText()[1:-1])
         return Constant(value)
 
     def visitVariable(self, ctx: YaguarParser.VariableContext):

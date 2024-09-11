@@ -50,19 +50,15 @@ def encapsulate(y):
 
 
 def make_nodes(dim_in, dim_out, hidden, parasitic=False):
-    expr = \
-        f"""
-op make_model():
-    nn = Sigmoid() >>
-    Linear({hidden - dim_out}, {dim_out}) >>
-    Sigmoid() >>
-    Linear({hidden}, {hidden - dim_out}) >>
-    Sigmoid() >>
-    Linear({hidden - dim_in}, {hidden}) >>
-    Sigmoid() >>
-    Linear({dim_in}, {hidden - dim_in})
-make_model()
-
+    expr = f"""
+_ = Linear({dim_in}, {hidden - dim_in})>>
+Sigmoid() >>
+Linear({hidden - dim_in}, {hidden}) >>
+Sigmoid() >>
+Linear({hidden}, {hidden - dim_out}) >>
+Sigmoid() >>
+Linear({hidden - dim_out}, {dim_out}) >>
+Sigmoid()
 """
     model = yaguar.operand(expr)((), {})
     print(model)
@@ -90,9 +86,11 @@ def main(parasitic=False):
 
     starting_error = loss.evaluate(model, validation_X, e_validation_y)
     print("STARTING ERROR:", starting_error)
+
     def closure():
         get_accuracy_validation(classes, model, validation_X, validation_y)
         get_accuracy_training(classes, model, train_X, train_y)
+
     optimization_args = OptimizationArgs(
         inputs=train_X,
         desired_output=e_train_y,
@@ -101,14 +99,13 @@ def main(parasitic=False):
         max_iter=1,
         min_error=sys.maxsize,
         batch_size=5,
-        epochs=250,
+        epochs=1000,
         decay_rate=0,
         ewc_lambda=0.000,
         grad_reg='adam',
         backpropagation=True,
         extra_action=closure
     )
-
 
     model.optimize(optimization_args)
 

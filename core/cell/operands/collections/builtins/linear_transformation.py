@@ -6,8 +6,8 @@ from core.cell.operands.weight import ShapedWeight
 from core.cell.train import BOO
 
 
-def xavier_init(dim_in, dim_out):
-    limit = np.sqrt(6 / (dim_in + dim_out))
+def xavier_init(dim_out, dim_in):
+    limit = np.sqrt(6. / (dim_in + dim_out))
     return np.random.uniform(-limit, limit, size=(dim_out, dim_in))
 
 

@@ -54,7 +54,7 @@ class BaseGradReg:
         new_weight = self.weight.get() - niu * corrected_gradient
         self.weight.set(new_weight)
         # Update learning rate with decay
-        self.optim_args.learning_rate *= self.optim_args.decay_rate
+        self.optim_args.learning_rate *= (1 - self.optim_args.decay_rate)
         y_pred = [cell(x_inst) for x_inst in self.optim_args.inputs]
         current_error = self.optim_args.loss_function(self.optim_args.
                                                       desired_output, y_pred)
