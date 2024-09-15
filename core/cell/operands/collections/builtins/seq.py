@@ -35,4 +35,3 @@ class Seq(BuiltinBaseFunction):
 
     def __getitem__(self, index):
         return self.children[index]
-

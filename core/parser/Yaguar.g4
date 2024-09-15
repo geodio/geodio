@@ -51,6 +51,7 @@ statement:
     | ID '=' expr NL                  # AssignmentStatement
     | OP ID '(' params? ')' ':' block # FunctionDeclaration
     | if_statement                    # IfStatement
+    // | micro                           # MicroStatement
     ;
 
 if_statement:
@@ -118,3 +119,46 @@ exprList:
 
 NUMBER : '-'? [0-9]+ ('.' [0-9]+)? ;
 ID     : [a-zA-Z_][a-zA-Z_0-9]* ;
+
+
+
+// RULES FOR MICRO
+//LABEL: ':' ID;
+//POINTER: '*' ID;
+//TYPE: 'int' | 'float' | 'char' | 'double' | 'bool' | 'void'; // Add other types as needed
+//JUMP: 'jump';
+//DEREF: '@'; // Dereferencing operator
+//
+//micro:
+//    typedVarDecl           # MicroTypedVarDecl
+//    | assignment           # MicroAssignment
+//    | pointerAssignment    # MicroPointerAssignment
+//    | dereferenceAssignment # MicroDereferenceAssignment
+//    | jumpStmt             # MicroJump
+//    | label                # MicroLabel
+//    ;
+//
+//typedVarDecl:
+//    TYPE ID            # TypedVarDeclaration  // e.g., int x;
+//    | TYPE POINTER      # PointerDeclaration  // e.g., int *ptr;
+//    ;
+//
+//assignment:
+//    ID '=' expr
+//    ;
+//
+//pointerAssignment:
+//    POINTER '=' expr
+//    ;
+//
+//dereferenceAssignment:
+//    DEREF POINTER '=' expr
+//    ;
+//
+//jumpStmt:
+//    JUMP LABEL          # MicroJumpStmt // e.g., jump :label;
+//    ;
+//
+//label:
+//    LABEL                  # LabelDefinition // e.g., :label;
+//    ;
