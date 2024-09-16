@@ -14,4 +14,6 @@ add_executable(geodio
         cpp/src/backends/Backend.h
         cpp/src/backends/CPUBackend.h
         cpp/src/backends/CPUBackend.cpp
+        cpp/src/tensors/Tensor_C_API.h
+        cpp/src/tensors/Tensor_C_API.cpp
 )

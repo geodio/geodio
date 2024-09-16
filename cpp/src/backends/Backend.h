@@ -21,7 +21,7 @@ namespace dio {
         // Numerical operations
         virtual void add(const T* a, const T* b, T* result, size_t size) = 0;
         virtual void multiply(const T* a, const T* b, T* result, size_t size) = 0;
-
+        virtual void matmul(const T* a, const T* b, T* result, size_t m,size_t n,size_t k) = 0;
         // More methods as needed
     };
 

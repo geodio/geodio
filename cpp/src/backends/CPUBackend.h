@@ -15,6 +15,7 @@ namespace dio {
         void copy_to_host(T* host_ptr, const T* device_ptr, size_t size) override;
         void add(const T* a, const T* b, T* result, size_t size) override;
         void multiply(const T* a, const T* b, T* result, size_t size) override;
+        void matmul(const T* a, const T* b, T* result, size_t m,size_t n,size_t k) override;
     };
 
 } // namespace dio

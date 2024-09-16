@@ -2,6 +2,7 @@
 #define GEODIO_TENSOR_H
 
 #include "../backends/Backend.h"
+#include "../backends/CPUBackend.h"
 #include <initializer_list>
 #include <vector>
 #include <cstddef>
@@ -36,17 +37,49 @@ namespace dio {
         // Information methods
         [[nodiscard]] size_t num_dimensions() const;
         [[nodiscard]] const std::vector<size_t>& shape() const;
+        [[nodiscard]] const std::vector<size_t>& strides() const; // Public accessor for strides
+        [[nodiscard]] size_t compute_size() const;
         [[nodiscard]] size_t compute_size(const std::vector<size_t>& shape) const;
+        [[nodiscard]] bool is_scalar() const;
 
         std::vector<T> get_data() const;
         // Element access
         T& operator()(const std::vector<size_t>& indices);
 
         const T& operator()(const std::vector<size_t>& indices) const;
-        // Element-wise operations
-        Tensor<T> operator+(const Tensor<T>& other) const;
 
-        Tensor<T> operator*(const Tensor<T>& other) const;
+
+        // Element-wise operations
+        template<typename U>
+        Tensor<typename std::common_type<T, U>::type> add(const Tensor<U>& other) const;
+
+        template<typename U>
+        Tensor<typename std::common_type<T, U>::type> subtract(const Tensor<U>& other) const;
+
+        template<typename U>
+        Tensor<typename std::common_type<T, U>::type> multiply(const Tensor<U>& other) const;
+
+        template<typename U>
+        Tensor<typename std::common_type<T, U>::type> divide(const Tensor<U>& other) const;
+        // Element-wise functions
+        Tensor<T> apply_elementwise_function(std::function<T(T)> func) const;
+
+        // Matrix multiplication
+        Tensor<T> matmul(const Tensor<T>& other) const;
+
+        // Operators
+        template<typename U>
+        Tensor<typename std::common_type<T, U>::type> operator+(const Tensor<U>& other) const;
+
+        template<typename U>
+        Tensor<typename std::common_type<T, U>::type> operator-(const Tensor<U>& other) const;
+
+        template<typename U>
+        Tensor<typename std::common_type<T, U>::type> operator*(const Tensor<U>& other) const;
+
+        template<typename U>
+        Tensor<typename std::common_type<T, U>::type> operator/(const Tensor<U>& other) const;
+
 
         // To string representation
         [[nodiscard]] std::string to_string() const;
@@ -77,32 +110,15 @@ namespace dio {
         // Helper function to print tensor contents
         void print_tensor(std::ostream& os, size_t index, size_t depth) const;
 
+
+        void broadcast_shapes(const Tensor<T>& other,
+                              std::vector<size_t>& out_shape,
+                              std::vector<size_t>& adjusted_strides1,
+                              std::vector<size_t>& adjusted_strides2) const;
+
     };
 
     // Implementation of methods (included in header due to templates)
-
-    // Compute strides based on shape
-    template<typename T>
-    void Tensor<T>::compute_strides() {
-        strides_.resize(shape_.size());
-        size_t stride = 1;
-        for (int i = static_cast<int>(shape_.size()) - 1; i >= 0; --i) {
-            strides_[i] = stride;
-            stride *= shape_[i];
-        }
-    }
-
-    // Return number of dimensions
-    template<typename T>
-    size_t Tensor<T>::num_dimensions() const {
-        return shape_.size();
-    }
-
-    // Return the shape
-    template<typename T>
-    const std::vector<size_t>& Tensor<T>::shape() const {
-        return shape_;
-    }
 
     // Element access (multi-dimensional indexing)
     template<typename T>
@@ -135,12 +151,6 @@ namespace dio {
         return data_[index];
     }
 
-
-    // Compute total size from shape
-    template<typename T>
-    size_t Tensor<T>::compute_size(const std::vector<size_t>& shape) const {
-        return std::accumulate(shape.begin(), shape.end(), static_cast<size_t>(1), std::multiplies<>());
-    }
 
     // To string representation
     template<typename T>
@@ -186,6 +196,192 @@ namespace dio {
             }
             os << "]";
         }
+
+}
+
+
+// Element-wise addition
+template<typename T>
+template<typename U>
+Tensor<typename std::common_type<T, U>::type> Tensor<T>::add(const Tensor<U>& other) const {
+    using ResultType = typename std::common_type<T, U>::type;
+
+    // Compute broadcasted shape
+    std::vector<size_t> result_shape;
+    std::vector<size_t> adjusted_strides1, adjusted_strides2;
+    broadcast_shapes(other, result_shape, adjusted_strides1, adjusted_strides2);
+
+    size_t total_size = compute_size(result_shape);
+    Tensor<ResultType> result;
+    result.shape_ = result_shape;
+    result.total_size_ = total_size;
+    result.backend_ = std::make_shared<CPUBackend<ResultType>>();
+    result.backend_->allocate(result.data_, total_size);
+    result.compute_strides();
+
+    // Prepare adjusted strides and data pointers
+    const T* data1 = this->data_;
+    const U* data2 = other.data_;
+
+    // Perform the operation
+    #pragma omp parallel for
+    for (size_t i = 0; i < total_size; ++i) {
+        size_t idx1 = 0, idx2 = 0;
+        size_t idx = i;
+        for (size_t dim = 0; dim < result_shape.size(); ++dim) {
+            size_t index = idx % result_shape[result_shape.size() - 1 - dim];
+            idx /= result_shape[result_shape.size() - 1 - dim];
+            idx1 += adjusted_strides1[adjusted_strides1.size() - 1 - dim] * index;
+            idx2 += adjusted_strides2[adjusted_strides2.size() - 1 - dim] * index;
+        }
+        result.data_[i] = static_cast<ResultType>(data1[idx1]) + static_cast<ResultType>(data2[idx2]);
+    }
+
+    return result;
+}
+
+// Subtraction, multiplication, and division implemented similarly
+
+template<typename T>
+template<typename U>
+Tensor<typename std::common_type<T, U>::type> Tensor<T>::subtract(const Tensor<U>& other) const {
+    using ResultType = typename std::common_type<T, U>::type;
+
+    // Compute broadcasted shape
+    std::vector<size_t> result_shape;
+    std::vector<size_t> adjusted_strides1, adjusted_strides2;
+    broadcast_shapes(other, result_shape, adjusted_strides1, adjusted_strides2);
+
+    size_t total_size = compute_size(result_shape);
+    Tensor<ResultType> result;
+    result.shape_ = result_shape;
+    result.total_size_ = total_size;
+    result.backend_ = std::make_shared<CPUBackend<ResultType>>();
+    result.backend_->allocate(result.data_, total_size);
+    result.compute_strides();
+
+    // Prepare adjusted strides and data pointers
+    const T* data1 = this->data_;
+    const U* data2 = other.data_;
+
+    // Perform the operation
+    #pragma omp parallel for
+    for (size_t i = 0; i < total_size; ++i) {
+        size_t idx1 = 0, idx2 = 0;
+        size_t idx = i;
+        for (size_t dim = 0; dim < result_shape.size(); ++dim) {
+            size_t index = idx % result_shape[result_shape.size() - 1 - dim];
+            idx /= result_shape[result_shape.size() - 1 - dim];
+            idx1 += adjusted_strides1[adjusted_strides1.size() - 1 - dim] * index;
+            idx2 += adjusted_strides2[adjusted_strides2.size() - 1 - dim] * index;
+        }
+        result.data_[i] = static_cast<ResultType>(data1[idx1]) - static_cast<ResultType>(data2[idx2]);
+    }
+
+    return result;
+}
+
+template<typename T>
+template<typename U>
+Tensor<typename std::common_type<T, U>::type> Tensor<T>::multiply(const Tensor<U>& other) const {
+    using ResultType = typename std::common_type<T, U>::type;
+
+    // Compute broadcasted shape
+    std::vector<size_t> result_shape;
+    std::vector<size_t> adjusted_strides1, adjusted_strides2;
+    broadcast_shapes(other, result_shape, adjusted_strides1, adjusted_strides2);
+
+    size_t total_size = compute_size(result_shape);
+    Tensor<ResultType> result;
+    result.shape_ = result_shape;
+    result.total_size_ = total_size;
+    result.backend_ = std::make_shared<CPUBackend<ResultType>>();
+    result.backend_->allocate(result.data_, total_size);
+    result.compute_strides();
+
+    // Prepare adjusted strides and data pointers
+    const T* data1 = this->data_;
+    const U* data2 = other.data_;
+
+    // Perform the operation
+    #pragma omp parallel for
+    for (size_t i = 0; i < total_size; ++i) {
+        size_t idx1 = 0, idx2 = 0;
+        size_t idx = i;
+        for (size_t dim = 0; dim < result_shape.size(); ++dim) {
+            size_t index = idx % result_shape[result_shape.size() - 1 - dim];
+            idx /= result_shape[result_shape.size() - 1 - dim];
+            idx1 += adjusted_strides1[adjusted_strides1.size() - 1 - dim] * index;
+            idx2 += adjusted_strides2[adjusted_strides2.size() - 1 - dim] * index;
+        }
+        result.data_[i] = static_cast<ResultType>(data1[idx1]) * static_cast<ResultType>(data2[idx2]);
+    }
+
+    return result;
+}
+
+template<typename T>
+template<typename U>
+Tensor<typename std::common_type<T, U>::type> Tensor<T>::divide(const Tensor<U>& other) const {
+    using ResultType = typename std::common_type<T, U>::type;
+
+    // Compute broadcasted shape
+    std::vector<size_t> result_shape;
+    std::vector<size_t> adjusted_strides1, adjusted_strides2;
+    broadcast_shapes(other, result_shape, adjusted_strides1, adjusted_strides2);
+
+    size_t total_size = compute_size(result_shape);
+    Tensor<ResultType> result;
+    result.shape_ = result_shape;
+    result.total_size_ = total_size;
+    result.backend_ = std::make_shared<CPUBackend<ResultType>>();
+    result.backend_->allocate(result.data_, total_size);
+    result.compute_strides();
+
+    // Prepare adjusted strides and data pointers
+    const T* data1 = this->data_;
+    const U* data2 = other.data_;
+
+    // Perform the operation
+    #pragma omp parallel for
+    for (size_t i = 0; i < total_size; ++i) {
+        size_t idx1 = 0, idx2 = 0;
+        size_t idx = i;
+        for (size_t dim = 0; dim < result_shape.size(); ++dim) {
+            size_t index = idx % result_shape[result_shape.size() - 1 - dim];
+            idx /= result_shape[result_shape.size() - 1 - dim];
+            idx1 += adjusted_strides1[adjusted_strides1.size() - 1 - dim] * index;
+            idx2 += adjusted_strides2[adjusted_strides2.size() - 1 - dim] * index;
+        }
+        result.data_[i] = static_cast<ResultType>(data1[idx1]) / static_cast<ResultType>(data2[idx2]);
+    }
+
+    return result;
+}
+
+
+template<typename T>
+template<typename U>
+Tensor<typename std::common_type<T, U>::type> Tensor<T>::operator+(const Tensor<U>& other) const {
+    return this->add(other);
+}
+
+template<typename T>
+template<typename U>
+Tensor<typename std::common_type<T, U>::type> Tensor<T>::operator-(const Tensor<U>& other) const {
+    return this->subtract(other);
+}
+
+template<typename T>
+template<typename U>
+Tensor<typename std::common_type<T, U>::type> Tensor<T>::operator*(const Tensor<U>& other) const {
+    return this->multiply(other);
+}
+
+template<typename T>
+template<typename U>
+Tensor<typename std::common_type<T, U>::type> Tensor<T>::operator/(const Tensor<U>& other) const {
+    return this->divide(other);
 }
 
 

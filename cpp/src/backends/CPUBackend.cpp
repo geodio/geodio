@@ -38,6 +38,15 @@ namespace dio {
         }
     }
 
+
+    template<typename T>
+    void CPUBackend<T>::matmul(const T* a, const T* b, T* result, size_t m,size_t n,size_t k) {
+        #pragma omp parallel for
+        for (size_t i = 0; i < m; ++i) {
+            result[i] = a[i] * b[i];
+        }
+    }
+
     // Explicit template instantiation
     template class CPUBackend<float>;
     template class CPUBackend<double>;

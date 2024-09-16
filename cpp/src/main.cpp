@@ -66,7 +66,7 @@ int main() {
     auto scalar_tensor = dio::Tensor<float>(42.0f);
     std::cout << "Scalar Tensor: " << scalar_tensor << std::endl;
 
-    dio::Tensor<float> result = tensor3D * tensor3D;
+    dio::Tensor<float> result = scalar_tensor * tensor3D;
 
     std::cout << "Multiplication result: " << result <<std::endl;
 
