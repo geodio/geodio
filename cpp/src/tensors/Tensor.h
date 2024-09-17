@@ -116,6 +116,12 @@ namespace dio {
                               std::vector<size_t>& adjusted_strides1,
                               std::vector<size_t>& adjusted_strides2) const;
 
+        template<typename U, typename R>
+        void get_adjusted_strides(const Tensor <U> &other, std::vector<size_t> &result_shape,
+                             std::vector<size_t> &adjusted_strides1,
+                             std::vector<size_t> &adjusted_strides2, const T *&data1, const U *&data2,
+                             Tensor <R> &result) const;
+
     };
 
     // Implementation of methods (included in header due to templates)
@@ -224,6 +230,13 @@ Tensor<typename std::common_type<T, U>::type> Tensor<T>::add(const Tensor<U>& ot
     const U* data2 = other.data_;
 
     // Perform the operation
+//    std::function<ResultType(T, U)> f = [](T x, U y) { return x + y;};
+//    this->backend_->elementwise_operation(
+//        data1, data2, result.data_,
+//        f,
+//        total_size_, result_shape, adjusted_strides1, adjusted_strides2
+//    );
+//        return result;
     #pragma omp parallel for
     for (size_t i = 0; i < total_size; ++i) {
         size_t idx1 = 0, idx2 = 0;
@@ -236,9 +249,25 @@ Tensor<typename std::common_type<T, U>::type> Tensor<T>::add(const Tensor<U>& ot
         }
         result.data_[i] = static_cast<ResultType>(data1[idx1]) + static_cast<ResultType>(data2[idx2]);
     }
-
-    return result;
+     return result;
 }
+    template<typename T>
+    template<typename U, typename R>
+    void Tensor<T>::get_adjusted_strides(const Tensor <U> &other, std::vector<size_t> &result_shape,
+                                         std::vector<size_t> &adjusted_strides1, std::vector<size_t> &adjusted_strides2,
+                                         const T *&data1, const U *&data2, Tensor<R> &result) const {
+        data1= data_;
+        data2= other.data_; // Compute broadcasted shape
+        broadcast_shapes(other, result_shape, adjusted_strides1, adjusted_strides2);
+
+        size_t total_size = compute_size(result_shape);
+        result.shape_ = result_shape;
+        result.total_size_ = total_size;
+        result.backend_ = std::make_shared<CPUBackend<R>>();
+        result.backend_->allocate(result.data_, total_size);
+        result.compute_strides();
+
+    }
 
 // Subtraction, multiplication, and division implemented similarly
 
