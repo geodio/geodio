@@ -1,4 +1,3 @@
-
 #include <memory>
 #include <../tensors/Tensor.h>
 
@@ -6,17 +5,24 @@
 #define GEODIO_OPERATION_H
 
 namespace dio {
-    typedef std::function<std::shared_ptr<Tensor<float>>(
-        const std::vector<std::shared_ptr<Tensor<float>>>& inputs)> ForwardFunc;
 
-    typedef std::function<std::vector<std::shared_ptr<Tensor<float>>>(
-        const std::vector<std::shared_ptr<Tensor<float>>>& inputs,
-        const std::shared_ptr<Tensor<float>>& upstream_gradient)> BackwardFunc;
 
-    struct Operation {
-        ForwardFunc forward{};
-        BackwardFunc backward{};
-    };
+template<typename T>
+using ForwardFunc = std::function<std::shared_ptr<Tensor<T>>(
+    const std::vector<std::shared_ptr<Tensor<T>>>& inputs)>;
+
+template<typename T>
+using BackwardFunc = std::function<std::vector<std::shared_ptr<Tensor<T>>>(
+    const std::vector<std::shared_ptr<Tensor<T>>>& inputs,
+    const std::shared_ptr<Tensor<T>>& upstream_gradient,
+    const std::shared_ptr<Tensor<T>>& forward_output)>;
+
+template<typename T>
+struct Operation {
+    ForwardFunc<T> forward;
+    BackwardFunc<T> backward;
+};
+
 } // namespace dio
 
 

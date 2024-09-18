@@ -3,6 +3,8 @@
 #include <iostream>
 #include <string>
 #include "../tests/runner.h"  // Include the test runner
+#include "operands/ExecutionEngine.h"
+#include "operands/OperationRegistry.h"
 
 int main(int argc, char* argv[]) {
     // Check command-line arguments
@@ -23,6 +25,11 @@ int main(int argc, char* argv[]) {
             run_tensor_db();
             return 0;
         }
+        else if (arg == "--run-exe-eng-tests") {
+            std::cout << "Running execution engine tests..." << std::endl;
+            run_execution_engine();
+            return 0;
+        }
         else {
             std::cerr << "Unknown argument: " << arg << std::endl;
             std::cerr << "Usage: " << argv[0] << " [--run-tests | --run-tensor-tests | --run-db-tests]" << std::endl;
@@ -36,6 +43,5 @@ int main(int argc, char* argv[]) {
     std::cout << "  --run-tests          Run all tests" << std::endl;
     std::cout << "  --run-tensor-tests   Run tensor tests only" << std::endl;
     std::cout << "  --run-db-tests       Run database tests only" << std::endl;
-
-    return 0;
+    std::cout << "  --run-exe-eng-tests  Run execution engine tests only" << std::endl;
 }

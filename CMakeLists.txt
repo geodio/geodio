@@ -29,4 +29,10 @@ add_executable(geodio
         cpp/src/operands/Operation.h
         cpp/src/operands/ExecutionEngine.h
         cpp/src/operands/OperationRegistry.h
+        cpp/src/operands/OperationRegistry.cpp
+        cpp/src/operands/ExecutionEngine.cpp
+        cpp/src/operands/operations.cpp
+        cpp/src/operands/operations.h
+        cpp/tests/test_execution_engine.cpp
+        cpp/tests/test_execution_engine.h
 )

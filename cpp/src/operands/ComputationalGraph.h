@@ -5,14 +5,15 @@
 #define GEODIO_COMPUTATIONALGRAPH_H
 
 namespace dio{
-    class ComputationalGraph {
-    public:
-        std::unordered_map<int, Operand> operands;
-        std::unordered_map<int, std::shared_ptr<Tensor<float>>> weights; // Weights associated with operands
-        std::unordered_map<int, std::shared_ptr<Tensor<float>>> gradients; // Gradients computed during backpropagation
+template<typename T>
+class ComputationalGraph {
+public:
+    std::unordered_map<int, Operand> operands{};
+    std::unordered_map<int, std::shared_ptr<Tensor<T>>> weights{}; // Weights associated with operands
+    std::unordered_map<int, std::shared_ptr<Tensor<T>>> gradients{}; // Gradients computed during backpropagation
 
-        // Methods to add operands, weights, etc.
-    };
+    // Methods to add operands, weights, etc.
+};
 } // namespace dio
 
 #endif //GEODIO_COMPUTATIONALGRAPH_H

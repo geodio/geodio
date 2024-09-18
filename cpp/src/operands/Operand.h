@@ -20,6 +20,8 @@ namespace dio {
         std::vector<int> inputs; // IDs of input operands
         // Additional metadata if needed
 
+        Operand(): op_type(OperandType::Constant), id(-1), inputs({}) {}
+
         Operand(OperandType type, int operand_id, const std::vector<int>& input_ids)
             : op_type(type), id(operand_id), inputs(input_ids) {}
     };
