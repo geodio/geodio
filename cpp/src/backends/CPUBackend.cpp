@@ -30,24 +30,6 @@ namespace dio {
         std::memcpy(host_ptr, device_ptr, size * sizeof(T));
     }
 
-    // Element-wise addition of two tensors
-    template<typename T>
-    void CPUBackend<T>::add(const T* a, const T* b, T* result, size_t size) {
-        #pragma omp parallel for
-        for (size_t i = 0; i < size; ++i) {
-            result[i] = a[i] + b[i];
-        }
-    }
-
-    // Element-wise multiplication of two tensors
-    template<typename T>
-    void CPUBackend<T>::multiply(const T* a, const T* b, T* result, size_t size) {
-        #pragma omp parallel for
-        for (size_t i = 0; i < size; ++i) {
-            result[i] = a[i] * b[i];
-        }
-    }
-
     // Matrix multiplication of two tensors
     template<typename T>
     void CPUBackend<T>::matmul(const T* a, const T* b, T* result, size_t m,size_t n,size_t k) {
@@ -64,34 +46,33 @@ namespace dio {
 
     template<typename T>
     template<typename U, typename R>
-    void CPUBackend<T>::elementwise_operation(const T* a, const U* b, R* result, std::function<R(T, U)> func,
-                                              const size_t total_size, const std::vector<size_t>& result_shape,
-                                              const std::vector<size_t>& adjusted_strides1,
-                                              const std::vector<size_t>& adjusted_strides2) {
-        // Perform the operation
-        #pragma omp parallel for
-        for (size_t i = 0; i < total_size; ++i) {
-            size_t idx1 = 0, idx2 = 0;
-            size_t idx = i;
-             for (size_t dim = 0; dim < result_shape.size(); ++dim) {
-                // Calculate the index for this dimension
-                size_t index = idx % result_shape[result_shape.size() - 1 - dim];
-                idx /= result_shape[result_shape.size() - 1 - dim];
-
-                // Apply broadcasting: if adjusted stride is 0, keep idx1 or idx2 at 0 for this dimension
-                idx1 += (adjusted_strides1[adjusted_strides1.size() - 1 - dim] != 0)
-                            ? adjusted_strides1[adjusted_strides1.size() - 1 - dim] * index
-                            : 0;
-
-                idx2 += (adjusted_strides2[adjusted_strides2.size() - 1 - dim] != 0)
-                            ? adjusted_strides2[adjusted_strides2.size() - 1 - dim] * index
-                            : 0;
-            }
-
-            // Perform the actual element-wise operation with the lambda function
-            result[i] = func(a[idx1], b[idx2]);
+    void CPUBackend<T>::elementwise_operation(const T* a, const U* b, R* result,
+                                          std::function<R(T, U)> func,
+                                          size_t total_size, const std::vector<size_t>& result_shape,
+                                          const std::vector<size_t>& adjusted_strides1,
+                                          const std::vector<size_t>& adjusted_strides2) {
+    // Perform the operation
+    #pragma omp parallel for
+    for (size_t i = 0; i < total_size; ++i) {
+        size_t idx1 = 0, idx2 = 0;
+        size_t idx = i;
+        for (int dim = static_cast<int>(result_shape.size()) - 1; dim >= 0; --dim) {
+            size_t index = idx % result_shape[dim];
+            idx /= result_shape[dim];
+            idx1 += adjusted_strides1[dim] * index;
+            idx2 += adjusted_strides2[dim] * index;
         }
+        result[i] = func(a[idx1], b[idx2]);
     }
+}
+
+template<typename T>
+void CPUBackend<T>::apply_unary_function(const T* a, T* result, std::function<T(T)> func, size_t size) {
+    #pragma omp parallel for
+    for (size_t i = 0; i < size; ++i) {
+        result[i] = func(a[i]);
+    }
+}
 
 
     // Implementation of the virtual function using generic pointers

@@ -20,9 +20,9 @@ namespace dio {
         virtual void copy_to_host(T* host_ptr, const T* device_ptr, size_t size) = 0;
 
         // Numerical operations between two tensors
-        virtual void add(const T* a, const T* b, T* result, size_t size) = 0;
-        virtual void multiply(const T* a, const T* b, T* result, size_t size) = 0;
         virtual void matmul(const T* a, const T* b, T* result, size_t m,size_t n,size_t k) = 0;
+
+        virtual void apply_unary_function(const T* a, T* result, std::function<T(T)> func, size_t size) = 0;
 
         // Virtual function for elementwise operation with generic pointers
         virtual void elementwise_operation_generic(const void* a, const void* b, void* result,

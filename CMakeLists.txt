@@ -16,4 +16,17 @@ add_executable(geodio
         cpp/src/backends/CPUBackend.cpp
         cpp/src/tensors/Tensor_C_API.h
         cpp/src/tensors/Tensor_C_API.cpp
+        cpp/src/backends/BackendManager.h
+        cpp/tests/test_tensors.cpp
+        cpp/tests/runner.cpp
+        cpp/tests/test_tensor_db.cpp
+        cpp/tests/runner.h
+        cpp/tests/test_tensor_db.h
+        cpp/tests/test_tensors.h
+        cpp/src/operands/Operand.h
+        cpp/src/operands/OperandType.h
+        cpp/src/operands/ComputationalGraph.h
+        cpp/src/operands/Operation.h
+        cpp/src/operands/ExecutionEngine.h
+        cpp/src/operands/OperationRegistry.h
 )

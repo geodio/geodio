@@ -1,37 +1,33 @@
 #include "Tensor.h"
 #include <stdexcept>
 #include <algorithm>
-#include "../backends/CPUBackend.h"
 
 namespace dio {
 
 template<typename T>
 Tensor<T>::Tensor()
-    : data_(nullptr), total_size_(0), backend_(std::make_shared<CPUBackend<T>>()) {}
+    : total_size_(0) {}
 
 template<typename T>
 Tensor<T>::Tensor(const T& value)
-    : shape_(), total_size_(1), backend_(std::make_shared<CPUBackend<T>>()) {
-    backend_->allocate(data_, 1);
+    : shape_(), total_size_(1) {
+    data_.resize(1);
     data_[0] = value;
     strides_ = {};
 }
 
 template<typename T>
 Tensor<T>::Tensor(const std::vector<T>& data, const std::vector<size_t>& shape)
-    : shape_(shape), backend_(std::make_shared<CPUBackend<T>>()) {
+    : shape_(shape), data_(data) {
     total_size_ = compute_size(shape_);
-    backend_->allocate(data_, total_size_);
-    std::copy(data.begin(), data.end(), data_);
+    if (data_.size() != total_size_) {
+        throw std::invalid_argument("Data size does not match shape size.");
+    }
     compute_strides();
 }
 
 template<typename T>
-Tensor<T>::~Tensor() {
-    if (data_) {
-        backend_->deallocate(data_);
-    }
-}
+Tensor<T>::~Tensor() = default;
 
 // Accessor for strides_
 template<typename T>
@@ -128,7 +124,7 @@ bool Tensor<T>::is_scalar() const {
 // Get data as vector
 template<typename T>
 std::vector<T> Tensor<T>::get_data() const {
-    return std::vector<T>(data_, data_ + total_size_);
+    return this->data_;
 }
 
 
@@ -161,24 +157,6 @@ void Tensor<T>::broadcast_shapes(const Tensor<T>& other,
     }
 }
 
-// Element-wise function application
-template<typename T>
-Tensor<T> Tensor<T>::apply_elementwise_function(std::function<T(T)> func) const {
-    Tensor<T> result;
-    result.shape_ = this->shape_;
-    result.total_size_ = this->total_size_;
-    result.backend_ = this->backend_;
-    result.backend_->allocate(result.data_, result.total_size_);
-    result.compute_strides();
-
-    #pragma omp parallel for
-    for (size_t i = 0; i < total_size_; ++i) {
-        result.data_[i] = func(this->data_[i]);
-    }
-
-    return result;
-}
-
 // Matrix multiplication
 template<typename T>
 [[nodiscard]] Tensor<T> Tensor<T>::matmul(const Tensor<T>& other) const {
@@ -196,17 +174,39 @@ template<typename T>
     Tensor<T> result;
     result.shape_ = { m, k };
     result.total_size_ = m * k;
-    result.backend_ = this->backend_;
-    result.backend_->allocate(result.data_, result.total_size_);
+    result.data_.resize(result.total_size_);
+    auto backend = BackendManager<T>::get_backend();
     result.compute_strides();
 
-    this->backend_->matmul(this->data_, other.data_, result.data_, m, n, k);
+    const T* data1 = this->data_.data();
+    const T* data2 = other.data_.data();
+    T* result_data = result.data_.data();
+
+    backend->matmul(data1, data2, result_data, m, n, k);
 
     return result;
 }
 
 // Operators
 
+// Apply element-wise function
+template<typename T>
+Tensor<T> Tensor<T>::apply_elementwise_function(std::function<T(T)> func) const {
+    Tensor<T> result;
+    result.shape_ = this->shape_;
+    result.total_size_ = this->total_size_;
+    result.data_.resize(result.total_size_);
+    result.compute_strides();
+
+    const T* data_in = this->data_.data();
+    T* data_out = result.data_.data();
+
+    auto backend = BackendManager<T>::get_backend();
+
+    backend->apply_unary_function(data_in, data_out, func, result.total_size_);
+
+    return result;
+}
 
 
 // GPU operations (No-ops for CPU backend)

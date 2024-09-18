@@ -13,8 +13,6 @@ namespace dio {
         void deallocate(T* ptr) override;
         void copy_to_device(T* device_ptr, const T* host_ptr, size_t size) override;
         void copy_to_host(T* host_ptr, const T* device_ptr, size_t size) override;
-        void add(const T* a, const T* b, T* result, size_t size) override;
-        void multiply(const T* a, const T* b, T* result, size_t size) override;
         void matmul(const T* a, const T* b, T* result, size_t m,size_t n,size_t k) override;
 
         // Virtual function for elementwise operation with generic pointers
@@ -32,6 +30,8 @@ namespace dio {
                                                   const std::vector<size_t>& adjusted_strides1,
                                                   const std::vector<size_t>& adjusted_strides2);
         #pragma warning(pop)
+
+         void apply_unary_function(const T* a, T* result, std::function<T(T)> func, size_t size) override;
     };
 
 } // namespace dio

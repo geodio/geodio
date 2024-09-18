@@ -1,0 +1,9 @@
+//
+// Created by zwartengaten on 9/18/24.
+//
+
+#ifndef GEODIO_OPERATIONREGISTRY_H
+#define GEODIO_OPERATIONREGISTRY_H
+
+
+#endif //GEODIO_OPERATIONREGISTRY_H
