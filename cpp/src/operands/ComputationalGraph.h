@@ -1,16 +1,16 @@
 #include "OperandType.h"
 #include "Operand.h"
+#include "AnyTensor.h"
 
 #ifndef GEODIO_COMPUTATIONALGRAPH_H
 #define GEODIO_COMPUTATIONALGRAPH_H
 
 namespace dio{
-template<typename T>
 class ComputationalGraph {
 public:
     std::unordered_map<int, Operand> operands{};
-    std::unordered_map<int, std::shared_ptr<Tensor<T>>> weights{}; // Weights associated with operands
-    std::unordered_map<int, std::shared_ptr<Tensor<T>>> gradients{}; // Gradients computed during backpropagation
+    std::unordered_map<int, tensor_ptr> weights{}; // Weights associated with operands
+    std::unordered_map<int, tensor_ptr> gradients{}; // Gradients computed during backpropagation
 
     // Methods to add operands, weights, etc.
 };

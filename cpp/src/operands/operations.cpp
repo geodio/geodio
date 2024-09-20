@@ -6,87 +6,130 @@
 
 
 namespace dio {
-template<typename T>
-std::shared_ptr<Tensor<T>> add_forward (const std::vector<std::shared_ptr<Tensor<T>>>& inputs) {
+
+tensor_ptr add_forward (const std::vector<tensor_ptr>& inputs) {
     auto tensor_result = (inputs[0]->add(*inputs[1]));
-    auto result = std::make_shared<Tensor<T>>(tensor_result);
+    auto result = std::make_shared<AnyTensor>(tensor_result);
     return result;
 }
 
-template<typename T>
-std::vector<std::shared_ptr<Tensor<T>>> add_backward(
-        const std::vector<std::shared_ptr<Tensor<T>>>& inputs,
-        const std::shared_ptr<Tensor<T>>& upstream_gradient,
-        const std::shared_ptr<Tensor<T>>& /*forward_output*/) {
+std::vector<tensor_ptr> add_backward(
+        const std::vector<tensor_ptr>& inputs,
+        const tensor_ptr& upstream_gradient,
+        const tensor_ptr& /*forward_output*/) {
    return {upstream_gradient, upstream_gradient};
 }
 
-template<typename T>
-std::shared_ptr<Tensor<T>> multiply_forward (const std::vector<std::shared_ptr<Tensor<T>>>& inputs) {
+tensor_ptr multiply_forward (const std::vector<tensor_ptr>& inputs) {
     auto tensor_result = (inputs[0]->multiply(*inputs[1]));
-    auto result = std::make_shared<Tensor<T>>(tensor_result);
+    auto result = std::make_shared<AnyTensor>(tensor_result);
     return result;
 }
 
-template<typename T>
-std::vector<std::shared_ptr<Tensor<T>>> multiply_backward(
-        const std::vector<std::shared_ptr<Tensor<T>>>& inputs,
-        const std::shared_ptr<Tensor<T>>& upstream_gradient,
-        const std::shared_ptr<Tensor<T>>& /*forward_output*/) {
+std::vector<tensor_ptr> multiply_backward(
+        const std::vector<tensor_ptr>& inputs,
+        const tensor_ptr& upstream_gradient,
+        const tensor_ptr& /*forward_output*/) {
     auto result =
-            std::vector<std::shared_ptr<Tensor<T>>>({
-                   std::make_shared<Tensor<T>>(upstream_gradient->multiply(*inputs[1])),
-                   std::make_shared<Tensor<T>>(upstream_gradient->multiply(*inputs[0]))
+            std::vector<tensor_ptr>({
+                   std::make_shared<AnyTensor>(upstream_gradient->multiply(*inputs[1])),
+                   std::make_shared<AnyTensor>(upstream_gradient->multiply(*inputs[0]))
            });
     return result;
 }
 
-template<typename T>
-std::shared_ptr<Tensor<T>> sigmoid_forward (const std::vector<std::shared_ptr<Tensor<T>>>& inputs) {
-    auto tensor_result = inputs[0]->apply_elementwise_function([](T x) {
+tensor_ptr sigmoid_forward (const std::vector<tensor_ptr>& inputs) {
+    auto tensor_result = inputs[0]->apply_unary([](auto x) {
                 return 1.0f / (1.0f + std::exp(-x));
             });
-    auto result = std::make_shared<Tensor<T>>(tensor_result);
+    auto result = std::make_shared<AnyTensor>(tensor_result);
     return result;
 }
 
-template<typename T>
-std::vector<std::shared_ptr<Tensor<T>>> sigmoid_backward(
-        const std::vector<std::shared_ptr<Tensor<T>>>& inputs,
-        const std::shared_ptr<Tensor<T>>& upstream_gradient,
-        const std::shared_ptr<Tensor<T>>& forward_output) {
-    auto one_minus_output = forward_output->apply_elementwise_function([](T x) {
+std::vector<tensor_ptr> sigmoid_backward(
+        const std::vector<tensor_ptr>& inputs,
+        const tensor_ptr& upstream_gradient,
+        const tensor_ptr& forward_output) {
+    auto one_minus_output = forward_output->apply_unary([](auto x) {
         return 1.0f - x;
     });
     auto local_gradient = forward_output->multiply(one_minus_output);
-    auto result =  std::vector<std::shared_ptr<Tensor<T>>>({
-       std::make_shared<Tensor<T>>(upstream_gradient->multiply(local_gradient))
+    auto result =  std::vector<tensor_ptr>({
+       std::make_shared<AnyTensor>(upstream_gradient->multiply(local_gradient))
    });
     return result;
 }
 
-template<typename T>
+
+tensor_ptr lt_forward (const std::vector<tensor_ptr>& inputs) {
+    auto tensor_result = (inputs[0]->multiply(*inputs[1]));
+    auto result = std::make_shared<AnyTensor>(tensor_result);
+    return result;
+}
+
+std::vector<tensor_ptr> lt_backward(
+        const std::vector<tensor_ptr>& inputs,
+        const tensor_ptr& upstream_gradient,
+        const tensor_ptr& forward_output) {
+   return {upstream_gradient, upstream_gradient};
+}
+
+
+tensor_ptr linear_forward(
+    const std::vector<tensor_ptr>& inputs) {
+    const auto& input = inputs[0];
+    const auto& weights = inputs[1];
+    const auto& bias = inputs[2];
+
+    auto weighted_input = input->matmul(*weights); // Matrix multiplication
+    auto output = weighted_input.add(*bias);      // Add bias
+
+    return std::make_shared<AnyTensor>(output);
+}
+
+std::vector<tensor_ptr> linear_backward(
+    const std::vector<tensor_ptr>& inputs,
+    const tensor_ptr& upstream_gradient,
+    const tensor_ptr& /*forward_output*/) {
+    const auto& input = inputs[0];
+    const auto& weights = inputs[1];
+
+    // Bias is inputs[2], not needed directly for gradients
+    // Gradient w.r.t Input
+    auto grad_input = std::make_shared<AnyTensor>(upstream_gradient->matmul(weights->transpose()));
+
+    // Gradient w.r.t Weights
+    auto grad_weights = std::make_shared<AnyTensor>(input->transpose().matmul(*upstream_gradient));
+
+    // Gradient w.r.t Bias
+    auto grad_bias = std::make_shared<AnyTensor>(upstream_gradient->sum(/*axis=*/{0})); // Sum over batch dimension
+    return {grad_input, grad_weights, grad_bias};
+}
+
+
 void initialize_operations() {
-    OperationRegistry<T> &registry = OperationRegistry<T>::get_instance();
+    OperationRegistry &registry = OperationRegistry::get_instance();
 
     // Register Add operation
-    registry.register_operation(OperandType::Add, Operation<T>{
-            add_forward<T>, add_backward<T>
+    registry.register_operation(OperandType::Add, Operation{
+            add_forward, add_backward
     });
 
     // Register Multiply operation
-    registry.register_operation(OperandType::Multiply, Operation<T>{
-            multiply_forward<T>, multiply_backward<T>
+    registry.register_operation(OperandType::Multiply, Operation{
+            multiply_forward, multiply_backward
     });
 
     // Register Sigmoid operation
-    registry.register_operation(OperandType::Sigmoid, Operation<T>{
-            sigmoid_forward<T>, sigmoid_backward<T>
+    registry.register_operation(OperandType::Sigmoid, Operation{
+            sigmoid_forward, sigmoid_backward
     });
 
+    // Register Linear Transformation Operand
+    registry.register_operation(OperandType::LinearTransformation, Operation{
+            linear_forward, linear_backward
+    });
     // Register other operations as needed
 }
 }
-template void dio::initialize_operations<float>();
-template void dio::initialize_operations<double>();
-template void dio::initialize_operations<int>();
+

@@ -1,15 +1,16 @@
+// test_execution_engine.h
 
 #include "test_execution_engine.h"
-#include <complex>
+#include <cmath>
+#include <iostream>
 #include "../src/operands/OperandType.h"
 #include "../src/operands/ComputationalGraph.h"
 #include "../src/operands/operations.h"
-
 #include "../src/operands/ExecutionEngine.h"
 
 void test_forward_pass() {
-    dio::ComputationalGraph<float> graph;
-    dio::initialize_operations<float>();
+    dio::ComputationalGraph graph;
+    dio::initialize_operations();
 
     // Assign unique IDs to operands
     int x_id = 1;
@@ -28,18 +29,26 @@ void test_forward_pass() {
     graph.operands[y_id] = dio::Operand(dio::OperandType::Sigmoid, y_id, {wx_plus_b_id});
 
     // Assign values to variables
-    graph.weights[x_id] = std::make_shared<dio::Tensor<float>>(2.0f); // x = 2.0
-    graph.weights[w_id] = std::make_shared<dio::Tensor<float>>(3.0f); // w = 3.0
-    graph.weights[b_id] = std::make_shared<dio::Tensor<float>>(1.0f); // b = 1.0
+    graph.weights[x_id] = dio::make_tensor_ptr<int>(2); // x = 2.0
+    graph.weights[w_id] = dio::make_tensor_ptr<float>(3.0f); // w = 3.0
+    graph.weights[b_id] = dio::make_tensor_ptr<float>(1.0f); // b = 1.0
 
     // Expected output: y = sigmoid((w * x) + b) = sigmoid((3 * 2) + 1) = sigmoid(7) ≈ 0.9990889
     float expected_output = 1.0f / (1.0f + std::exp(-7.0f));
 
     // Perform forward pass
-    std::shared_ptr<dio::Tensor<float>> y_output = dio::ExecutionEngine<float>::forward(graph, y_id);
+    std::shared_ptr<dio::AnyTensor> y_output = dio::ExecutionEngine::forward(graph, y_id);
 
     // Check if the output matches the expected value
-    float computed_output = y_output->get_data()[0];
+    float computed_output;
+
+    if (y_output->is<float>()) {
+        computed_output = y_output->get<float>().get_data()[0];
+    } else {
+        std::cerr << "Unexpected data type in y_output" << std::endl;
+        return;
+    }
+
     if (std::abs(computed_output - expected_output) < 1e-6f) {
         std::cout << "Forward pass test passed." << std::endl;
     } else {
@@ -49,8 +58,8 @@ void test_forward_pass() {
 }
 
 void test_backward_pass() {
-    dio::ComputationalGraph<float> graph;
-    dio::initialize_operations<float>();
+    dio::ComputationalGraph graph;
+    dio::initialize_operations();
 
     // Assign unique IDs to operands
     int x_id = 1;
@@ -69,32 +78,34 @@ void test_backward_pass() {
     graph.operands[y_id] = dio::Operand(dio::OperandType::Sigmoid, y_id, {wx_plus_b_id});
 
     // Assign values to variables
-    graph.weights[x_id] = std::make_shared<dio::Tensor<float>>(2.0f); // x = 2.0
-    graph.weights[w_id] = std::make_shared<dio::Tensor<float>>(3.0f); // w = 3.0
-    graph.weights[b_id] = std::make_shared<dio::Tensor<float>>(1.0f); // b = 1.0
+    graph.weights[x_id] = dio::make_tensor_ptr<float>(2.0f); // x = 2.0
+    graph.weights[w_id] = dio::make_tensor_ptr<float>(3.0f); // w = 3.0
+    graph.weights[b_id] = dio::make_tensor_ptr<float>(1.0f); // b = 1.0
 
     // Perform forward pass
-    std::shared_ptr<dio::Tensor<float>> y_output = dio::ExecutionEngine<float>::forward(graph, y_id);
+    std::shared_ptr<dio::AnyTensor> y_output = dio::ExecutionEngine::forward(graph, y_id);
 
     // Assume loss L = y, so dL/dy = 1
-    std::shared_ptr<dio::Tensor<float>> loss_gradient = std::make_shared<dio::Tensor<float>>(1.0f);
+    std::shared_ptr<dio::AnyTensor> loss_gradient = dio::make_tensor_ptr<float>(1.0f);
 
     // Perform backward pass
-    dio::ExecutionEngine<float>::backward(graph, y_id, loss_gradient);
+    dio::ExecutionEngine::backward(graph, y_id, loss_gradient);
 
     // Expected gradients
-    float sigmoid_output = y_output->get_data()[0];
+    float sigmoid_output = y_output->get<float>().get_data()[0];
     float grad_y = 1.0f;
     float grad_wx_plus_b = grad_y * sigmoid_output * (1.0f - sigmoid_output);
     float grad_wx = grad_wx_plus_b;
     float grad_b = grad_wx_plus_b * 1.0f;
-    float grad_w = grad_wx * graph.weights[x_id]->get_data()[0]; // grad_wx * x
-    float grad_x = grad_wx * graph.weights[w_id]->get_data()[0]; // grad_wx * w
+    float x_value = graph.weights[x_id]->get<float>().get_data()[0];
+    float w_value = graph.weights[w_id]->get<float>().get_data()[0];
+    float grad_w = grad_wx * x_value; // grad_wx * x
+    float grad_x = grad_wx * w_value; // grad_wx * w
 
     // Retrieve computed gradients
-    float computed_grad_w = graph.gradients[w_id]->get_data()[0];
-    float computed_grad_x = graph.gradients[x_id]->get_data()[0];
-    float computed_grad_b = graph.gradients[b_id]->get_data()[0];
+    float computed_grad_w = graph.gradients[w_id]->get<float>().get_data()[0];
+    float computed_grad_x = graph.gradients[x_id]->get<float>().get_data()[0];
+    float computed_grad_b = graph.gradients[b_id]->get<float>().get_data()[0];
 
     // Check gradients
     bool passed = true;
@@ -117,6 +128,8 @@ void test_backward_pass() {
 
 void execution_engine_tests() {
     std::cout << std::endl << "Testing Execution Engine functionality..." << std::endl;
+    std::cout << "Testing Forward . . ." << std::endl;
     test_forward_pass();
+    std::cout << "Testing Backward . . ." << std::endl;
     test_backward_pass();
 }

@@ -129,84 +129,101 @@ std::vector<T> Tensor<T>::get_data() const {
 
 
 
-// Broadcast shapes and compute adjusted strides
 template<typename T>
-void Tensor<T>::broadcast_shapes(const Tensor<T>& other,
-                                 std::vector<size_t>& out_shape,
-                                 std::vector<size_t>& adjusted_strides1,
-                                 std::vector<size_t>& adjusted_strides2) const {
-    size_t ndim1 = this->shape_.size();
-    size_t ndim2 = other.shape_.size();
-    size_t ndim = std::max(ndim1, ndim2);
-
-    out_shape.resize(ndim);
-    adjusted_strides1.resize(ndim);
-    adjusted_strides2.resize(ndim);
-
-    for (size_t i = 0; i < ndim; ++i) {
-        size_t dim1 = (i < ndim - ndim1) ? 1 : this->shape_[i - (ndim - ndim1)];
-        size_t dim2 = (i < ndim - ndim2) ? 1 : other.shape_[i - (ndim - ndim2)];
-
-        if (dim1 != dim2 && dim1 != 1 && dim2 != 1) {
-            throw std::invalid_argument("Shapes are not broadcastable.");
-        }
-
-        out_shape[i] = std::max(dim1, dim2);
-        adjusted_strides1[i] = (dim1 == 1) ? 0 : this->strides_[(ndim1 > ndim2 ? i : i - (ndim - ndim1))];
-        adjusted_strides2[i] = (dim2 == 1) ? 0 : other.strides_[(ndim2 > ndim1 ? i : i - (ndim - ndim2))];
-    }
-}
-
-// Matrix multiplication
-template<typename T>
-[[nodiscard]] Tensor<T> Tensor<T>::matmul(const Tensor<T>& other) const {
-    if (this->num_dimensions() != 2 || other.num_dimensions() != 2) {
-        throw std::invalid_argument("Both tensors must be 2D for matrix multiplication.");
-    }
-    if (this->shape_[1] != other.shape_[0]) {
-        throw std::invalid_argument("Inner dimensions must match for matrix multiplication.");
-    }
-
-    size_t m = this->shape_[0];
-    size_t n = this->shape_[1];
-    size_t k = other.shape_[1];
-
+Tensor<T> Tensor<T>::transpose(const std::vector<size_t>& axis) const {
     Tensor<T> result;
-    result.shape_ = { m, k };
-    result.total_size_ = m * k;
-    result.data_.resize(result.total_size_);
-    auto backend = BackendManager<T>::get_backend();
+
+    // If axis is empty or {0}, reverse the shape (default transpose)
+    std::vector<size_t> new_axis = axis;
+    if (new_axis.empty() || (new_axis.size() == 1 && new_axis[0] == 0)) {
+        new_axis.resize(this->shape_.size());
+        std::iota(new_axis.begin(), new_axis.end(), 0);  // Create [0, 1, 2, ..., N]
+        std::reverse(new_axis.begin(), new_axis.end());  // Reverse it
+    }
+
+    // Ensure the new axis order is valid
+    if (new_axis.size() != this->shape_.size()) {
+        throw std::invalid_argument("Axis size must match tensor dimensions.");
+    }
+
+    // Set new shape based on the new axis order
+    result.shape_.resize(this->shape_.size());
+    for (size_t i = 0; i < new_axis.size(); ++i) {
+        result.shape_[i] = this->shape_[new_axis[i]];
+    }
+
+    result.total_size_ = this->total_size_;
+    result.data_.resize(this->total_size_);
     result.compute_strides();
 
-    const T* data1 = this->data_.data();
-    const T* data2 = other.data_.data();
-    T* result_data = result.data_.data();
+    // Create strides for both tensors
+    std::vector<size_t> new_strides(this->shape_.size());
+    for (size_t i = 0; i < new_axis.size(); ++i) {
+        new_strides[i] = this->strides_[new_axis[i]];
+    }
 
-    backend->matmul(data1, data2, result_data, m, n, k);
+    // Copy the data according to the new axis order
+    for (size_t i = 0; i < result.total_size_; ++i) {
+        std::vector<size_t> old_indices = compute_indices(i, result.shape_);
+        size_t new_flat_index = compute_flat_index(old_indices, new_strides);
+        result.data_[i] = this->data_[new_flat_index];
+    }
 
     return result;
 }
+
+template<typename T>
+Tensor<T> Tensor<T>::sum(const std::vector<size_t>& axis) const {
+    if (axis.empty() || (axis.size() == 1 && axis[0] == 0)) {
+        // Sum all elements (flatten the tensor)
+        T total = std::accumulate(this->data_.begin(), this->data_.end(), static_cast<T>(0));
+        return Tensor<T>(std::vector<T>{total}, {}); // Return scalar tensor
+    }
+
+    // Ensure axis dimensions are valid
+    for (size_t ax : axis) {
+        if (ax >= this->shape_.size()) {
+            throw std::invalid_argument("Axis is out of bounds for tensor dimensions.");
+        }
+    }
+
+    // Reduce along the provided axes
+    std::vector<size_t> new_shape = this->shape_;
+    for (size_t ax : axis) {
+        new_shape[ax] = 1;
+    }
+
+    Tensor<T> result;
+    result.shape_ = new_shape;
+    result.total_size_ = compute_size(new_shape);
+    result.data_.resize(result.total_size_);
+    result.compute_strides();
+
+    // Perform the summation along the specified axes
+    for (size_t i = 0; i < result.total_size_; ++i) {
+        std::vector<size_t> indices = compute_indices(i, result.shape_);
+        T sum_value = 0;
+
+        // Sum along the specified axes
+        for (size_t ax : axis) {
+            std::vector<size_t> varying_indices = indices;
+            for (size_t j = 0; j < this->shape_[ax]; ++j) {
+                varying_indices[ax] = j;
+                sum_value += this->operator()(varying_indices);  // Access via operator()
+            }
+        }
+
+        result.data_[i] = sum_value;
+    }
+
+    return result;
+}
+
+
 
 // Operators
 
-// Apply element-wise function
-template<typename T>
-Tensor<T> Tensor<T>::apply_elementwise_function(std::function<T(T)> func) const {
-    Tensor<T> result;
-    result.shape_ = this->shape_;
-    result.total_size_ = this->total_size_;
-    result.data_.resize(result.total_size_);
-    result.compute_strides();
 
-    const T* data_in = this->data_.data();
-    T* data_out = result.data_.data();
-
-    auto backend = BackendManager<T>::get_backend();
-
-    backend->apply_unary_function(data_in, data_out, func, result.total_size_);
-
-    return result;
-}
 
 
 // GPU operations (No-ops for CPU backend)

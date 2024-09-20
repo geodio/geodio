@@ -170,13 +170,16 @@ void test_matrix_multiplication() {
         std::cout << "Matrix multiplication test passed." << std::endl;
     }
 }
+double some_sin(double x) {
+    return std::sin(x);
+}
 
 void test_apply_elementwise_function() {
     std::vector<double> data = {0.0, M_PI_2, M_PI, 3*M_PI_2};
     std::vector<size_t> shape = {2, 2};
     dio::Tensor<double> tensor(data, shape);
-
-    auto result = tensor.apply_elementwise_function([](double x) { return std::sin(x); });
+    std::function<double(double)> some_sin = [](double x) { return std::sin(x); };
+    auto result = tensor.apply_elementwise_function(some_sin);
     std::vector<double> expected_data = {0.0, 1.0, 0.0, -1.0};
 
     bool success = true;

@@ -20,9 +20,11 @@ namespace dio {
         virtual void copy_to_host(T* host_ptr, const T* device_ptr, size_t size) = 0;
 
         // Numerical operations between two tensors
-        virtual void matmul(const T* a, const T* b, T* result, size_t m,size_t n,size_t k) = 0;
+        template<typename U>
+        void matmul(const T* a, const U* b, typename std::common_type<T, U>::type* result, size_t m,size_t n,size_t k);
 
-        virtual void apply_unary_function(const T* a, T* result, std::function<T(T)> func, size_t size) = 0;
+        template<typename U>
+        void apply_unary_function(const T* a, U* result, std::function<U(T)> func, size_t size);
 
         // Virtual function for elementwise operation with generic pointers
         virtual void elementwise_operation_generic(const void* a, const void* b, void* result,
@@ -39,7 +41,7 @@ namespace dio {
                                    const std::vector<size_t>& adjusted_strides2);
     };
 
-     template<typename T>
+    template<typename T>
     template<typename U, typename R>
     void Backend<T>::elementwise_operation(const T* a, const U* b, R* result, std::function<R(T, U)> func,
                                               const size_t total_size, const std::vector<size_t>& result_shape,
@@ -56,6 +58,29 @@ namespace dio {
                 idx2 += adjusted_strides2[adjusted_strides2.size() - 1 - dim] * index;
             }
             result[i] = func(a[idx1], b[idx2]);
+        }
+    }
+
+    template<typename T>
+    template<typename U>
+    void Backend<T>::matmul(const T* a, const U* b, typename std::common_type<T, U>::type* result, size_t m,size_t n,size_t k) {
+    #pragma omp parallel for
+        for (size_t i = 0; i < m; ++i) {
+            for (size_t j = 0; j < k; ++j) {
+                result[i * k + j] = 0;
+                for (size_t p = 0; p < n; ++p) {
+                    result[i * k + j] += a[i * n + p] * b[p * k + j];
+                }
+            }
+        }
+    }
+
+    template<typename T>
+    template<typename U>
+    void Backend<T>::apply_unary_function(const T* a, U* result, std::function<U(T)> func, size_t size) {
+        #pragma omp parallel for
+        for (size_t i = 0; i < size; ++i) {
+            result[i] = func(a[i]);
         }
     }
 

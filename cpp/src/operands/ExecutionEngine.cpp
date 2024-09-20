@@ -4,16 +4,14 @@
 
 namespace dio {
 
-template<typename T>
-std::shared_ptr<Tensor<T>> ExecutionEngine<T>::forward(ComputationalGraph<T>& graph, int output_operand_id) {
-    std::unordered_map<int, std::shared_ptr<Tensor<T>>> forward_cache;
+tensor_ptr ExecutionEngine::forward(ComputationalGraph& graph, int output_operand_id) {
+    std::unordered_map<int, tensor_ptr> forward_cache;
     compute_forward(graph, output_operand_id, forward_cache);
     return forward_cache[output_operand_id];
 }
 
-template<typename T>
-void ExecutionEngine<T>::compute_forward(ComputationalGraph<T>& graph, int operand_id,
-                                      std::unordered_map<int, std::shared_ptr<Tensor<T>>>& forward_cache) {
+void ExecutionEngine::compute_forward(ComputationalGraph& graph, int operand_id,
+                                      std::unordered_map<int, tensor_ptr>& forward_cache) {
     if (forward_cache.find(operand_id) != forward_cache.end()) {
         return;
     }
@@ -27,25 +25,25 @@ void ExecutionEngine<T>::compute_forward(ComputationalGraph<T>& graph, int opera
             throw std::runtime_error("Value for operand ID " + std::to_string(operand_id) + " not found.");
         }
     } else {
-        std::vector<std::shared_ptr<Tensor<T>>> input_tensors;
+        std::vector<tensor_ptr> input_tensors;
         for (int input_id : operand.inputs) {
             compute_forward(graph, input_id, forward_cache);
             input_tensors.push_back(forward_cache[input_id]);
         }
 
-        OperationRegistry<T>& registry = OperationRegistry<T>::get_instance();
+        OperationRegistry& registry = OperationRegistry::get_instance();
         Operation operation = registry.get_operation(operand.op_type);
 
-        std::shared_ptr<Tensor<T>> result = operation.forward(input_tensors);
+        std::shared_ptr<AnyTensor> result = operation.forward(input_tensors);
 
         forward_cache[operand_id] = result;
     }
 }
-template<typename T>
-void ExecutionEngine<T>::backward(ComputationalGraph<T>& graph, int output_operand_id,
-                                  const std::shared_ptr<Tensor<T>>& loss_gradient) {
-    std::unordered_map<int, std::shared_ptr<Tensor<T>>> gradient_cache;
-    std::unordered_map<int, std::shared_ptr<Tensor<T>>> forward_cache;
+
+void ExecutionEngine::backward(ComputationalGraph& graph, int output_operand_id,
+                                  const tensor_ptr& loss_gradient) {
+    std::unordered_map<int, tensor_ptr> gradient_cache;
+    std::unordered_map<int, tensor_ptr> forward_cache;
 
     // Ensure forward pass is computed
     compute_forward(graph, output_operand_id, forward_cache);
@@ -59,14 +57,13 @@ void ExecutionEngine<T>::backward(ComputationalGraph<T>& graph, int output_opera
     }
 }
 
-template<typename T>
-void ExecutionEngine<T>::compute_backward(ComputationalGraph<T>& graph, int operand_id,
-                                       const std::shared_ptr<Tensor<T>>& upstream_gradient,
-                                       std::unordered_map<int, std::shared_ptr<Tensor<T>>>& forward_cache,
-                                       std::unordered_map<int, std::shared_ptr<Tensor<T>>>& gradient_cache) {
+void ExecutionEngine::compute_backward(ComputationalGraph& graph, int operand_id,
+                                       const tensor_ptr& upstream_gradient,
+                                       std::unordered_map<int, tensor_ptr>& forward_cache,
+                                       std::unordered_map<int, tensor_ptr>& gradient_cache) {
     if (gradient_cache.find(operand_id) != gradient_cache.end()) {
         // Accumulate gradient
-        gradient_cache[operand_id] = std::make_shared<Tensor<T>>(gradient_cache[operand_id]->add(*upstream_gradient));
+        gradient_cache[operand_id] = std::make_shared<AnyTensor>(gradient_cache[operand_id]->add(*upstream_gradient));
         return;
     } else {
         gradient_cache[operand_id] = upstream_gradient;
@@ -81,11 +78,11 @@ void ExecutionEngine<T>::compute_backward(ComputationalGraph<T>& graph, int oper
         // Variables are leaves; gradient is stored
         return;
     } else {
-        OperationRegistry<T>& registry = OperationRegistry<T>::get_instance();
+        OperationRegistry& registry = OperationRegistry::get_instance();
         Operation operation = registry.get_operation(operand.op_type);
 
         // Get inputs
-        std::vector<std::shared_ptr<Tensor<T>>> input_tensors;
+        std::vector<tensor_ptr> input_tensors;
         for (int input_id : operand.inputs) {
             input_tensors.push_back(forward_cache[input_id]);
         }
@@ -94,7 +91,7 @@ void ExecutionEngine<T>::compute_backward(ComputationalGraph<T>& graph, int oper
         auto forward_output = forward_cache[operand_id];
 
         // Compute local gradients
-        std::vector<std::shared_ptr<Tensor<T>>> local_gradients =
+        std::vector<tensor_ptr> local_gradients =
                 operation.backward(input_tensors, upstream_gradient, forward_output);
 
         // Recursively compute backward for inputs
@@ -107,8 +104,5 @@ void ExecutionEngine<T>::compute_backward(ComputationalGraph<T>& graph, int oper
         }
     }
 }
-template class ExecutionEngine<float>;
-template class ExecutionEngine<double>;
-template class ExecutionEngine<int>;
 
 } // namespace dio

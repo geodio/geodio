@@ -1,26 +1,25 @@
 #include <memory>
 #include <../tensors/Tensor.h>
+#include "AnyTensor.h"
 
 #ifndef GEODIO_OPERATION_H
 #define GEODIO_OPERATION_H
 
 namespace dio {
 
+using tensor = tensor_ptr;
 
-template<typename T>
-using ForwardFunc = std::function<std::shared_ptr<Tensor<T>>(
-    const std::vector<std::shared_ptr<Tensor<T>>>& inputs)>;
+using ForwardFunc = std::function<tensor(
+    const std::vector<tensor>& inputs)>;
 
-template<typename T>
-using BackwardFunc = std::function<std::vector<std::shared_ptr<Tensor<T>>>(
-    const std::vector<std::shared_ptr<Tensor<T>>>& inputs,
-    const std::shared_ptr<Tensor<T>>& upstream_gradient,
-    const std::shared_ptr<Tensor<T>>& forward_output)>;
+using BackwardFunc = std::function<std::vector<tensor>(
+    const std::vector<tensor>& inputs,
+    const tensor& upstream_gradient,
+    const tensor& forward_output)>;
 
-template<typename T>
 struct Operation {
-    ForwardFunc<T> forward;
-    BackwardFunc<T> backward;
+    ForwardFunc forward;
+    BackwardFunc backward;
 };
 
 } // namespace dio

@@ -35,4 +35,9 @@ add_executable(geodio
         cpp/src/operands/operations.h
         cpp/tests/test_execution_engine.cpp
         cpp/tests/test_execution_engine.h
+        cpp/src/tensors/AnyTensor.cpp
+        cpp/src/tensors/AnyTensor.h
+        cpp/src/tensors/ApplyType.h
+        cpp/src/tensors/ITensor.cpp
+        cpp/src/tensors/ITensor.h
 )

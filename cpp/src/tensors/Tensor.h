@@ -6,6 +6,7 @@
 #include "../backends/Backend.h"
 #include "../backends/CPUBackend.h"
 #include "../backends/BackendManager.h"
+#include "ITensor.h"
 #include <initializer_list>
 #include <vector>
 #include <cstddef>
@@ -23,7 +24,7 @@
 namespace dio {
 
     template<typename T>
-    class Tensor {
+    class Tensor : public ITensor{
     public:
         // Constructors
         Tensor();  // Default constructor
@@ -35,7 +36,16 @@ namespace dio {
         explicit Tensor(const T& value);
 
         // Destructor
-        ~Tensor();
+        ~Tensor() override;
+
+        [[nodiscard]] const std::type_info& type() const {
+            return typeid(T);
+        }
+        [[nodiscard]] const std::type_info& type_info() const override {
+            return typeid(T);
+        }
+
+
 
         // Information methods
         [[nodiscard]] size_t num_dimensions() const;
@@ -69,10 +79,12 @@ namespace dio {
         Tensor<typename std::common_type<T, U>::type> divide(const Tensor<U>& other) const;
 
         // Element-wise functions
-        Tensor<T> apply_elementwise_function(std::function<T(T)> func) const;
+        template<typename R>
+        Tensor<R> apply_elementwise_function(std::function<R(T)> func) const;
 
         // Matrix multiplication
-        Tensor<T> matmul(const Tensor<T>& other) const;
+        template<typename U>
+        Tensor<typename std::common_type<T, U>::type> matmul(const Tensor<U>& other) const;
 
         // Operators
         template<typename U>
@@ -97,7 +109,41 @@ namespace dio {
         // GPU operations
         void to_device();
         void from_device();
-    private:
+
+        template<typename U>
+        Tensor<U> cast() const {
+
+            // If T and U are the same type, return a copy of the tensor
+            if (std::is_same<U, T>::value) {
+                return *this;  // Implicitly converts Tensor<T> to Tensor<U> when T == U
+            }
+            // Otherwise, create a new Tensor<U> and convert the data
+            Tensor<U> result;
+            result.shape_ = this->shape_;
+            result.total_size_ = this->total_size_;
+            result.compute_strides(); // Ensure this correctly initializes strides_
+
+            // Resize the data vector to hold the new type
+            result.data_.resize(this->total_size_);
+
+            // Perform the type conversion
+            std::transform(
+                data_.begin(),
+                data_.end(),
+                result.data_.begin(),
+                [](const T& value) {
+                    return static_cast<U>(value);
+                }
+            );
+            return result;
+
+        }
+
+        Tensor <T> transpose(const std::vector<size_t> &axis) const;
+
+        Tensor <T> sum(const std::vector<size_t> &axis) const;
+
+        // private:
         std::vector<T> data_;          // Changed from raw pointer to std::vector
         std::vector<size_t> shape_;
         std::vector<size_t> strides_;
@@ -107,20 +153,20 @@ namespace dio {
         void compute_strides();
 
         [[nodiscard]] std::vector<size_t> compute_broadcast_shape(
-                const std::vector<size_t>& shape1, const std::vector<size_t>& shape2) const;
+        const std::vector<size_t>& shape1, const std::vector<size_t>& shape2) const;
         [[nodiscard]] size_t compute_flat_index(
-                const std::vector<size_t>& indices, const std::vector<size_t>& strides) const;
+        const std::vector<size_t>& indices, const std::vector<size_t>& strides) const;
         [[nodiscard]] std::vector<size_t> compute_indices(
-                size_t flat_index, const std::vector<size_t>& shape) const;
+        size_t flat_index, const std::vector<size_t>& shape) const;
 
         // Helper function to print tensor contents
         void print_tensor(std::ostream& os, size_t index, size_t depth) const;
 
-        void broadcast_shapes(const Tensor<T>& other,
-                              std::vector<size_t>& out_shape,
-                              std::vector<size_t>& adjusted_strides1,
-                              std::vector<size_t>& adjusted_strides2) const;
-
+        template<typename U>
+        void broadcast_shapes(const Tensor<U>& other,
+        std::vector<size_t>& out_shape,
+        std::vector<size_t>& adjusted_strides1,
+        std::vector<size_t>& adjusted_strides2) const;
     };
 
     // Implementation of methods (included in header due to templates)
@@ -220,7 +266,7 @@ namespace dio {
         const U* data2 = other.data_.data();
         R* result_data = result.data_.data();
 
-        auto backend = BackendManager<R>::get_backend();
+        auto backend = BackendManager<T>::get_backend();
 
         // Use the backend's elementwise operation
         backend->template elementwise_operation<U, R>(
@@ -289,9 +335,86 @@ namespace dio {
         return this->divide(other);
     }
 
+    // Matrix multiplication
+    template<typename T>
+    template<typename U>
+    [[nodiscard]] Tensor<typename std::common_type<T, U>::type> Tensor<T>::matmul(const Tensor<U>& other) const {
+        if (this->num_dimensions() != 2 || other.num_dimensions() != 2) {
+            throw std::invalid_argument("Both tensors must be 2D for matrix multiplication.");
+        }
+        if (this->shape_[1] != other.shape_[0]) {
+            throw std::invalid_argument("Inner dimensions must match for matrix multiplication.");
+        }
+        using R = typename std::common_type<T, U>::type;
 
-    // Implement other methods...
+        size_t m = this->shape_[0];
+        size_t n = this->shape_[1];
+        size_t k = other.shape_[1];
 
+        Tensor<R> result;
+        result.shape_ = { m, k };
+        result.total_size_ = m * k;
+        result.data_.resize(result.total_size_);
+        auto backend = BackendManager<T>::get_backend();
+        result.compute_strides();
+
+        const T* data1 = this->data_.data();
+        const U* data2 = other.data_.data();
+        R* result_data = result.data_.data();
+
+        backend->matmul(data1, data2, result_data, m, n, k);
+
+        return result;
+    }
+
+    // Apply element-wise function
+template<typename T>
+template<typename R>
+Tensor<R> Tensor<T>::apply_elementwise_function(std::function<R(T)> func) const {
+    Tensor<R> result;
+    result.shape_ = this->shape_;
+    result.total_size_ = this->total_size_;
+    result.data_.resize(result.total_size_);
+    result.compute_strides();
+
+    const T* data_in = this->data_.data();
+    R* data_out = result.data_.data();
+
+    auto backend = BackendManager<T>::get_backend();
+
+    backend->apply_unary_function(data_in, data_out, func, result.total_size_);
+
+    return result;
+}
+
+// Broadcast shapes and compute adjusted strides
+template<typename T>
+template<typename U>
+void Tensor<T>::broadcast_shapes(const Tensor<U>& other,
+                                 std::vector<size_t>& out_shape,
+                                 std::vector<size_t>& adjusted_strides1,
+                                 std::vector<size_t>& adjusted_strides2) const {
+    size_t ndim1 = this->shape_.size();
+    size_t ndim2 = other.shape_.size();
+    size_t ndim = std::max(ndim1, ndim2);
+
+    out_shape.resize(ndim);
+    adjusted_strides1.resize(ndim);
+    adjusted_strides2.resize(ndim);
+
+    for (size_t i = 0; i < ndim; ++i) {
+        size_t dim1 = (i < ndim - ndim1) ? 1 : this->shape_[i - (ndim - ndim1)];
+        size_t dim2 = (i < ndim - ndim2) ? 1 : other.shape_[i - (ndim - ndim2)];
+
+        if (dim1 != dim2 && dim1 != 1 && dim2 != 1) {
+            throw std::invalid_argument("Shapes are not broadcastable.");
+        }
+
+        out_shape[i] = std::max(dim1, dim2);
+        adjusted_strides1[i] = (dim1 == 1) ? 0 : this->strides_[(ndim1 > ndim2 ? i : i - (ndim - ndim1))];
+        adjusted_strides2[i] = (dim2 == 1) ? 0 : other.strides_[(ndim2 > ndim1 ? i : i - (ndim - ndim2))];
+    }
+}
 } // namespace dio
 
 #endif // GEODIO_TENSOR_H

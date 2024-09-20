@@ -8,6 +8,7 @@ namespace dio{
         Add,
         Multiply,
         Sigmoid,
+        LinearTransformation
         // Add more operations as needed
     };
 } // namespace dio

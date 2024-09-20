@@ -2,31 +2,36 @@
 #define GEODIO_OPERATIONS_H
 
 namespace dio {
-template<typename T>
-std::shared_ptr<Tensor<T>> add_forward (const std::vector<std::shared_ptr<Tensor<T>>>& inputs);
 
-template<typename T>
-std::vector<std::shared_ptr<Tensor<T>>> add_backward(
-        const std::vector<std::shared_ptr<Tensor<T>>>& inputs,
-        const std::shared_ptr<Tensor<T>>& upstream_gradient);
+tensor_ptr add_forward (const std::vector<tensor_ptr>& inputs);
 
-template<typename T>
-std::shared_ptr<Tensor<T>> multiply_forward (const std::vector<std::shared_ptr<Tensor<T>>>& inputs);
+std::vector<tensor_ptr> add_backward(
+        const std::vector<tensor_ptr>& inputs,
+        const tensor_ptr& upstream_gradient,
+        const tensor_ptr& /*forward_output*/);
 
-template<typename T>
-std::vector<std::shared_ptr<Tensor<T>>> multiply_backward(
-        const std::vector<std::shared_ptr<Tensor<T>>>& inputs,
-        const std::shared_ptr<Tensor<T>>& upstream_gradient);
+tensor_ptr multiply_forward (const std::vector<tensor_ptr>& inputs);
 
-template<typename T>
-std::shared_ptr<Tensor<T>> sigmoid_forward (const std::vector<std::shared_ptr<Tensor<T>>>& inputs);
+std::vector<tensor_ptr> multiply_backward(
+        const std::vector<tensor_ptr>& inputs,
+        const tensor_ptr& upstream_gradient,
+        const tensor_ptr& /*forward_output*/);
 
-template<typename T>
-std::vector<std::shared_ptr<Tensor<T>>> sigmoid_backward(
-        const std::vector<std::shared_ptr<Tensor<T>>>& inputs,
-        const std::shared_ptr<Tensor<T>>& upstream_gradient);
+tensor_ptr sigmoid_forward (const std::vector<tensor_ptr>& inputs);
 
-template<typename T>
+std::vector<tensor_ptr> sigmoid_backward(
+        const std::vector<tensor_ptr>& inputs,
+        const tensor_ptr& upstream_gradient,
+        const tensor_ptr& /*forward_output*/);
+
+tensor_ptr linear_forward (const std::vector<tensor_ptr>& inputs);
+
+std::vector<tensor_ptr> linear_backward(
+    const std::vector<tensor_ptr>& inputs,
+    const tensor_ptr& upstream_gradient,
+    const tensor_ptr& /*forward_output*/);
+
+
 void initialize_operations();
 } // namespace dio
 
