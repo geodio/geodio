@@ -40,4 +40,14 @@ add_executable(geodio
         cpp/src/tensors/ApplyType.h
         cpp/src/tensors/ITensor.cpp
         cpp/src/tensors/ITensor.h
+        cpp/src/tensors/Slice.h
+        cpp/src/operands/optimization/OptimizationArgs.cpp
+        cpp/src/operands/optimization/OptimizationArgs.h
+        cpp/src/operands/optimization/LossFunction.cpp
+        cpp/src/operands/optimization/LossFunction.h
+        cpp/src/operands/optimization/AdamOptimizer.cpp
+        cpp/src/operands/optimization/AdamOptimizer.h
+        cpp/tests/test_slice_mem.cpp
+        cpp/tests/test_slice_mem.h
+        cpp/src/tensors/ITensor.cpp
 )

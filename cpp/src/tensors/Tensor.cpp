@@ -1,16 +1,33 @@
-#include "Tensor.h"
+
 #include <stdexcept>
 #include <algorithm>
+
+#include "Tensor.h"
+
+
 
 namespace dio {
 
 template<typename T>
+[[nodiscard]] Tensor<T> Tensor<T>::slice(const std::vector<Slice> &slices) {
+    auto tensor = Tensor<T>(*this, slices);
+    return tensor.copy();
+}
+
+// Constructor for slicing
+template<typename T>
+Tensor<T>::Tensor(Tensor<T>& base_tensor, const std::vector<Slice>& slices)
+    : base_tensor_(std::ref(base_tensor)), slices_(slices), is_view_(true), total_size_(base_tensor.total_size_){
+    calculate_view();
+}
+
+template<typename T>
 Tensor<T>::Tensor()
-    : total_size_(0) {}
+    : total_size_(0), is_view_(false) {}
 
 template<typename T>
 Tensor<T>::Tensor(const T& value)
-    : shape_(), total_size_(1) {
+    : shape_(), total_size_(1), is_view_(false) {
     data_.resize(1);
     data_[0] = value;
     strides_ = {};
@@ -18,7 +35,7 @@ Tensor<T>::Tensor(const T& value)
 
 template<typename T>
 Tensor<T>::Tensor(const std::vector<T>& data, const std::vector<size_t>& shape)
-    : shape_(shape), data_(data) {
+    : shape_(shape), data_(data), is_view_(false) {
     total_size_ = compute_size(shape_);
     if (data_.size() != total_size_) {
         throw std::invalid_argument("Data size does not match shape size.");

@@ -5,6 +5,7 @@ namespace dio{
     enum class OperandType {
         Constant,
         Variable,
+        Weight,
         Add,
         Multiply,
         Sigmoid,

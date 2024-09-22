@@ -23,6 +23,15 @@ public:
     explicit AnyTensor(std::shared_ptr<Tensor<T>> tensor)
         : tensor_ptr_(std::move(tensor)) {}
 
+    // Constructor from vector and shape
+    template<typename T>
+    explicit AnyTensor(const std::vector<T> &data, const std::vector<size_t> &shape)
+    :tensor_ptr_(std::make_shared<dio::Tensor<T>>(data, shape)) {}
+
+    // Constructor for scalar tensors
+    template<typename T>
+    explicit AnyTensor(const T &value):tensor_ptr_(std::make_shared<dio::Tensor<T>>(value)) {}
+
     // Copy constructor
     AnyTensor(const AnyTensor& other)
         : tensor_ptr_(other.tensor_ptr_) {}
@@ -111,6 +120,18 @@ public:
         return apply(other, ApplyType::Divide);
     }
 
+    template<typename T>
+    [[nodiscard]] AnyTensor add(T scalar) const;
+
+    template<typename T>
+    [[nodiscard]] AnyTensor subtract(T scalar) const;
+
+    template<typename T>
+    [[nodiscard]] AnyTensor multiply(T scalar) const;
+
+    template<typename T>
+    [[nodiscard]] AnyTensor divide(T scalar) const;
+
     [[nodiscard]] AnyTensor matmul(const AnyTensor& other) const {
         return apply(other, ApplyType::Matmul);
     }
@@ -118,6 +139,8 @@ public:
     [[nodiscard]] AnyTensor transpose(const std::vector<size_t>& axis={0}) const;
 
     [[nodiscard]] AnyTensor sum(const std::vector<size_t>& axis={0}) const;
+
+    [[nodiscard]] const std::vector<size_t>& shape() const;
 
     // Apply a custom unary operation
     template<typename Func>
@@ -127,17 +150,29 @@ public:
     template<typename Func>
     [[nodiscard]] AnyTensor apply_custom(const AnyTensor& other, Func custom_op) const;
 
+    [[nodiscard]] AnyTensor slice(const std::vector<Slice> &slices) const;
+
+    // Operators
+    AnyTensor operator+(const AnyTensor& other) const;
+
+    AnyTensor operator-(const AnyTensor& other) const;
+
+    AnyTensor operator*(const AnyTensor& other) const;
+
+    AnyTensor operator/(const AnyTensor& other) const;
+
 private:
     std::shared_ptr<ITensor> tensor_ptr_;
+
 };
 
-using tensor_ptr = std::shared_ptr<AnyTensor>;
+using a_tens = AnyTensor;
 
 template<typename T>
-[[maybe_unused]] tensor_ptr make_tensor_ptr(T value);
+[[maybe_unused]] a_tens make_tensor_ptr(T value);
 
 template<typename T>
-[[maybe_unused]] tensor_ptr make_tensor_ptr(const std::vector<T>& data, const std::vector<size_t>& shape);
+[[maybe_unused]] a_tens make_tensor_ptr(const std::vector<T>& data, const std::vector<size_t>& shape);
 
 // Enumeration for tensor types
 enum class TensorType {
@@ -352,14 +387,38 @@ inline AnyTensor AnyTensor::apply_unary(Func custom_op) const {
 }
 
 template<typename T>
-[[maybe_unused]] tensor_ptr make_tensor_ptr(T value) {
-    return std::make_shared<dio::AnyTensor>(std::make_shared<dio::Tensor<T>>(value));
+[[maybe_unused]] a_tens make_tensor_ptr(T value) {
+    return dio::AnyTensor(std::make_shared<dio::Tensor<T>>(value));
 }
 
 
 template<typename T>
-[[maybe_unused]] tensor_ptr make_tensor_ptr(const std::vector<T>& data, const std::vector<size_t>& shape) {
-    return std::make_shared<dio::AnyTensor>(std::make_shared<dio::Tensor<T>>(data, shape));
+[[maybe_unused]] a_tens make_tensor_ptr(const std::vector<T>& data, const std::vector<size_t>& shape) {
+    return dio::AnyTensor(std::make_shared<dio::Tensor<T>>(data, shape));
+}
+
+template<typename T>
+AnyTensor AnyTensor::add(const T scalar) const {
+    auto other = AnyTensor(scalar);
+    return add(other);
+}
+
+template<typename T>
+AnyTensor AnyTensor::subtract(const T scalar) const {
+    auto other = AnyTensor(scalar);
+    return subtract(other);
+}
+
+template<typename T>
+AnyTensor AnyTensor::multiply(const T scalar) const {
+    auto other = AnyTensor(scalar);
+    return multiply(other);
+}
+
+template<typename T>
+AnyTensor AnyTensor::divide(const T scalar) const {
+    auto other = AnyTensor(scalar);
+    return subtract(other);
 }
 
 

@@ -2,7 +2,7 @@
 use iso_c_binding
 
 type, bind(C) :: TensorHandle
-    type(C_PTR) :: tensor_ptr
+    type(C_PTR) :: a_tens
     character(C_CHAR) :: type_code
 end type TensorHandle
 

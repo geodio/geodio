@@ -7,7 +7,7 @@
 
 namespace dio {
 
-using tensor = tensor_ptr;
+using tensor = a_tens;
 
 using ForwardFunc = std::function<tensor(
     const std::vector<tensor>& inputs)>;

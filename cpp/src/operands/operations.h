@@ -3,33 +3,33 @@
 
 namespace dio {
 
-tensor_ptr add_forward (const std::vector<tensor_ptr>& inputs);
+a_tens add_forward (const std::vector<a_tens>& inputs);
 
-std::vector<tensor_ptr> add_backward(
-        const std::vector<tensor_ptr>& inputs,
-        const tensor_ptr& upstream_gradient,
-        const tensor_ptr& /*forward_output*/);
+std::vector<a_tens> add_backward(
+        const std::vector<a_tens>& inputs,
+        const a_tens& upstream_gradient,
+        const a_tens& /*forward_output*/);
 
-tensor_ptr multiply_forward (const std::vector<tensor_ptr>& inputs);
+a_tens multiply_forward (const std::vector<a_tens>& inputs);
 
-std::vector<tensor_ptr> multiply_backward(
-        const std::vector<tensor_ptr>& inputs,
-        const tensor_ptr& upstream_gradient,
-        const tensor_ptr& /*forward_output*/);
+std::vector<a_tens> multiply_backward(
+        const std::vector<a_tens>& inputs,
+        const a_tens& upstream_gradient,
+        const a_tens& /*forward_output*/);
 
-tensor_ptr sigmoid_forward (const std::vector<tensor_ptr>& inputs);
+a_tens sigmoid_forward (const std::vector<a_tens>& inputs);
 
-std::vector<tensor_ptr> sigmoid_backward(
-        const std::vector<tensor_ptr>& inputs,
-        const tensor_ptr& upstream_gradient,
-        const tensor_ptr& /*forward_output*/);
+std::vector<a_tens> sigmoid_backward(
+        const std::vector<a_tens>& inputs,
+        const a_tens& upstream_gradient,
+        const a_tens& /*forward_output*/);
 
-tensor_ptr linear_forward (const std::vector<tensor_ptr>& inputs);
+a_tens linear_forward (const std::vector<a_tens>& inputs);
 
-std::vector<tensor_ptr> linear_backward(
-    const std::vector<tensor_ptr>& inputs,
-    const tensor_ptr& upstream_gradient,
-    const tensor_ptr& /*forward_output*/);
+std::vector<a_tens> linear_backward(
+    const std::vector<a_tens>& inputs,
+    const a_tens& upstream_gradient,
+    const a_tens& /*forward_output*/);
 
 
 void initialize_operations();

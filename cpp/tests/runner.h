@@ -11,6 +11,8 @@ void run_tensor_db();
 
 void run_execution_engine();
 
+void run_slicing();
+
 void run_all();
 
 #endif //GEODIO_RUNNER_H
