@@ -173,17 +173,18 @@ void ExecutionEngine::optimize(ComputationalGraph& graph, const a_tens& input_da
             // Get batch data
             const a_tens batch_input = input_data.slice({Slice(batch * batch_size, (batch + 1) * batch_size)});
             a_tens batch_target = target_data.slice({Slice(batch * batch_size, (batch + 1) * batch_size)});
-            std::cout << "INPUT" << batch_input.get<float>() << std::endl;
-            std::cout << "TARGET" << batch_target.get<float>() << std::endl;
+            std::cout << "INPUT: " << batch_input.get<float>() << std::endl;
+            std::cout << "    TARGET: " << batch_target.get<float>() << std::endl;
             // Forward pass
             a_tens prediction = forward(graph, graph.root_id, {batch_input});
 
             // Compute loss
             a_tens loss = LossFunctions::compute_loss(prediction, batch_target, loss_function);
-            std::cout << "PREDICTION" << prediction.get<float>() << std::endl;
-            std::cout << "LOSS" << loss.get<float>() << std::endl;
+            a_tens loss_grad = LossFunctions::compute_loss_gradient(prediction, batch_target, loss_function);
+            std::cout << "    PREDICTION: " << prediction.get<float>() << std::endl;
+            std::cout << "    LOSS: " << loss.get<float>() << std::endl;
             // Backward pass
-            backward(graph, graph.root_id, loss, {batch_input});
+            backward(graph, graph.root_id, loss_grad, {batch_input});
 
             // Update weights
             for (auto &[operand_id, gradient]: graph.gradients) {
@@ -193,6 +194,7 @@ void ExecutionEngine::optimize(ComputationalGraph& graph, const a_tens& input_da
                 }
             }
         }
+        std::cout << std::endl;
     }
 }
 

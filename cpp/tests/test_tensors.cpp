@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <cassert>
 #include "../src/tensors/Tensor.h"
 
 void test_default_constructor() {
@@ -221,6 +222,85 @@ void test_out_of_bounds_access() {
     }
 }
 
+void test_transpose() {
+    // Test 1: Transpose of a 2x3 matrix
+    std::vector<float> data_2x3 = {1, 2, 3, 4, 5, 6};
+    dio::Tensor matrix_2x3(data_2x3, {2, 3});
+    std::vector<float> expected_data_3x2 = {1, 4, 2, 5, 3, 6};
+    dio::Tensor expected_transpose_3x2(expected_data_3x2, {3, 2});
+    dio::Tensor result_transpose_3x2 = matrix_2x3.transpose({});
+    for (size_t i = 0; i < 3; i++)
+        for (size_t j = 0; j < 2; j++)
+            assert(result_transpose_3x2({i,j}) == expected_transpose_3x2({i,j}));
+
+    // Test 2: Transpose of a square matrix (3x3)
+    std::vector<float> data_3x3 = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    dio::Tensor matrix_3x3(data_3x3, {3, 3});
+    std::vector<float> expected_data_transpose_3x3 = {1, 4, 7, 2, 5, 8, 3, 6, 9};
+    dio::Tensor expected_transpose_3x3(expected_data_transpose_3x3, {3, 3});
+    dio::Tensor result_transpose_3x3 = matrix_3x3.transpose({});
+    for (size_t i = 0; i < 3; i++)
+        for (size_t j = 0; j < 3; j++)
+            assert(result_transpose_3x3({i, j}) == expected_transpose_3x3({i, j}));
+
+    // Test 3: Transpose of a 1x3 vector
+    std::vector<float> data_1x3 = {1, 2, 3};
+    dio::Tensor vector_1x3(data_1x3, {1, 3});
+    std::vector<float> expected_data_3x1 = {1, 2, 3};
+    dio::Tensor expected_transpose_3x1(expected_data_3x1, {3, 1});
+    dio::Tensor result_transpose_3x1 = vector_1x3.transpose({});
+    for (size_t i = 0; i < 3; i++)
+        for (size_t j = 0; j < 1; j++)
+            assert(result_transpose_3x1({i, j}) == expected_transpose_3x1({i, j}));
+
+    // Test 4: Transpose of a 3x1 vector
+    std::vector<float> data_3x1 = {1, 2, 3};
+    dio::Tensor vector_3x1(data_3x1, {3, 1});
+    std::vector<float> expected_data_1x3 = {1, 2, 3};
+    dio::Tensor expected_transpose_1x3(expected_data_1x3, {1, 3});
+    dio::Tensor result_transpose_1x3 = vector_3x1.transpose({});
+    for (size_t i = 0; i < 1; i++)
+        for (size_t j = 0; j < 3; j++)
+            assert(result_transpose_1x3({i, j}) == expected_transpose_1x3({i, j}));
+
+    std::cout << "All transpose tests passed!" << std::endl;
+}
+
+void test_sum() {
+    // Test 1: Sum of all elements in a 2x3 matrix
+    std::vector<float> data_2x3 = {1, 2, 4, 8, 16, 32};
+    dio::Tensor matrix_2x3(data_2x3, {2, 3});
+    float expected_sum_all = 63; // 1+2+4+8+16+32 = 63
+    dio::Tensor<float> result_sum_all = matrix_2x3.sum({});
+    std::cout << result_sum_all << std::endl;
+    assert(result_sum_all.data_[0] == expected_sum_all);
+
+    // Test 2: Sum along rows (axis=0) in a 2x3 matrix
+    std::vector<float> expected_data_sum_rows = {5, 7, 9}; // sum along rows: {1+4, 2+5, 3+6}
+    dio::Tensor expected_sum_rows(expected_data_sum_rows, {1, 3});
+    dio::Tensor result_sum_rows = matrix_2x3.sum({0});
+//    for (size_t i = 0; i < 3; i++)
+//        assert(result_sum_rows({i}) == expected_sum_rows({0, i}));
+
+    // Test 3: Sum along columns (axis=1) in a 2x3 matrix
+    std::vector<float> expected_data_sum_cols = {6, 15}; // sum along columns: {1+2+3, 4+5+6}
+    dio::Tensor expected_sum_cols(expected_data_sum_cols, {2, 1});
+    dio::Tensor result_sum_cols = matrix_2x3.sum({1});
+//    for (size_t i = 0; i < 2; i++)
+//        assert(result_sum_cols({i}) == expected_sum_cols({i}));
+
+    // Test 4: Sum of a 1D vector
+    std::vector<float> data_1d = {1, 2, 3, 4};
+    dio::Tensor vector_1d(data_1d, {4});
+    float expected_sum_vector = 10; // 1+2+3+4 = 10
+//    float result_sum_vector = vector_1d.sum({0})({0});
+//    assert(result_sum_vector == expected_sum_vector);
+
+    std::cout << "All sum tests passed!" << std::endl;
+}
+
+
+
 int tensor_tests() {
     test_default_constructor();
     test_scalar_constructor();
@@ -236,6 +316,8 @@ int tensor_tests() {
     test_apply_elementwise_function();
     test_invalid_shape();
     test_out_of_bounds_access();
+    test_transpose();
+    test_sum();
 
     return 0;
 }

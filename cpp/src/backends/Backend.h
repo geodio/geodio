@@ -20,8 +20,11 @@ namespace dio {
         virtual void copy_to_host(T* host_ptr, const T* device_ptr, size_t size) = 0;
 
         // Numerical operations between two tensors
-        template<typename U>
-        void matmul(const T* a, const U* b, typename std::common_type<T, U>::type* result, size_t m,size_t n,size_t k);
+        template<typename U, typename R>
+        void matmul(const T* a, const U* b, R* result,
+                               size_t m, size_t n, size_t k,
+                               const std::vector<size_t>& strides_a,
+                               const std::vector<size_t>& strides_b);
 
         template<typename U>
         void apply_unary_function(const T* a, U* result, std::function<U(T)> func, size_t size);
@@ -62,15 +65,25 @@ namespace dio {
     }
 
     template<typename T>
-    template<typename U>
-    void Backend<T>::matmul(const T* a, const U* b, typename std::common_type<T, U>::type* result, size_t m,size_t n,size_t k) {
-    #pragma omp parallel for
+    template<typename U, typename R>
+    void Backend<T>::matmul(const T* a, const U* b, R* result,
+                               size_t m, size_t n, size_t k,
+                               const std::vector<size_t>& strides_a,
+                               const std::vector<size_t>& strides_b) {
+        // A is (m x n), B is (n x k), result is (m x k)
+
+        #pragma omp parallel for
         for (size_t i = 0; i < m; ++i) {
             for (size_t j = 0; j < k; ++j) {
-                result[i * k + j] = 0;
+                R sum = 0;
                 for (size_t p = 0; p < n; ++p) {
-                    result[i * k + j] += a[i * n + p] * b[p * k + j];
+                    // Compute indices for A and B, considering strides and possible broadcasting
+                    size_t idx_a = i * strides_a[0] + p * strides_a[1];
+                    size_t idx_b = p * strides_b[0] + j * strides_b[1];
+
+                    sum += a[idx_a] * b[idx_b];
                 }
+                result[i * k + j] = sum;
             }
         }
     }

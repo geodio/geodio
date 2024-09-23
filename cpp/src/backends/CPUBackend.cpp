@@ -32,18 +32,29 @@ namespace dio {
 
     // Matrix multiplication of two tensors
     template<typename T>
-    template<typename U>
-    void CPUBackend<T>::matmul(const T* a, const U* b, typename std::common_type<T, U>::type* result, size_t m,size_t n,size_t k) {
+    template<typename U, typename R>
+    void CPUBackend<T>::matmul(const T* a, const U* b, R* result,
+                               size_t m, size_t n, size_t k,
+                               const std::vector<size_t>& strides_a,
+                               const std::vector<size_t>& strides_b) {
+        // A is (m x n), B is (n x k), result is (m x k)
+
         #pragma omp parallel for
         for (size_t i = 0; i < m; ++i) {
             for (size_t j = 0; j < k; ++j) {
-                result[i * k + j] = 0;
+                R sum = 0;
                 for (size_t p = 0; p < n; ++p) {
-                    result[i * k + j] += a[i * n + p] * b[p * k + j];
+                    // Compute indices for A and B, considering strides and possible broadcasting
+                    size_t idx_a = i * strides_a[0] + p * strides_a[1];
+                    size_t idx_b = p * strides_b[0] + j * strides_b[1];
+
+                    sum += a[idx_a] * b[idx_b];
                 }
+                result[i * k + j] = sum;
             }
         }
     }
+
 
     template<typename T>
     template<typename U, typename R>
@@ -52,20 +63,20 @@ namespace dio {
                                           size_t total_size, const std::vector<size_t>& result_shape,
                                           const std::vector<size_t>& adjusted_strides1,
                                           const std::vector<size_t>& adjusted_strides2) {
-    // Perform the operation
-    #pragma omp parallel for
-    for (size_t i = 0; i < total_size; ++i) {
-        size_t idx1 = 0, idx2 = 0;
-        size_t idx = i;
-        for (int dim = static_cast<int>(result_shape.size()) - 1; dim >= 0; --dim) {
-            size_t index = idx % result_shape[dim];
-            idx /= result_shape[dim];
-            idx1 += adjusted_strides1[dim] * index;
-            idx2 += adjusted_strides2[dim] * index;
+        // Perform the operation
+        #pragma omp parallel for
+        for (size_t i = 0; i < total_size; ++i) {
+            size_t idx1 = 0, idx2 = 0;
+            size_t idx = i;
+            for (int dim = static_cast<int>(result_shape.size()) - 1; dim >= 0; --dim) {
+                size_t index = idx % result_shape[dim];
+                idx /= result_shape[dim];
+                idx1 += adjusted_strides1[dim] * index;
+                idx2 += adjusted_strides2[dim] * index;
+            }
+            result[i] = func(a[idx1], b[idx2]);
         }
-        result[i] = func(a[idx1], b[idx2]);
     }
-}
 
 template<typename T>
 template<typename R>

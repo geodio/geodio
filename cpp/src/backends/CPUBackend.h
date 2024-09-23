@@ -14,8 +14,11 @@ namespace dio {
         void copy_to_device(T* device_ptr, const T* host_ptr, size_t size) override;
         void copy_to_host(T* host_ptr, const T* device_ptr, size_t size) override;
 
-        template<typename U>
-        void matmul(const T* a, const U* b, typename std::common_type<T, U>::type* result, size_t m,size_t n,size_t k);
+        template<typename U, typename R>
+        void matmul(const T* a, const U* b, R* result,
+                               size_t m, size_t n, size_t k,
+                               const std::vector<size_t>& strides_a,
+                               const std::vector<size_t>& strides_b);
 
         // Virtual function for elementwise operation with generic pointers
         void elementwise_operation_generic(const void* a, const void* b, void* result,

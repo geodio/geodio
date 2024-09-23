@@ -31,16 +31,16 @@ int optimize(){
     graph.weights[b_id] = dio::make_tensor_ptr<float>({0.0f}, {1});
 
     // Define input and target data
-    std::vector<float> input_vector({1.0f, 0.0f, 0.0f, 0.0f});
-    dio::a_tens input_data = dio::AnyTensor(input_vector, {2, 2});
-    std::vector<float> target_vector({1.0f, 0.0f});
-    dio::a_tens target_data = dio::AnyTensor(target_vector, {2, 1});
+    std::vector<float> input_vector({1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f,});
+    dio::a_tens input_data = dio::AnyTensor(input_vector, {6, 2});
+    std::vector<float> target_vector({1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f});
+    dio::a_tens target_data = dio::AnyTensor(target_vector, {6, 1});
 
     // Set optimization arguments
     dio::OptimizationArgs args;
     args.set("learning_rate", 0.01f);
-    args.set("batch_size", 2);
-    args.set("max_epoch", 100);
+    args.set("batch_size", 1);
+    args.set("max_epoch", 300);
     args.set("loss_function", dio::LossFunction::MeanSquaredError);
     args.set("gradient_regularizer", dio::GradientRegularizer::Adam);
 

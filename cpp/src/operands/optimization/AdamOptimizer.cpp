@@ -23,6 +23,8 @@ namespace dio {
         // Update weights
         std::function<float (float)> func = [this](float x) { return std::sqrt(x) + epsilon_; };
         auto r = weights - m_hat.multiply(learning_rate_).divide(v_hat.apply_unary(func));
+        std::cout << "        [ORIGINAL WEIGHT: " << weights.get<float>() << std::endl;
+        std::cout << "        GRADIENT: " << gradient.get<float>() << "]" << std::endl;
         return r;
     }
 } // dio

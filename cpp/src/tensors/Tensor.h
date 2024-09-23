@@ -26,6 +26,13 @@
 
 namespace dio {
 
+    std::vector<size_t> compute_strides_for_shape(const std::vector<size_t>& shape);
+
+    std::vector<size_t> compute_broadcast_strides(
+        const std::vector<size_t>& original_strides,
+        const std::vector<size_t>& original_shape,
+        const std::vector<size_t>& broadcasted_shape);
+
     template<typename T>
     class Tensor : public ITensor{
     public:
@@ -169,16 +176,20 @@ namespace dio {
         Tensor<T> copy() const;
 
         // private:
-        std::vector<T> data_;          // Changed from raw pointer to std::vector
+        std::vector<T> data_;           // Changed from raw pointer to std::vector
 
         std::vector<size_t> shape_;
         std::vector<size_t> strides_;
         size_t total_size_;
-        bool is_view_;                        // Flag to indicate if this tensor is a view (slice)
+
+        bool is_view_;                  // Flag to indicate if this tensor is a view (slice)
+
         // For slicing (view)
+        size_t offset_ = 0;
         std::optional<std::reference_wrapper<Tensor<T>>> base_tensor_;
 
-        std::vector<Slice> slices_ {};           // Slice info for each dimension
+        std::vector<Slice> slices_ {};  // Slice info for each dimension
+
         // Helper methods
         void compute_strides();
 
@@ -246,77 +257,107 @@ namespace dio {
     template<typename T>
     std::vector<size_t> Tensor<T>::calculate_base_indices(const std::vector<size_t>& view_indices) const {
         std::vector<size_t> base_indices(view_indices.size());
+
         for (size_t i = 0; i < view_indices.size(); ++i) {
             const Slice& slice = slices_[i];
-            base_indices[i] = slice.start() + view_indices[i] * slice.step();
+            int start = slice.resolve_start(base_tensor_->get().shape()[i]);
+            base_indices[i] = start + view_indices[i] * slice.step();
         }
         return base_indices;
     }
 
-   template<typename T>
+    template<typename T>
     void Tensor<T>::calculate_view() {
-        // Ensure the shape and strides vectors are the same size as the base tensor's shape
-        shape_.resize(base_tensor_->get().shape().size());
-        strides_.resize(base_tensor_->get().strides_.size());
+        shape_.clear();
+        strides_.clear();
 
-        // Loop through all dimensions of the base tensor
-        for (size_t i = 0; i < base_tensor_->get().shape().size(); ++i) {
+        size_t num_dimensions = base_tensor_->get().shape().size();
+        offset_ = 0;  // Reset the offset
+
+        // Handle case where fewer slices are provided than there are dimensions
+        for (size_t i = 0; i < num_dimensions; ++i) {
             if (i < slices_.size()) {
-                // If there's a slice for this dimension, apply it
-                const Slice& slice = slices_[i];
-                shape_[i] = (slice.end() - slice.start() + slice.step() - 1) / slice.step();  // Handle rounding up
-                strides_[i] = base_tensor_->get().strides()[i] * slice.step();
+                const auto& slice = slices_[i];
+
+                // Resolve start and end indices
+                int start = slice.resolve_start(base_tensor_->get().shape()[i]);
+                int end = slice.resolve_end(base_tensor_->get().shape()[i]);
+
+                // Adjust for negative indices AFTER knowing the shape
+                if (start < 0) {
+                    start += base_tensor_->get().shape()[i];
+                }
+                if (end < 0) {
+                    end += base_tensor_->get().shape()[i];
+                }
+
+                // Check for out-of-bounds indices
+                if (start < 0 || end < 0 || start >= base_tensor_->get().shape()[i] || end > base_tensor_->get().shape()[i]) {
+                    throw std::out_of_range("Slice index out of range");
+                }
+
+                // Calculate the offset in the flattened array
+                offset_ += start * base_tensor_->get().strides()[i];
+
+                // Set the new shape and strides for the view
+                shape_.push_back(end - start);
+                strides_.push_back(base_tensor_->get().strides()[i] * slice.step());
             } else {
-                // If no slice is provided, keep the original dimension's size and stride
-                shape_[i] = base_tensor_->get().shape()[i];
-                strides_[i] = base_tensor_->get().strides()[i];
+                // If no slice is provided for this dimension, treat it as an empty slice (full range)
+                shape_.push_back(base_tensor_->get().shape()[i]);
+                strides_.push_back(base_tensor_->get().strides()[i]);
             }
         }
 
-        // Calculate the total size for the view based on the updated shape
-        total_size_ = compute_size(shape_);
+        // Note: No need to adjust data_ directly. The data pointer remains empty in the view.
     }
 
-
     // Implementation of methods (included in header due to templates)
-
     // Element access (multi-dimensional indexing)
     template<typename T>
     T& Tensor<T>::operator()(const std::vector<size_t>& indices) {
-        if (is_view_) {
-            // Calculate base indices from slice view and access base tensor
-            std::vector<size_t> base_indices = calculate_base_indices(indices);
-            return base_tensor_->get().operator()(base_indices);
+        std::vector<size_t> expanded_indices = indices;
+
+        // Automatically handle empty slices by filling missing dimensions with 0
+        while (expanded_indices.size() < shape_.size()) {
+            expanded_indices.push_back(0);
         }
-        if (indices.size() != shape_.size()) {
-            throw std::invalid_argument("Number of indices must match number of dimensions.");
+
+        if (expanded_indices.size() != shape_.size()) {
+            throw std::invalid_argument("Number of indices must match the number of dimensions.");
         }
-        for (size_t i = 0; i < indices.size(); ++i) {
-            if (indices[i] >= shape_[i]) {
-                throw std::out_of_range("Index out of bounds in dimension " + std::to_string(i));
+
+        for (size_t i = 0; i < expanded_indices.size(); ++i) {
+            if (expanded_indices[i] >= shape_[i]) {
+                throw std::out_of_range("Index out of bounds.");
             }
         }
-        size_t index = compute_flat_index(indices, strides_);
-        return data_[index];
+
+        size_t index = compute_flat_index(expanded_indices, strides_);
+        return is_view_ ? base_tensor_->get().data_[index + offset_] : data_[index];
     }
 
     template<typename T>
     const T& Tensor<T>::operator()(const std::vector<size_t>& indices) const {
-        if (is_view_) {
-            // Calculate base indices from slice view and access base tensor
-            const std::vector<size_t> base_indices = calculate_base_indices(indices);
-            return base_tensor_->get().operator()(base_indices);
+        std::vector<size_t> expanded_indices = indices;
+
+        // Automatically handle empty slices by filling missing dimensions with 0
+        while (expanded_indices.size() < shape_.size()) {
+            expanded_indices.push_back(0);
         }
-        if (indices.size() != shape_.size()) {
-            throw std::invalid_argument("Number of indices must match number of dimensions.");
+
+        if (expanded_indices.size() != shape_.size()) {
+            throw std::invalid_argument("Number of indices must match the number of dimensions.");
         }
-        for (size_t i = 0; i < indices.size(); ++i) {
-            if (indices[i] >= shape_[i]) {
-                throw std::out_of_range("Index out of bounds in dimension " + std::to_string(i));
+
+        for (size_t i = 0; i < expanded_indices.size(); ++i) {
+            if (expanded_indices[i] >= shape_[i]) {
+                throw std::out_of_range("Index out of bounds.");
             }
         }
-        size_t index = compute_flat_index(indices, strides_);
-        return data_[index];
+
+        size_t index = compute_flat_index(expanded_indices, strides_);
+        return is_view_ ? base_tensor_->get().data_[index + offset_] : data_[index];
     }
 
     // To string representation
@@ -339,13 +380,23 @@ namespace dio {
         return os;
     }
 
-    // Helper function to print tensor contents recursively
+    // Helper function to print tensor contents recursively, handling both regular and view tensors
     template<typename T>
     void Tensor<T>::print_tensor(std::ostream& os, size_t index, size_t depth) const {
+        // Check if the tensor is a view and adjust the data access accordingly
+        const T* data_ptr;
+        if (is_view_) {
+            // Retrieve data from the base tensor if this is a view
+            data_ptr = base_tensor_->get().data_.data() + offset_;
+        } else {
+            // Use the local data if this is not a view
+            data_ptr = data_.data();
+        }
+
         if (depth == shape_.size() - 1) {
             os << "[";
             for (size_t i = 0; i < shape_[depth]; ++i) {
-                os << data_[index + i];
+                os << data_ptr[index + i];  // Access the correct data pointer
                 if (i < shape_[depth] - 1) {
                     os << ", ";
                 }
@@ -355,7 +406,7 @@ namespace dio {
             os << "[";
             for (size_t i = 0; i < shape_[depth]; ++i) {
                 size_t new_index = index + i * strides_[depth];
-                print_tensor(os, new_index, depth + 1);
+                print_tensor(os, new_index, depth + 1);  // Recursive call for deeper dimensions
                 if (i < shape_[depth] - 1) {
                     os << ", ";
                 }
@@ -381,8 +432,8 @@ namespace dio {
         result.compute_strides();
 
         // Prepare adjusted strides and data pointers
-        const T* data1 = this->data_.data();
-        const U* data2 = other.data_.data();
+        const T* data1 = is_view_ ? base_tensor_->get().data_.data() + offset_ : this->data_.data();
+        const U* data2 = other.is_view_ ? other.base_tensor_->get().data_.data() + other.offset_ : other.data_.data();
         R* result_data = result.data_.data();
 
         auto backend = BackendManager<T>::get_backend();
@@ -457,31 +508,74 @@ namespace dio {
     // Matrix multiplication
     template<typename T>
     template<typename U>
-    [[nodiscard]] Tensor<typename std::common_type<T, U>::type> Tensor<T>::matmul(const Tensor<U>& other) const {
-        if (this->num_dimensions() != 2 || other.num_dimensions() != 2) {
-            throw std::invalid_argument("Both tensors must be 2D for matrix multiplication.");
+    [[nodiscard]] Tensor<typename std::common_type<T, U>::type>
+    Tensor<T>::matmul(const Tensor<U>& other) const {
+        std::vector<size_t> shape1 = shape_;
+        std::vector<size_t> shape2 = other.shape_;
+
+        // For vector handling, add dimension if necessary (1D -> 2D)
+        if (shape1.size() == 1) {
+            shape1.insert(shape1.begin(), 1);  // Treat as row vector
         }
-        if (this->shape_[1] != other.shape_[0]) {
-            throw std::invalid_argument("Inner dimensions must match for matrix multiplication.");
+        if (shape2.size() == 1) {
+            shape2.push_back(1);  // Treat as column vector
         }
+
+        // Check if dimensions allow broadcasting
+        size_t n = shape1.back();  // Shared dimension from (x, n)
+        size_t p = shape2.front(); // Shared dimension from (p, y)
+
+        // Error check for incompatible dimensions where broadcasting isn't possible
+        if (n != p && n != 1 && p != 1) {
+            throw std::invalid_argument("Matrix multiplication dimensions mismatch: "
+                                        "Incompatible shapes " + std::to_string(n) + " and " + std::to_string(p));
+        }
+
+        // Broadcast smaller dimension if possible
+        if (n == 1) {
+            shape1.back() = p; // Broadcast first matrix's trailing dimension
+        } else if (p == 1) {
+            shape2.front() = n; // Broadcast second matrix's leading dimension
+        }
+
+        // Compute adjusted shapes and strides
+        std::vector<size_t> shape_a = shape1;  // Adjusted shape of A after broadcasting
+        std::vector<size_t> shape_b = shape2;  // Adjusted shape of B after broadcasting
+
+        // Adjust strides to account for broadcasting
+        std::vector<size_t> strides_a = compute_broadcast_strides(
+            strides_, shape_, shape_a);
+
+        std::vector<size_t> strides_b = compute_broadcast_strides(
+            other.strides_, other.shape_, shape_b);
+
+        // Compute result shape
+        std::vector<size_t> result_shape = { shape_a[0], shape_b[1] }; // (m, k)
+        size_t m = result_shape[0];  // Number of rows in the result
+        size_t k = result_shape[1];  // Number of columns in the result
+        size_t n_shared = shape_a[1]; // Shared inner dimension
+
+        // Initialize result tensor
         using R = typename std::common_type<T, U>::type;
-
-        size_t m = this->shape_[0];
-        size_t n = this->shape_[1];
-        size_t k = other.shape_[1];
-
         Tensor<R> result;
-        result.shape_ = { m, k };
+        result.shape_ = result_shape;
         result.total_size_ = m * k;
         result.data_.resize(result.total_size_);
-        auto backend = BackendManager<T>::get_backend();
         result.compute_strides();
 
-        const T* data1 = this->data_.data();
-        const U* data2 = other.data_.data();
+        // Prepare data pointers
+        const T* data1 = is_view_ ? base_tensor_->get().data_.data() + offset_ : data_.data();
+        const U* data2 = other.is_view_ ? other.base_tensor_->get().data_.data() + other.offset_ : other.data_.data();
         R* result_data = result.data_.data();
 
-        backend->matmul(data1, data2, result_data, m, n, k);
+        auto backend = BackendManager<T>::get_backend();
+
+        // Use the backend's matrix multiplication
+        backend->template matmul<U, R>(
+            data1, data2, result_data,
+            m, n_shared, k,
+            strides_a, strides_b
+        );
 
         return result;
     }
@@ -496,7 +590,7 @@ namespace dio {
         result.data_.resize(result.total_size_);
         result.compute_strides();
 
-        const T* data_in = this->data_.data();
+        const T* data_in = is_view_ ? base_tensor_->get().data_.data() + offset_ : this->data_.data();
         R* data_out = result.data_.data();
 
         auto backend = BackendManager<T>::get_backend();
@@ -534,6 +628,6 @@ namespace dio {
             adjusted_strides2[i] = (dim2 == 1) ? 0 : other.strides_[(ndim2 > ndim1 ? i : i - (ndim - ndim2))];
         }
     }
-    } // namespace dio
+} // namespace dio
 
 #endif // GEODIO_TENSOR_H
