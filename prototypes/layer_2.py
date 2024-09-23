@@ -7,10 +7,10 @@ import numpy as np
 from core.cell.cell import Cell
 from core.cell.geoo import t_geoo
 from core.cell.operands.stateful import Stateful
-from core.cell.optim.optimizable import OptimizableOperand
-from core.cell.optim.optimization_args import OptimizationArgs
-from core.cell.optim.optimizer import FisherOptimizer
-from core.organism.link import Link
+from core.cell.train.optimizable import OptimizableOperand
+from core.cell.train.optimization_args import OptimizationArgs
+from core.cell.train.optimizer import FisherOptimizer
+from prototypes.link import Link
 
 
 class DistributionPolicy(IntEnum):
@@ -41,7 +41,7 @@ class Layer(OptimizableOperand, Stateful):
     def add_cells(self, cells: List[Cell]):
         self.children.extend(cells)
 
-    def __call__(self, args):
+    def __call__(self, args, meta_args=None):
         outputs = self.call_according_to_policy(args)
         self.update_cells_states(outputs)
         return outputs

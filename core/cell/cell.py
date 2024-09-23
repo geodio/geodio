@@ -1,12 +1,12 @@
 from typing import TypeVar, List, Iterable
 
+from core.cell.operands.function import PassThrough
 from core.cell.geoo import GeneExpressedOptimizableOperand
-from core.cell.operands.stateful import State
 from core.cell.operands.constant import ONE
-from core.cell.operands.operand import Operand
-from core.cell.optim.optimization_args import OptimizationArgs
+from core.cell.operands import Operand
+from core.cell.train.optimization_args import OptimizationArgs
 from core.genetic.pop_utils import ReproductionPolicy
-from core.math import rnd
+from core.cell.math import rnd
 
 
 class Cell(GeneExpressedOptimizableOperand):
@@ -20,10 +20,14 @@ class Cell(GeneExpressedOptimizableOperand):
     def nodes(self):
         return self.root.children
 
-    def __call__(self, args):
+    def __call__(self, args, meta_args=None):
         if not isinstance(args, Iterable):
             args = [args]
-        return self.root(args)
+        return self.forward(args, meta_args)
+
+    def forward(self, x, meta_args=None):
+        self.state = self.root(x, meta_args)
+        return self.state
 
     def replace(self, node_old, node_new):
         self.root.replace_child(node_old, node_new)
@@ -57,7 +61,7 @@ class Cell(GeneExpressedOptimizableOperand):
     def set_weights(self, new_weights):
         self.root.set_weights(new_weights)
 
-    def derive_unchained(self, var_index, by_weights=True):
+    def derive_uncached(self, var_index, by_weights=True):
         derivative_root = self.root.derive(var_index, by_weights)
         derivative = Cell(derivative_root, self.arity, 0)
         return derivative
@@ -84,8 +88,28 @@ class Cell(GeneExpressedOptimizableOperand):
         self.weight_cache = None
         self.derivative_cache = {}
 
+    def __eq__(self, other):
+        if not isinstance(other, Cell):
+            return False
+        return self.root == other.root
+
 
 t_cell = TypeVar('t_cell', bound=Cell)
 t_cell_list = TypeVar('t_cell_list', bound=List[Cell])
 HALLOW_CELL = Cell(ONE, 0, 1)
 HALLOW_CELL.state = 1.0
+
+
+class OCell(Cell):
+    def optimize(self, args: OptimizationArgs):
+        self.optimizer(self, args)
+
+
+class EmptyCell(OCell):
+    def __init__(self, arity):
+        root = PassThrough(arity)
+        super().__init__(root, arity, -1)
+
+    def set_root(self, root: Operand):
+        self.root = root
+        return self

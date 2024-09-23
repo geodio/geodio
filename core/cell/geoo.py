@@ -4,7 +4,7 @@ from typing import TypeVar
 import numpy as np
 
 from core.cell.operands.stateful import Stateful
-from core.cell.optim.optimizable import OptimizableOperand
+from core.cell.train.optimizable import OptimizableOperand
 from core.genetic.pop_utils import ReproductionPolicy
 
 

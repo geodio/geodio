@@ -1,20 +1,22 @@
-from typing import Optional
-
 from core.cell.operands.operand import Operand
+from core.cell.operands.utility import verify_equal_children
 
 
 class Function(Operand):
-    def __init__(self, arity, value, children=None):
+    def __init__(self, arity, value, children=None, is_childless=False):
         super().__init__(arity)
         self.value = value
-        self.children = children if children is not None else []
+        if is_childless:
+            self.children = None
+        else:
+            self.children = children if children is not None else []
+        self.is_childless = is_childless
 
-    def __call__(self, args):
-        func_args = [child(args) for child in self.children]
-        return self.value(*func_args)
-
-    def d(self, var_index) -> Optional[Operand]:
-        return None
+    def __call__(self, args, meta_args=None):
+        if not self.is_childless:
+            func_args = [child(args, meta_args) for child in self.children]
+            return self.value(*func_args)
+        return self.value(*args)
 
     def __invert__(self):
         return None  # Replace with actual inversion logic
@@ -45,6 +47,14 @@ class Function(Operand):
     def derive(self, index, by_weight=True):
         return None
 
+    def __eq__(self, other):
+        if isinstance(other, Function):
+            return (
+                    self.value.__name__ == other.value.__name__ and
+                    verify_equal_children(self, other)
+                    )
+        return False
+
 
 class PassThrough(Operand):
     def __invert__(self):
@@ -53,7 +63,7 @@ class PassThrough(Operand):
     def __init__(self, arity):
         super().__init__(arity)
 
-    def __call__(self, args):
+    def __call__(self, args, meta_args=None):
         return args
 
     def derive(self, index, by_weight=True):
@@ -66,4 +76,37 @@ class PassThrough(Operand):
         return PassThrough(self.arity)
 
     def to_python(self) -> str:
-        return "<->"
+        return "X"
+
+    def __eq__(self, other):
+        return isinstance(other, PassThrough)
+
+
+class Collector(Operand):
+    def __init__(self, arity, children):
+        super().__init__(arity)
+        self.children = children
+
+    def __call__(self, args, meta_args=None):
+        r = [child(args, meta_args) for child in self.children]
+        return r
+
+    def derive(self, index, by_weight=True):
+        return Collector(self.arity, [child.derive(index, by_weight) for child
+                         in (
+                self.children)])
+
+    def set_weights(self, new_weights):
+        raise NotImplementedError
+
+    def clone(self):
+        return Collector(self.arity, [child.clone() for child in self.children])
+
+    def __invert__(self):
+        raise NotImplementedError
+
+    def to_python(self) -> str:
+        return "[" + ', '.join(self.children) + "]"
+
+    def __eq__(self, other):
+        raise NotImplementedError

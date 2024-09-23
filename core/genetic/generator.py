@@ -1,17 +1,17 @@
 import random
 from abc import ABC, abstractmethod
-from typing import Optional, List, Tuple
+from typing import Optional, List
 
-from core.cell.collections.bank import CellBank
+from core.cell.operands import CellBank
 from core.organism.organism import Organism
-from core.math import rnd
+from core.cell.math import rnd
 from core.cell.cell import Cell
 from core.genetic.cell_utils import crossover
-from core.cell.collections.functors import Functors
-from core.cell.operands.function import Function
-from core.cell.operands.operand import Operand
-from core.cell.operands.variable import Variable
-from core.cell.operands.weight import Weight
+from core.cell.operands import BaseFunctions
+from core.cell.operands import Function
+from core.cell.operands import Operand
+from core.cell.operands import Variable
+from core.cell.operands import Weight
 from core.genetic.pop_utils import PopulationProperties, ReproductionPolicy
 
 
@@ -83,7 +83,7 @@ class RandomCellGenerator(NodeBasedCellGenerator):
             return node
 
     def generate_function_node(self, depth):
-        if not isinstance(self.pop_prop.func_set, Functors):
+        if not isinstance(self.pop_prop.func_set, BaseFunctions):
             func = rnd.choice(self.pop_prop.func_set)
             # Number of arguments of the function
             arity = len(func.__code__.co_varnames)

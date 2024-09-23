@@ -1,9 +1,9 @@
 # organism.py
 from typing import List, Dict
 from core.cell.cell import Cell
-from core.cell.optim.optimization_args import OptimizationArgs
+from core.cell.train.optimization_args import OptimizationArgs
 from prototypes.layer_2 import Layer, LayerType
-from core.organism.link import Link
+from prototypes.link import Link
 
 
 class Organism(Cell):
@@ -28,7 +28,7 @@ class Organism(Cell):
     def get_cell_by_id(self, cell_id: int) -> Cell:
         return self.cell_map.get(cell_id)
 
-    def __call__(self, args):
+    def __call__(self, args, meta_args=None):
         for layer in self.layers:
             layer(args)
         return self.layers[-1].get_cell_states()

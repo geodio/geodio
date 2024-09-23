@@ -1,13 +1,15 @@
 from abc import abstractmethod, ABCMeta
 from typing import Union
 
+import numba
 import numpy as np
 from typing_extensions import TypeVar
 
-from core.cell.operands.constant import ONE, ZERO
+from core.cell.operands.constant import ONE, ZERO, Constant
 from core.cell.operands.operand import Operand
 
 
+@numba.jit
 def adapt_shape_and_apply(_w, *args):
     """
     Adapts the shape of _w to match the shape of the first argument in args if they differ.
@@ -50,6 +52,12 @@ def adapt_shape_and_apply(_w, *args):
             return _w, False
 
 
+class LockedException(Exception):
+    def __init__(self, msg: str):
+        self.msg = f"Attempted to alter value of locked weight: {msg}"
+        super().__init__(self.msg)
+
+
 class AbsWeight(Operand, metaclass=ABCMeta):
 
     def __init__(self, adaptive_shape=False):
@@ -64,10 +72,10 @@ class AbsWeight(Operand, metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get(self) -> Union[np.ndarray, float]:
+    def get(self, **kwargs) -> Union[np.ndarray, float]:
         pass
 
-    def __call__(self, args):
+    def __call__(self, args, meta_args=None):
         _w = self.get()
         if self.adaptive_shape and not self.adapted:
             _w, b = adapt_shape_and_apply(_w, *args)
@@ -83,6 +91,8 @@ class AbsWeight(Operand, metaclass=ABCMeta):
         return [self]
 
     def set_weights(self, new_weights):
+        if self._locked:
+            raise LockedException(self.to_python())
         new_weight = new_weights[0]
         self.set(new_weight)
 
@@ -109,11 +119,11 @@ class AbsWeight(Operand, metaclass=ABCMeta):
 
     is_locked = property(lambda self: self._locked)
 
-    def get_output_dim(self):
-        if np.isscalar(self.get()):
-            return 0
-        else:
-            return self.get().shape
+    def __eq__(self, other):
+        if isinstance(other, AbsWeight):
+            return (self.w_index == other.w_index and self.get() ==
+                    other.get() and self._locked == other._locked and
+                    self.adapted == other.adapted)
 
 
 class Weight(AbsWeight):
@@ -150,7 +160,7 @@ class Weight(AbsWeight):
     def to_python(self) -> str:
         return str(self.__weight)
 
-    def get(self):
+    def get(self, **kwargs):
         return self.__weight
 
     def set(self, weight: Union[np.ndarray, float, 't_weight']):
@@ -162,3 +172,53 @@ class Weight(AbsWeight):
 
 ZERO_WEIGHT = Weight(0)
 t_weight = TypeVar('t_weight', bound=AbsWeight)
+
+
+class ShapedWeight(AbsWeight):
+    def __init__(self, shape, weight: Union[np.ndarray, float] = None):
+        super().__init__(adaptive_shape=False)
+        self.shape = shape
+        if weight is None:
+            self.__weight = np.zeros(shape)
+        else:
+            self.set(weight)
+
+    def set(self, weight: Union[np.ndarray, float, 't_weight']):
+        if isinstance(weight, AbsWeight):
+            weight = weight.get()
+        if isinstance(weight, np.ndarray):
+            if weight.shape != self.shape:
+                raise ValueError(f"Weight shape {weight.shape} does not "
+                                 f"match required shape {self.shape}.")
+            self.__weight = weight
+        else:
+            self.__weight = np.full(self.shape, weight)
+
+    def get(self, **kwargs) -> np.ndarray:
+        return self.__weight
+
+    def d(self, var_index):
+        derivative = ShapedWeight(self.shape, np.zeros(self.shape))
+        derivative.lock()
+        return derivative
+
+    def d_w(self, dw):
+        if self.w_index == dw:
+            derivative = ShapedWeight(self.shape, np.ones(self.shape))
+        else:
+            derivative = ShapedWeight(self.shape, np.zeros(self.shape))
+        derivative.lock()
+        return derivative
+
+    def derive(self, index, by_weights=True):
+        if by_weights:
+            return self.d_w(index)
+        return self.d(index)
+
+    def clone(self) -> 'ShapedWeight':
+        sw = ShapedWeight(self.shape, np.copy(self.__weight))
+        sw.w_index = self.w_index
+        return sw
+
+    def to_python(self) -> str:
+        return str(self.__weight.shape)

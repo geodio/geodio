@@ -1,11 +1,11 @@
 from unittest import TestCase
 
 from core.cell.cell import Cell
-from core.cell.collections.builtin_functors import Prod, Add, Power
+from core.cell import Prod, Add, Power
 from core.cell.operands.constant import Constant
 from core.cell.operands.variable import Variable
 from core.cell.operands.weight import Weight
-from core.organism.router import Router
+from prototypes.router import Router
 
 
 class TestRouter(TestCase):

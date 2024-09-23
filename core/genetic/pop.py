@@ -3,8 +3,10 @@ import threading
 
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+from core import logger
 from core.cell.cell import Cell
-from core.cell.optim.loss import LossFunction
+from core.cell.train.loss import LossFunction
 from core.genetic.generator import RandomCellGenerator
 from core.genetic.pop_utils import PopulationProperties, ReproductionPolicy
 
@@ -14,7 +16,7 @@ lock = threading.Lock()
 def evolve_individual(cell: Cell, x, y, fitness_func, age_benefit,
                       optimize=True, max_iterations=100, min_error=10):
     if cell is None or cell.root is None:
-        print("ERROR")
+        logger.logging.error("Cannot evolve empty cell")
     try:
         if optimize:
             cell.optimize_values(fitness_func, x, y,
@@ -41,7 +43,8 @@ def evolve_individual(cell: Cell, x, y, fitness_func, age_benefit,
 class Pop:
     def __init__(self, pop_size, func_set, term_set, max_depth, arity,
                  kill_rate=0.3, crossover_rate=0.8, mutation_rate=0.2,
-                 age_benefit=1e-8, generator=None, optimize=False):
+                 age_benefit=1e-8, generator=None, optimize=False,
+                 min_error=10):
         self.generations = 0
         self.pop_prop = PopulationProperties(pop_size, func_set, term_set,
                                              max_depth, arity)
@@ -56,6 +59,7 @@ class Pop:
         self.optimize = optimize
         self.mark_ratio = self.kill_rate / np.sqrt(
             self.pop_prop.population_size)
+        self.min_error = min_error
 
     def initialize_population(self):
         pop = self.generator.new_offspring_list(self.pop_prop.population_size)
@@ -69,7 +73,8 @@ class Pop:
                     cell, x, y,
                     fitness_func,
                     self.age_benefit,
-                    self.optimize, self.generations
+                    self.optimize, self.generations,
+                    self.min_error
                 ): cell for cell in self.population
             }
             for future in as_completed(futures):
@@ -84,8 +89,8 @@ class Pop:
             x.reproduction_policy = ReproductionPolicy.CROSSOVER
 
     def get_best_individuals(self, size):
-        sorted_population = sorted(self.population, key=lambda indi:
-        indi.error)[:size]
+        sorted_population = sorted(
+            self.population, key=lambda indi: indi.error)[:size]
         sorted_population.extend([ind for ind in self.population if
                                   ind.error < 1])
         return sorted_population
@@ -144,9 +149,9 @@ class Pop:
             self.mutate_middle()
             self.evaluate_population(x, y, fitness_func)
             if gen % 20 == 0:
-                print(f"====GENERATION {gen}====")
+                logger.logging.debug(f"====GENERATION {gen}====")
                 best_ind, best_fit = self.get_best_ind()
-                print(best_ind)
+                logger.logging.debug(best_ind)
                 if best_fit < 1e-5:
                     break
         best_ind, best_fit = self.get_best_ind()
