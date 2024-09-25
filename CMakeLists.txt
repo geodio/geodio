@@ -50,4 +50,5 @@ add_executable(geodio
         cpp/tests/test_slice_mem.cpp
         cpp/tests/test_slice_mem.h
         cpp/src/tensors/ITensor.cpp
+        cpp/src/utils/VectorGenerator.h
 )

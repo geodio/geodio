@@ -61,20 +61,6 @@ std::vector<a_tens> sigmoid_backward(
 }
 
 
-a_tens lt_forward (const std::vector<a_tens>& inputs) {
-    auto tensor_result = (inputs[0].multiply(inputs[1]));
-    auto result = AnyTensor(tensor_result);
-    return result;
-}
-
-std::vector<a_tens> lt_backward(
-        const std::vector<a_tens>& inputs,
-        const a_tens& upstream_gradient,
-        const a_tens& forward_output) {
-   return {upstream_gradient, upstream_gradient};
-}
-
-
 a_tens linear_forward(
     const std::vector<a_tens>& inputs) {
     const auto& input = inputs[0];

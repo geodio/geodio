@@ -14,31 +14,37 @@
 
 namespace dio {
 
-class AnyTensor {
+    static const std::type_index TYPE_FLOAT = typeid(float);
+
+    static const std::type_index TYPE_DOUBLE = typeid(double);
+
+    static const std::type_index TYPE_INT = typeid(int);
+
+    class AnyTensor {
 public:
     AnyTensor() = default;
 
     // Constructor that takes ownership of the tensor pointer
     template<typename T>
     explicit AnyTensor(std::shared_ptr<Tensor<T>> tensor)
-        : tensor_ptr_(std::move(tensor)) {}
+        : tensor_ptr_(std::move(tensor)), type_index_(typeid(T)) {}
 
     // Constructor from vector and shape
     template<typename T>
     explicit AnyTensor(const std::vector<T> &data, const std::vector<size_t> &shape)
-    :tensor_ptr_(std::make_shared<dio::Tensor<T>>(data, shape)) {}
+    :tensor_ptr_(std::make_shared<dio::Tensor<T>>(data, shape)), type_index_(typeid(T)) {}
 
     // Constructor for scalar tensors
     template<typename T>
-    explicit AnyTensor(const T &value):tensor_ptr_(std::make_shared<dio::Tensor<T>>(value)) {}
+    explicit AnyTensor(const T &value):tensor_ptr_(std::make_shared<dio::Tensor<T>>(value)), type_index_(typeid(T)) {}
 
     // Copy constructor
     AnyTensor(const AnyTensor& other)
-        : tensor_ptr_(other.tensor_ptr_) {}
+        : tensor_ptr_(other.tensor_ptr_), type_index_(other.type_index_) {}
 
     // Move constructor
     AnyTensor(AnyTensor&& other) noexcept
-        : tensor_ptr_(std::move(other.tensor_ptr_)) {}
+        : tensor_ptr_(std::move(other.tensor_ptr_)), type_index_(other.type_index_) {}
 
     // Assignment operator
     AnyTensor& operator=(const AnyTensor& other) {
@@ -73,12 +79,17 @@ public:
     }
 
     // Retrieve the tensor as its original type
-    template<typename T>
+   template<typename T>
     [[nodiscard]] Tensor<T>& get() const {
         if (!tensor_ptr_) {
-            throw std::runtime_error("AnyTensor is empty");
+            throw std::runtime_error("Error: Attempted to access an empty AnyTensor. The tensor is uninitialized.");
         }
-        auto casted_ptr = std::dynamic_pointer_cast<Tensor<T>>(tensor_ptr_);
+        if (type_index_ != typeid(T)) {
+            throw std::runtime_error("Error: Type mismatch in AnyTensor. Expected type '" +
+                std::string(typeid(T).name()) + "', but actual stored type is '" +
+                std::string(type_index_.name()) + "'.");
+        }
+        auto casted_ptr = std::static_pointer_cast<Tensor<T>>(tensor_ptr_);
         if (!casted_ptr) {
             throw std::bad_cast();
         }
@@ -91,12 +102,12 @@ public:
         if (!tensor_ptr_) {
             return false;
         }
-        return tensor_ptr_->type_info() == typeid(T);
+        return type_index_ == typeid(T);
     }
 
     // Get the stored type index
     [[nodiscard]] std::type_index type_index() const {
-        return std::type_index(type());
+        return type_index_;
     }
 
     // Apply binary operation with another AnyTensor
@@ -163,7 +174,7 @@ public:
 
 private:
     std::shared_ptr<ITensor> tensor_ptr_;
-
+    std::type_index type_index_ = TYPE_FLOAT;
 };
 
 using a_tens = AnyTensor;
@@ -182,13 +193,28 @@ enum class TensorType {
     Unknown
 };
 
+
+
 // Helper function to map type_info to TensorType
 inline TensorType getTensorType(const std::type_info& type_info) {
-    if (type_info == typeid(float)) {
+    std::type_index t_i = {type_info};
+    if (t_i == TYPE_FLOAT) {
         return TensorType::Float;
-    } else if (type_info == typeid(double)) {
+    } else if (t_i == TYPE_DOUBLE) {
         return TensorType::Double;
-    } else if (type_info == typeid(int)) {
+    } else if (t_i == TYPE_INT) {
+        return TensorType::Int;
+    } else {
+        return TensorType::Unknown;
+    }
+}
+
+inline TensorType getTensorType(const std::type_index& t_i) {
+    if (t_i == TYPE_FLOAT) {
+        return TensorType::Float;
+    } else if (t_i == TYPE_DOUBLE) {
+        return TensorType::Double;
+    } else if (t_i == TYPE_INT) {
         return TensorType::Int;
     } else {
         return TensorType::Unknown;
@@ -291,8 +317,8 @@ inline AnyTensor AnyTensor::apply(const AnyTensor& other, ApplyType apply_type,
         throw std::runtime_error("Cannot apply empty AnyTensors");
     }
 
-    TensorType type1 = getTensorType(this->type());
-    TensorType type2 = getTensorType(other.type());
+    TensorType type1 = getTensorType(this->type_index());
+    TensorType type2 = getTensorType(other.type_index());
 
     if (type1 == TensorType::Unknown || type2 == TensorType::Unknown) {
         throw std::runtime_error("Unsupported tensor type in application");

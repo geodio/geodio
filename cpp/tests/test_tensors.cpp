@@ -273,7 +273,7 @@ void test_sum() {
     float expected_sum_all = 63; // 1+2+4+8+16+32 = 63
     dio::Tensor<float> result_sum_all = matrix_2x3.sum({});
     std::cout << result_sum_all << std::endl;
-    assert(result_sum_all.data_[0] == expected_sum_all);
+    assert(result_sum_all.get_data()[0] == expected_sum_all);
 
     // Test 2: Sum along rows (axis=0) in a 2x3 matrix
     std::vector<float> expected_data_sum_rows = {5, 7, 9}; // sum along rows: {1+4, 2+5, 3+6}

@@ -175,23 +175,23 @@ namespace dio {
 
         Tensor<T> copy() const;
 
-        // private:
         std::vector<T> data_;           // Changed from raw pointer to std::vector
-
         std::vector<size_t> shape_;
+
         std::vector<size_t> strides_;
         size_t total_size_;
-
         bool is_view_;                  // Flag to indicate if this tensor is a view (slice)
 
         // For slicing (view)
         size_t offset_ = 0;
-        std::optional<std::reference_wrapper<Tensor<T>>> base_tensor_;
 
+        std::optional<std::reference_wrapper<Tensor<T>>> base_tensor_;
         std::vector<Slice> slices_ {};  // Slice info for each dimension
 
         // Helper methods
         void compute_strides();
+
+    private:
 
         [[nodiscard]] std::vector<size_t> compute_broadcast_shape(
         const std::vector<size_t>& shape1, const std::vector<size_t>& shape2) const;
