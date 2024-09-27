@@ -135,6 +135,7 @@ void test_conditions_and_jumps() {
     int y_id = 2;
     int condition_id = 3;
     int true_branch_id = 4;
+    int label_inside = 44;
     int false_branch_id = 5;
     int jump_label_id = 6;
     int jump_id = 7;
@@ -187,6 +188,67 @@ void test_conditions_and_jumps() {
     }
 }
 
+void test_conditions_and_jumps_2() {
+    // Initialize computational graph
+    dio::ComputationalGraph graph;
+
+    // Operand IDs
+    int x_id = 1;
+    int y_id = 2;
+    int z_id = 3;
+    int label_id = 4;
+    int jump_id = 5;
+    int final_result_id = 6;
+
+    dio::initialize_operations();
+
+    // Create operands
+    // x and y constants
+    graph.operands[x_id] = dio::Operand(dio::OperandType::Constant, x_id, {});
+    graph.operands[y_id] = dio::Operand(dio::OperandType::Constant, y_id, {});
+
+    // z = x + y
+    graph.operands[z_id] = dio::Operand(dio::OperandType::Add, z_id, {x_id, y_id});
+
+    // Label that contains z_id
+    graph.operands[label_id] = dio::Operand(dio::OperandType::Label, label_id, {z_id});
+
+    // Jump to label
+    graph.operands[jump_id] = dio::Operand(dio::OperandType::Jump, jump_id, {label_id});
+
+    // Final result depends on jump_id
+    // We assume that the Jump operand returns the result of the label
+    graph.operands[final_result_id] = dio::Operand(dio::OperandType::Identity, final_result_id, {jump_id});
+
+    // Assign values for variables x and y
+    graph.constants[x_id] = dio::make_tensor_ptr<int>(4);  // x = 4
+    graph.constants[y_id] = dio::make_tensor_ptr<int>(2);  // y = 2
+
+    // Expected output: z = x + y = 4 + 2 = 6
+    int expected_output = 6;
+
+    // Perform forward pass
+    dio::a_tens result = dio::ExecutionEngine::forward(graph, final_result_id);
+
+    // Extract the computed result
+    int computed_output;
+    if (result.is<int>()) {
+        computed_output = result.get<int>().get_data()[0];
+    } else {
+        std::cerr << "Unexpected data type in result" << std::endl;
+        return;
+    }
+
+    // Verify the output
+    if (computed_output == expected_output) {
+        std::cout << "Jump test passed." << std::endl;
+    } else {
+        std::cerr << "Jump test failed. Expected: " << expected_output
+                  << ", Got: " << computed_output << std::endl;
+    }
+}
+
+
 
 void execution_engine_tests() {
     std::cout << std::endl << "Testing Execution Engine functionality..." << std::endl;
@@ -196,4 +258,5 @@ void execution_engine_tests() {
     test_backward_pass();
     std::cout << "Testing Jumps . . ." << std::endl;
     test_conditions_and_jumps();
+    test_conditions_and_jumps_2();
 }

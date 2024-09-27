@@ -65,6 +65,14 @@ private:
                                      std::unordered_map<int, std::unordered_map<int, bool>> &execution_path);
 
     static a_tens evaluate_comparison(const Operand &operand, const std::vector<a_tens> &inputs);
+
+    static void processJumpToken(ComputationalGraph &graph, const Token &current_token, std::stack<Token> &token_stack,
+                          std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
+                          int current_time_step);
+
+    static void processLabelToken(ComputationalGraph &graph, const Token &current_token, std::stack<Token> &token_stack,
+                           std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
+                           int current_time_step);
 };
 } // namespace dio
 

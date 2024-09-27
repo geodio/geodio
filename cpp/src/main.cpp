@@ -135,5 +135,6 @@ int main(int argc, char* argv[]) {
     std::cout << "  --run-exe-eng-tests  Run execution engine tests only" << std::endl;
     std::cout << "  --run-slicing        Run slicing tests only" << std::endl;
 
+    //run_execution_engine();
     optimize();
 }

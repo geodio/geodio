@@ -22,7 +22,8 @@ namespace dio{
         Add,
         Multiply,
         Sigmoid,
-        LinearTransformation
+        LinearTransformation,
+        Identity
         // Add more operations as needed
     };
 

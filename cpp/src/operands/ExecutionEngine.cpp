@@ -41,14 +41,13 @@ namespace dio {
 
     }
 
-    a_tens ExecutionEngine::compute_forward(ComputationalGraph &graph,
-                                            int output_operand_id,
-                                            const std::vector<a_tens> &args,
-                                            std::stack<Token> &token_stack,
-                                            std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
-                                            int* current_time_step,
-                                            std::unordered_map<int, std::unordered_map<int, bool>>& execution_path) {
-        token_stack.emplace(TokenType::Operand, output_operand_id);  // Start with the output operand
+    a_tens ExecutionEngine::compute_forward(ComputationalGraph &graph, int output_operand_id, const std::vector<a_tens> &args,
+                                  std::stack<Token> &token_stack,
+                                  std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
+                                  int* current_time_step,
+                                  std::unordered_map<int, std::unordered_map<int, bool>>& execution_path) {
+
+        token_stack.emplace(TokenType::Operand, output_operand_id);
 
         while (!token_stack.empty()) {
             Token current_token = token_stack.top();
@@ -61,6 +60,14 @@ namespace dio {
 
                 case TokenType::Return:
                     processReturnToken(graph, current_token, time_aware_cache, *current_time_step);
+                    break;
+
+                case TokenType::Jump:
+                    processJumpToken(graph, current_token, token_stack, time_aware_cache, *current_time_step);
+                    break;
+
+                case TokenType::Label:
+                    processLabelToken(graph, current_token, token_stack, time_aware_cache, *current_time_step);
                     break;
 
                 case TokenType::ConditionReturn:
@@ -79,6 +86,7 @@ namespace dio {
         // Return the final result at the last time step
         return time_aware_cache[*current_time_step][output_operand_id];
     }
+
 
     void ExecutionEngine::processOperandToken(ComputationalGraph &graph,
                                               const Token &current_token,
@@ -121,12 +129,22 @@ namespace dio {
                 time_aware_cache[*current_time_step][current_token.operand_id] = a_tens(static_cast<int>(*current_time_step));
                 break;
 
-            case OperandType::Jump:
-                token_stack.emplace(TokenType::Operand, operand.inputs[0]);  // Jump to label
-                break;
+            case OperandType::Jump: {
+             // Push Jump token
+             int label_id = operand.inputs[0];
+             // Push Jump token with jump_label
+             token_stack.emplace(TokenType::Jump, current_token.operand_id, -1, label_id);
+             break;
+            }
 
             case OperandType::Label:
-                // Do nothing for labels
+                // Push Label token
+                token_stack.emplace(TokenType::Label, current_token.operand_id);
+                break;
+
+            case OperandType::Identity:
+                token_stack.emplace(TokenType::Return, current_token.operand_id);
+                token_stack.emplace(TokenType::Operand, graph.operands[current_token.operand_id].inputs[0]);
                 break;
 
             case OperandType::Condition:
@@ -163,6 +181,42 @@ namespace dio {
         }
     }
 
+    void ExecutionEngine::processJumpToken(ComputationalGraph &graph,
+                                           const Token &current_token,
+                                           std::stack<Token> &token_stack,
+                                           std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
+                                           int current_time_step) {
+        Operand &jump_operand = graph.operands[current_token.operand_id];
+        // The target label ID is stored in jump_label
+        int label_id = current_token.jump_label;
+
+        // After the label is processed, we need to store the result of the jump
+        // Since jumps might be associated with a result, we can push a Return token
+        token_stack.emplace(TokenType::Return, current_token.operand_id);
+
+        // Push the Label token to process the label
+        token_stack.emplace(TokenType::Label, label_id);
+
+
+    }
+
+    void ExecutionEngine::processLabelToken(ComputationalGraph &graph,
+                                            const Token &current_token,
+                                            std::stack<Token> &token_stack,
+                                            std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
+                                            int current_time_step) {
+        Operand &label_operand = graph.operands[current_token.operand_id];
+
+        // Push a Return token to process the label after its contents are computed
+        token_stack.emplace(TokenType::Return, current_token.operand_id);
+
+        // Push the operands of the label onto the stack to compute them
+        for (auto it = label_operand.inputs.rbegin(); it != label_operand.inputs.rend(); ++it) {
+            token_stack.emplace(TokenType::Operand, *it);
+        }
+    }
+
+
     void ExecutionEngine::processReturnToken(ComputationalGraph &graph,
                                              const Token &current_token,
                                              std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
@@ -177,6 +231,13 @@ namespace dio {
 
         // Handle comparison operations separately
         switch (operand.op_type) {
+            case OperandType::Label:
+                result = input_tensors[input_tensors.size() - 1];
+                break;
+            case OperandType::Identity:
+            case OperandType::Jump:
+                result = input_tensors[0];
+                break;
             case OperandType::LessThan:
             case OperandType::GreaterThan:
             case OperandType::Equal:
@@ -251,6 +312,14 @@ namespace dio {
             // Handle the case where there's no false branch
             throw std::runtime_error("Condition has no false branch");
         }
+
+        // Uncache the condition inputs after use
+        time_aware_cache[current_time_step].erase(condition_operand.inputs[0]);
+
+        // Uncache the true or false branch inputs if not needed
+        int branch_input = cond_met ? condition_operand.inputs[1] : condition_operand.inputs[2];
+        time_aware_cache[current_time_step].erase(branch_input);
+
     }
 
     std::vector<a_tens> ExecutionEngine::fill_input_tens(const Operand &operand,

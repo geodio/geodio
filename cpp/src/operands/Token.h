@@ -6,7 +6,7 @@ namespace dio {
         Operand,        // Represents an operand to be processed
         Return,         // Represents a return instruction for where to store the result
         Jump,           // Represents a jump instruction, with condition
-        ConditionalJump, // Represents a conditional jump
+        Label,          // Represents a conditional jump
         ConditionReturn,
         ConditionResult
     };
