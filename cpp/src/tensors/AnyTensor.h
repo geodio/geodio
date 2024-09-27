@@ -22,7 +22,7 @@ namespace dio {
 
     class AnyTensor {
 public:
-    AnyTensor() = default;
+    AnyTensor(): type_index_(typeid(float)){};
 
     // Constructor that takes ownership of the tensor pointer
     template<typename T>
@@ -40,11 +40,11 @@ public:
 
     // Copy constructor
     AnyTensor(const AnyTensor& other)
-        : tensor_ptr_(other.tensor_ptr_), type_index_(other.type_index_) {}
+        : tensor_ptr_(other.tensor_ptr_), type_index_(other.tensor_ptr_->type_info()) {}
 
     // Move constructor
     AnyTensor(AnyTensor&& other) noexcept
-        : tensor_ptr_(std::move(other.tensor_ptr_)), type_index_(other.type_index_) {}
+        : tensor_ptr_(std::move(other.tensor_ptr_)), type_index_(other.tensor_ptr_->type_info()) {}
 
     // Assignment operator
     AnyTensor& operator=(const AnyTensor& other) {
@@ -84,10 +84,10 @@ public:
         if (!tensor_ptr_) {
             throw std::runtime_error("Error: Attempted to access an empty AnyTensor. The tensor is uninitialized.");
         }
-        if (type_index_ != typeid(T)) {
+        if (type_index_ != typeid(T) && type_index_ != tensor_ptr_->type_info()) {
             throw std::runtime_error("Error: Type mismatch in AnyTensor. Expected type '" +
                 std::string(typeid(T).name()) + "', but actual stored type is '" +
-                std::string(type_index_.name()) + "'.");
+                std::string(tensor_ptr_->type_info().name()) + "'.");
         }
         auto casted_ptr = std::static_pointer_cast<Tensor<T>>(tensor_ptr_);
         if (!casted_ptr) {
@@ -174,7 +174,7 @@ public:
 
 private:
     std::shared_ptr<ITensor> tensor_ptr_;
-    std::type_index type_index_ = TYPE_FLOAT;
+    std::type_index type_index_;
 };
 
 using a_tens = AnyTensor;
