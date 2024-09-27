@@ -29,7 +29,7 @@ void test_forward_pass() {
     graph.operands[y_id] = dio::Operand(dio::OperandType::Sigmoid, y_id, {wx_plus_b_id});
 
     // Assign values to variables
-    graph.weights[x_id] = dio::make_tensor_ptr<int>(2); // x = 2.0
+    graph.weights[x_id] = dio::make_tensor_ptr<float>(2); // x = 2.0
     graph.weights[w_id] = dio::make_tensor_ptr<float>(3.0f); // w = 3.0
     graph.weights[b_id] = dio::make_tensor_ptr<float>(1.0f); // b = 1.0
 
@@ -126,10 +126,74 @@ void test_backward_pass() {
     }
 }
 
+void test_conditions_and_jumps() {
+    // Initialize computational graph
+    dio::ComputationalGraph graph;
+
+    // Operand IDs
+    int x_id = 1;
+    int y_id = 2;
+    int condition_id = 3;
+    int true_branch_id = 4;
+    int false_branch_id = 5;
+    int jump_label_id = 6;
+    int jump_id = 7;
+    int final_result_id = 8;
+
+    dio::initialize_operations();
+
+    // Create operands
+    // x > y ?
+    graph.operands[x_id] = dio::Operand(dio::OperandType::Constant, x_id, {});
+    graph.operands[y_id] = dio::Operand(dio::OperandType::Constant, y_id, {});
+    graph.operands[condition_id] = dio::Operand(dio::OperandType::GreaterThan, condition_id, {x_id, y_id});
+
+    // Branches: True and False
+    graph.operands[true_branch_id] = dio::Operand(dio::OperandType::Add, true_branch_id, {x_id, y_id});  // True: x + y
+    graph.operands[false_branch_id] = dio::Operand(dio::OperandType::Multiply, false_branch_id, {x_id, y_id});  // False: x * y
+
+    // Jump: If condition is true, jump to the label
+    graph.operands[jump_label_id] = dio::Operand(dio::OperandType::Label, jump_label_id, {});
+    graph.operands[jump_id] = dio::Operand(dio::OperandType::Jump, jump_id, {jump_label_id});
+
+    // Final result: If the condition is true, the result is x + y; if false, the result is x * y
+    graph.operands[final_result_id] = dio::Operand(dio::OperandType::Condition, final_result_id, {condition_id, true_branch_id, false_branch_id});
+
+    // Assign values for variables x and y
+    graph.constants[x_id] = dio::make_tensor_ptr<int>(4);  // x = 4
+    graph.constants[y_id] = dio::make_tensor_ptr<int>(2);  // y = 2
+
+    // Expected output: since x > y (4 > 2), the result should be true branch (x + y = 4 + 2 = 6)
+    int expected_output = 6;
+
+    // Perform forward pass
+    dio::a_tens result = dio::ExecutionEngine::forward(graph, final_result_id);
+
+    // Extract the computed result
+    int computed_output;
+    if (result.is<int>()) {
+        computed_output = result.get<int>().get_data()[0];
+    } else {
+        std::cerr << "Unexpected data type in result" << std::endl;
+        return;
+    }
+
+    // Verify the output
+    if (computed_output == expected_output) {
+        std::cout << "Condition and jump test passed." << std::endl;
+    } else {
+        std::cerr << "Condition and jump test failed. Expected: " << expected_output
+                  << ", Got: " << computed_output << std::endl;
+    }
+}
+
+
 void execution_engine_tests() {
     std::cout << std::endl << "Testing Execution Engine functionality..." << std::endl;
     std::cout << "Testing Forward . . ." << std::endl;
     test_forward_pass();
     std::cout << "Testing Backward . . ." << std::endl;
     test_backward_pass();
+    std::cout << "Testing Jumps . . ." << std::endl;
+    test_conditions_and_jumps();
 }
