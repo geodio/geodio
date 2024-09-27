@@ -34,6 +34,9 @@ namespace dio {
         const std::vector<size_t>& broadcasted_shape);
 
     template<typename T>
+    class TensorIterator;
+
+    template<typename T>
     class Tensor : public ITensor{
     public:
         // Constructors
@@ -67,7 +70,7 @@ namespace dio {
         [[nodiscard]] size_t compute_size(const std::vector<size_t>& shape) const;
         [[nodiscard]] bool is_scalar() const;
 
-        std::vector<T> get_data() const;
+        [[nodiscard]] std::vector<T> get_data() const;
         // Element access
         T& operator()(const std::vector<size_t>& indices);
 
@@ -141,39 +144,13 @@ namespace dio {
         void from_device();
 
         template<typename U>
-        Tensor<U> cast() const {
+        Tensor<U> cast() const;
 
-            // If T and U are the same type, return a copy of the tensor
-            if (std::is_same<U, T>::value) {
-                return *this;  // Implicitly converts Tensor<T> to Tensor<U> when T == U
-            }
-            // Otherwise, create a new Tensor<U> and convert the data
-            Tensor<U> result;
-            result.shape_ = this->shape_;
-            result.total_size_ = this->total_size_;
-            result.compute_strides(); // Ensure this correctly initializes strides_
+        [[nodiscard]] Tensor <T> transpose(const std::vector<size_t> &axis) const;
 
-            // Resize the data vector to hold the new type
-            result.data_.resize(this->total_size_);
+        [[nodiscard]] Tensor <T> sum(const std::vector<size_t> &axis) const;
 
-            // Perform the type conversion
-            std::transform(
-                data_.begin(),
-                data_.end(),
-                result.data_.begin(),
-                [](const T& value) {
-                    return static_cast<U>(value);
-                }
-            );
-            return result;
-
-        }
-
-        Tensor <T> transpose(const std::vector<size_t> &axis) const;
-
-        Tensor <T> sum(const std::vector<size_t> &axis) const;
-
-        Tensor<T> copy() const;
+        [[nodiscard]] Tensor<T> copy() const;
 
         std::vector<T> data_;           // Changed from raw pointer to std::vector
         std::vector<size_t> shape_;
@@ -191,6 +168,32 @@ namespace dio {
         // Helper methods
         void compute_strides();
 
+        // Method to return an iterator to the beginning of the tensor
+        [[nodiscard]] TensorIterator<T> begin() const {
+            return TensorIterator<T>(data_.data(), this, 0);
+        }
+
+        // Method to return an iterator to the end of the tensor
+        [[nodiscard]] TensorIterator<T> end() const {
+            return TensorIterator<T>(data_.data(), this, total_size_);
+        }
+
+        TensorIterator<T> begin() {
+            return TensorIterator<T>(data_.data(), this, 0);  // Non-const iterator
+        }
+
+        // Method to return a non-const iterator to the end of the tensor
+        TensorIterator<T> end() {
+            return TensorIterator<T>(data_.data(), this, total_size_);  // Non-const iterator
+        }
+
+        [[nodiscard]] std::vector<size_t> compute_indices(
+        size_t flat_index, const std::vector<size_t>& shape) const;
+
+        size_t size() {
+            return total_size_;
+        }
+
     private:
 
         [[nodiscard]] std::vector<size_t> compute_broadcast_shape(
@@ -198,8 +201,7 @@ namespace dio {
 
         [[nodiscard]] size_t compute_flat_index(
         const std::vector<size_t>& indices, const std::vector<size_t>& strides) const;
-        [[nodiscard]] std::vector<size_t> compute_indices(
-        size_t flat_index, const std::vector<size_t>& shape) const;
+
         // Slice handling
         void calculate_view();
 
@@ -218,6 +220,36 @@ namespace dio {
         std::vector<size_t>& adjusted_strides1,
         std::vector<size_t>& adjusted_strides2) const;
     };
+
+    template<typename T>
+    template<typename U>
+    Tensor<U> Tensor<T>::cast() const {
+
+        // If T and U are the same type, return a copy of the tensor
+        if (std::is_same<U, T>::value) {
+            return *this;  // Implicitly converts Tensor<T> to Tensor<U> when T == U
+        }
+        // Otherwise, create a new Tensor<U> and convert the data
+        Tensor<U> result;
+        result.shape_ = this->shape_;
+        result.total_size_ = this->total_size_;
+        result.compute_strides(); // Ensure this correctly initializes strides_
+
+        // Resize the data vector to hold the new type
+        result.data_.resize(this->total_size_);
+
+        // Perform the type conversion
+        std::transform(
+                data_.begin(),
+                data_.end(),
+                result.data_.begin(),
+                [](const T& value) {
+                    return static_cast<U>(value);
+                }
+        );
+        return result;
+
+    }
 
     template<typename T>
     void Tensor<T>::increment_indices(std::vector<size_t> &indices) const {
@@ -628,6 +660,51 @@ namespace dio {
             adjusted_strides2[i] = (dim2 == 1) ? 0 : other.strides_[(ndim2 > ndim1 ? i : i - (ndim - ndim2))];
         }
     }
+
+    template<typename T>
+    class TensorIterator {
+    public:
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = T;
+        using difference_type = std::ptrdiff_t;
+        using pointer = T*;
+        using reference = T&;
+        using const_pointer = const T*;
+        using const_reference = const T&;
+
+        // Constructor for non-const data (modifiable tensor)
+        TensorIterator(pointer data, Tensor<T>* tensor, size_t current_index)
+            : tensor_(tensor), current_index_(current_index) {}
+
+        // Constructor for const data (non-modifiable tensor)
+        TensorIterator(const_pointer data, const Tensor<T>* tensor, size_t current_index)
+            : tensor_(tensor), current_index_(current_index) {}
+
+        // Non-const dereference operator (for non-const iterators)
+        // reference operator*();
+
+        // Const dereference operator (for const iterators)
+        const_reference operator*() const;
+
+        // Pre-increment operator
+        TensorIterator& operator++();
+
+        // Post-increment operator
+        TensorIterator operator++(int);
+
+        // Equality operator
+        bool operator==(const TensorIterator& other) const;
+
+        // Inequality operator
+        bool operator!=(const TensorIterator& other) const;
+
+    private:
+        const Tensor<T>* tensor_;  // Can point to const or non-const tensor
+        size_t current_index_;
+    };
+
+
+
 } // namespace dio
 
 #endif // GEODIO_TENSOR_H

@@ -194,8 +194,8 @@ namespace dio {
 
     // Get data as vector
     template<typename T>
-    std::vector<T> Tensor<T>::get_data() const {
-        return this->data_;
+    [[nodiscard]] std::vector<T> Tensor<T>::get_data() const {
+        return this->is_view_? this->base_tensor_->get().data_: this->data_;
     }
 
     template<typename T>
@@ -315,7 +315,48 @@ namespace dio {
         // No-op for CPUBackend
     }
 
+
+
+    template<typename T>
+    bool TensorIterator<T>::operator==(const TensorIterator &other) const {
+        return current_index_ == other.current_index_;
+    }
+
+    template<typename T>
+    bool TensorIterator<T>::operator!=(const TensorIterator &other) const {
+        return !(*this == other);
+    }
+
+    template<typename T>
+    TensorIterator<T> &TensorIterator<T>::operator++() {
+        ++current_index_;
+        return *this;
+    }
+
+    template<typename T>
+    TensorIterator<T> TensorIterator<T>::operator++(int) {
+        TensorIterator temp = *this;
+        ++(*this);
+        return temp;
+    }
+
+    template<typename T>
+    const T& TensorIterator<T>::operator*() const {
+        std::vector<size_t> indices = tensor_->compute_indices(current_index_, tensor_->shape());
+        return (*tensor_)(indices);  // Const reference
+    }
+
+//    template<typename T>
+//    T& TensorIterator<T>::operator*() {
+//        std::vector<size_t> indices = tensor_->compute_indices(current_index_, tensor_->shape());
+//        return (*tensor_)(indices);  // Non-const reference
+//    }
+
     // Explicit template instantiation (required in a separate compilation unit)
+    template class TensorIterator<float>;
+    template class TensorIterator<double>;
+    template class TensorIterator<int>;
+    template class TensorIterator<bool>;
     template class Tensor<float>;
     template class Tensor<double>;
     template class Tensor<int>;
