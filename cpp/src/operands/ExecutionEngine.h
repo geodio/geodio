@@ -1,6 +1,6 @@
 #include <stack>
 #include "ComputationalGraph.h"
-#include "AnyTensor.h"
+#include "../tensors/AnyTensor.h"
 #include "optimization/OptimizationArgs.h"
 #include "Token.h"
 #include "Operation.h"

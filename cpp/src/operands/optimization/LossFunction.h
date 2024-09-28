@@ -3,7 +3,7 @@
 #define GEODIO_LOSSFUNCTION_H
 
 #include <cmath>
-#include "AnyTensor.h"
+#include "../../tensors/AnyTensor.h"
 #include "OptimizationArgs.h"
 
 namespace dio {

@@ -1,6 +1,6 @@
 #include <memory>
-#include <../tensors/Tensor.h>
-#include "AnyTensor.h"
+#include "../tensors/Tensor.h"
+#include "../tensors/AnyTensor.h"
 
 #ifndef GEODIO_OPERATION_H
 #define GEODIO_OPERATION_H

@@ -1,6 +1,6 @@
 #include "OperandType.h"
 #include "Operand.h"
-#include "AnyTensor.h"
+#include "../tensors/AnyTensor.h"
 
 #ifndef GEODIO_COMPUTATIONALGRAPH_H
 #define GEODIO_COMPUTATIONALGRAPH_H
