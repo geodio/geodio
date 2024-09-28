@@ -1,7 +1,7 @@
 // test_tensor_db.cpp
 
-#include "../tensors/Tensor.h"
-#include "../tensors/TensorDb.h"
+#include "../src/tensors/Tensor.h"
+#include "../src/tensors/TensorDb.h"
 #include <iostream>
 
 int tensor_db_tests() {
