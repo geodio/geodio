@@ -13,8 +13,8 @@ PYBIND11_MODULE(tensor_bindings, m) {
 
         // Copy and move constructors
         .def(py::init<const dio::AnyTensor&>(), "Copy constructor")
-        // Move constructor with return_value_policy::move
-        .def(py::init<dio::AnyTensor&>(), "Move constructor", py::return_value_policy::move)
+//        // Move constructor with return_value_policy::move
+//        .def(py::init<dio::AnyTensor&>(), "Move constructor", py::return_value_policy::move)
 
         // Assignment operators
         .def("__copy__", [](const dio::AnyTensor &self) { return dio::AnyTensor(self); })

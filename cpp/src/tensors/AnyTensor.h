@@ -41,10 +41,10 @@ public:
     // Copy constructor
     AnyTensor(const AnyTensor& other)
         : tensor_ptr_(other.tensor_ptr_), type_index_(other.tensor_ptr_->type_info()) {}
-
-    // Move constructor
-    AnyTensor(AnyTensor&& other) noexcept
-        : tensor_ptr_(std::move(other.tensor_ptr_)), type_index_(other.tensor_ptr_->type_info()) {}
+//
+//    // Move constructor
+//    AnyTensor(AnyTensor&& other) noexcept
+//        : tensor_ptr_(std::move(other.tensor_ptr_)), type_index_(other.tensor_ptr_->type_info()) {}
 
     // Assignment operator
     AnyTensor& operator=(const AnyTensor& other) {
