@@ -1,0 +1,11 @@
+# Include the compiled shared library (geodio_bindings.so)
+include geodio/geodio_bindings*.so
+
+# Include the README file
+include README.md
+
+# Include the license file
+include LICENSE
+
+# Include any other files needed for the package
+include geodio/*.py
