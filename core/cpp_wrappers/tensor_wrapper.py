@@ -1,6 +1,6 @@
-import tensor_bindings
+import geodio_bindings
 
-EMPTY_TENSOR = tensor_bindings.AnyTensor()
+EMPTY_TENSOR = geodio_bindings.AnyTensor()
 tensor = type(EMPTY_TENSOR)
 
 class Tensor:
@@ -9,15 +9,15 @@ class Tensor:
         High-level constructor for AnyTensor. Automatically infers types.
         """
         if isinstance(data, list) and all(isinstance(x, float) for x in data):
-            self.tensor = tensor_bindings.AnyTensor(data, shape)
+            self.tensor = geodio_bindings.AnyTensor(data, shape)
         elif isinstance(data, list) and all(isinstance(x, int) for x in data):
-            self.tensor = tensor_bindings.AnyTensor(data, shape)
+            self.tensor = geodio_bindings.AnyTensor(data, shape)
         elif isinstance(data, float):
-            self.tensor = tensor_bindings.AnyTensor(data)
+            self.tensor = geodio_bindings.AnyTensor(data)
         elif isinstance(data, int):
-            self.tensor = tensor_bindings.AnyTensor(data)
+            self.tensor = geodio_bindings.AnyTensor(data)
         elif isinstance(data, tensor):
-            self.tensor = tensor_bindings.AnyTensor(data)
+            self.tensor = geodio_bindings.AnyTensor(data)
         else:
             raise ValueError("Unsupported type for Tensor")
 

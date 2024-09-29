@@ -13,10 +13,12 @@
 //
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/operators.h>
 #include "../tensors/AnyTensor.h"
+#include "ExecutionEngine.h"
 
 namespace py = pybind11;
 
@@ -94,4 +96,50 @@ PYBIND11_MODULE(tensor_bindings, m) {
                 return self.get<double>().to_string();
             return std::string("Empty tensor");
         });
+
+    py::enum_<dio::OperandType>(m, "OperandType")
+        .value("Constant", dio::OperandType::Constant)
+        .value("Variable", dio::OperandType::Variable)
+        .value("Weight", dio::OperandType::Weight)
+        .value("Seq", dio::OperandType::Seq)
+        .value("Tick", dio::OperandType::Tick)
+        .value("getTime", dio::OperandType::getTime)
+        .value("Jump", dio::OperandType::Jump)
+        .value("Label", dio::OperandType::Label)
+        .value("Condition", dio::OperandType::Condition)
+        .value("LessThan", dio::OperandType::LessThan)
+        .value("GreaterThan", dio::OperandType::GreaterThan)
+        .value("Equal", dio::OperandType::Equal)
+        .value("LessThanOrEqual", dio::OperandType::LessThanOrEqual)
+        .value("GreaterThanOrEqual", dio::OperandType::GreaterThanOrEqual)
+        .value("Add", dio::OperandType::Add)
+        .value("Multiply", dio::OperandType::Multiply)
+        .value("Sigmoid", dio::OperandType::Sigmoid)
+        .value("LinearTransformation", dio::OperandType::LinearTransformation)
+        .value("Identity", dio::OperandType::Identity);
+
+    // Binding for Operand class
+    py::class_<dio::Operand>(m, "Operand")
+        .def(py::init<>())  // Default constructor
+        .def(py::init<dio::OperandType, int, const std::vector<int>&>(), "Constructor with args", py::arg("op_type"), py::arg("id"), py::arg("inputs"))
+        .def_readwrite("op_type", &dio::Operand::op_type)
+        .def_readwrite("id", &dio::Operand::id)
+        .def_readwrite("inputs", &dio::Operand::inputs);
+
+    // Binding for ComputationalGraph class
+    py::class_<dio::ComputationalGraph>(m, "ComputationalGraph")
+        .def(py::init<int>(), py::arg("rootId") = 0)
+        .def_readwrite("root_id", &dio::ComputationalGraph::root_id)
+        .def_readwrite("operands", &dio::ComputationalGraph::operands)
+        .def_readwrite("weights", &dio::ComputationalGraph::weights)
+        .def_readwrite("gradients", &dio::ComputationalGraph::gradients)
+        .def_readwrite("constants", &dio::ComputationalGraph::constants)
+        .def_readwrite("var_map", &dio::ComputationalGraph::var_map);
+
+    // Binding for ExecutionEngine class
+    py::class_<dio::ExecutionEngine>(m, "ExecutionEngine")
+        .def_static("forward", &dio::ExecutionEngine::forward, py::arg("graph"), py::arg("output_operand_id"), py::arg("args") = std::vector<dio::a_tens>{})
+        .def_static("backward", &dio::ExecutionEngine::backward, py::arg("graph"), py::arg("output_operand_id"), py::arg("loss_gradient"), py::arg("args") = std::vector<dio::a_tens>{})
+        .def_static("optimize", &dio::ExecutionEngine::optimize, py::arg("graph"), py::arg("input_data"), py::arg("target_data"), py::arg("args"))
+        .def_static("evaluate_condition", &dio::ExecutionEngine::evaluate_condition, py::arg("graph"), py::arg("operand"), py::arg("inputs"));
 }

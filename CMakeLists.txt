@@ -84,13 +84,13 @@ target_link_libraries(geodio PRIVATE geodio_lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ../core/cpp_wrappers)
 
 # Ensure the Python interpreter is linked
-pybind11_add_module(tensor_bindings cpp/src/bindings/a_tens_binding.cpp)
+pybind11_add_module(geodio_bindings cpp/src/bindings/geodio_binding.cpp)
 
 # Link the bindings module to the geodio_lib and pybind11
-target_link_libraries(tensor_bindings PRIVATE geodio_lib pybind11::module)
+target_link_libraries(geodio_bindings PRIVATE geodio_lib pybind11::module)
 
 # Link the Python3 libraries if necessary (for Python interpreter symbols)
-target_link_libraries(tensor_bindings PRIVATE Python3::Python)
+target_link_libraries(geodio_bindings PRIVATE Python3::Python)
 
 # Add tests
 enable_testing()
