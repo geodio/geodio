@@ -19,10 +19,11 @@
 #include <pybind11/operators.h>
 #include "../tensors/AnyTensor.h"
 #include "ExecutionEngine.h"
+#include "operations.h"
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(tensor_bindings, m) {
+PYBIND11_MODULE(geodio_bindings, m) {
     py::class_<dio::AnyTensor>(m, "AnyTensor")
         // Constructors
         .def(py::init<>())  // Default constructor
@@ -126,6 +127,8 @@ PYBIND11_MODULE(tensor_bindings, m) {
         .def_readwrite("id", &dio::Operand::id)
         .def_readwrite("inputs", &dio::Operand::inputs);
 
+    m.def("initialize_operations", &dio::OperationInitializer::initialize, "Initialize operations (called once)");
+
     // Binding for ComputationalGraph class
     py::class_<dio::ComputationalGraph>(m, "ComputationalGraph")
         .def(py::init<int>(), py::arg("rootId") = 0)
@@ -134,7 +137,23 @@ PYBIND11_MODULE(tensor_bindings, m) {
         .def_readwrite("weights", &dio::ComputationalGraph::weights)
         .def_readwrite("gradients", &dio::ComputationalGraph::gradients)
         .def_readwrite("constants", &dio::ComputationalGraph::constants)
-        .def_readwrite("var_map", &dio::ComputationalGraph::var_map);
+        .def_readwrite("var_map", &dio::ComputationalGraph::var_map)
+        .def("add_operand", [](dio::ComputationalGraph& self, int key, const dio::Operand& value) {
+            self.operands[key] = value;
+        })
+        .def("add_operand", [](dio::ComputationalGraph& self, int key, const dio::OperandType& op_type, const std::vector<int>& input_ids) {
+            self.operands[key] = dio::Operand(op_type, key, input_ids);
+        })
+        .def("add_constant", [](dio::ComputationalGraph& self, int key, const dio::a_tens& value) {
+            self.constants[key] = value;
+        })
+        .def("add_var_map", [](dio::ComputationalGraph& self, int key, int value) {
+            self.var_map[key] = value;
+        })
+        .def("add_weight", [](dio::ComputationalGraph& self, int key, const dio::a_tens& value) {
+            self.weights[key] = value;
+        });
+
 
     // Binding for ExecutionEngine class
     py::class_<dio::ExecutionEngine>(m, "ExecutionEngine")

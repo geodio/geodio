@@ -18,6 +18,11 @@
 
 namespace dio {
 
+class OperationInitializer {
+public:
+    static void initialize();
+};
+
 a_tens add_forward (const std::vector<a_tens>& inputs);
 
 std::vector<a_tens> add_backward(

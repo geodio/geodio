@@ -15,6 +15,7 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "OperationRegistry.h"
+#include "operations.h"
 #include <cmath>
 
 
@@ -130,6 +131,14 @@ void initialize_operations() {
             linear_forward, linear_backward
     });
     // Register other operations as needed
+}
+
+void dio::OperationInitializer::initialize() {
+    static bool initialized = false;  // Ensures the initialization runs only once
+    if (!initialized) {
+        initialize_operations();
+        initialized = true;
+    }
 }
 }
 
