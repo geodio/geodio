@@ -81,7 +81,7 @@ add_executable(geodio
 target_link_libraries(geodio PRIVATE geodio_lib)
 
 # Add pybind11 bindings module
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY core/cpp_wrappers)
 
 # Ensure the Python interpreter is linked
 pybind11_add_module(tensor_bindings cpp/src/bindings/a_tens_binding.cpp)

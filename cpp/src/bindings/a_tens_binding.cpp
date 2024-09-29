@@ -1,5 +1,6 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/operators.h>
 #include "AnyTensor.h"  // Include your header files
 
 namespace py = pybind11;
@@ -60,13 +61,22 @@ PYBIND11_MODULE(tensor_bindings, m) {
         .def("slice", &dio::AnyTensor::slice)
 
         // Operators (bind with lambdas)
-        .def("__add__", [](const dio::AnyTensor &a, const dio::AnyTensor &b) { return a + b; })
+        .def(py::self + py::self)
+        .def(py::self * py::self)
         .def("__sub__", [](const dio::AnyTensor &a, const dio::AnyTensor &b) { return a - b; })
-        .def("__mul__", [](const dio::AnyTensor &a, const dio::AnyTensor &b) { return a * b; })
         .def("__truediv__", [](const dio::AnyTensor &a, const dio::AnyTensor &b) { return a / b; })
 
         // String representation
         .def("__repr__", [](const dio::AnyTensor &self) {
             return "<AnyTensor of type '" + std::string(self.type().name()) + "'>";
+        })
+        .def("__str__", [](const dio::AnyTensor &self) {
+            if (self.is<int>())
+                return self.get<int>().to_string();
+            if (self.is<float>())
+                return self.get<float>().to_string();
+            if (self.is<double>())
+                return self.get<double>().to_string();
+            return std::string("Empty tensor");
         });
 }
