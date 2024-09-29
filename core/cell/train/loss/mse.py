@@ -3,7 +3,6 @@ from typing import List
 
 import numpy as np
 
-from core.cell.train.forest import forest_derive
 from core.cell.operands.operand import Operand
 from core.cell.operands.utility import get_predicted
 from core.cell.train.loss.loss_function import LossFunction
@@ -27,19 +26,6 @@ class MSE(LossFunction):
         gradient_results = np.array([delta_f_w_j(X_i) for X_i in inputs])
         result = self.compute_gradient(desired_output, gradient_results, predicted)
         return result
-
-    def multi_gradient(self, cell, inputs, desired_outputs,
-                       operands: List[Operand]):
-        m_tree = forest_derive(cell, operands)
-        desired_output_flat = [y[0] for y in desired_outputs]
-
-        predicted = get_predicted(inputs, cell)
-        m_gradient_results = np.array([m_tree(x_i) for x_i in inputs]).T
-        return [
-            self.compute_gradient(desired_output_flat, gradient_results,
-                                  predicted)
-            for gradient_results in m_gradient_results
-        ]
 
     def compute_gradient(self, desired_output, gradient_results, predicted):
         desired_output = flatten(desired_output)

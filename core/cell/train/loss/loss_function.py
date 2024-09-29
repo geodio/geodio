@@ -32,7 +32,3 @@ class LossFunction(ABC, metaclass=ABCMeta):
     def get_y_minus_predicted(self, Y, predicted):
         Y_minus_predicted = np.array(Y) - np.array(predicted[:len(Y)])
         return Y_minus_predicted
-
-    @abstractmethod
-    def multi_gradient(self, cell, X, Y, operands):
-        pass
