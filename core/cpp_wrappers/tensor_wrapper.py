@@ -1,4 +1,8 @@
 import tensor_bindings
+
+EMPTY_TENSOR = tensor_bindings.AnyTensor()
+tensor = type(EMPTY_TENSOR)
+
 class Tensor:
     def __init__(self, data, shape=None):
         """
@@ -11,6 +15,8 @@ class Tensor:
         elif isinstance(data, float):
             self.tensor = tensor_bindings.AnyTensor(data)
         elif isinstance(data, int):
+            self.tensor = tensor_bindings.AnyTensor(data)
+        elif isinstance(data, tensor):
             self.tensor = tensor_bindings.AnyTensor(data)
         else:
             raise ValueError("Unsupported type for Tensor")
@@ -71,5 +77,8 @@ class Tensor:
         else:
             raise TypeError("Unsupported tensor type")
 
+    def __str__(self):
+        return f"<Tensor {str(self.tensor)}>"
+
     def __repr__(self):
-        return f"<Tensor shape={self.shape()} data={self.data()}>"
+        return f"<Tensor {self.tensor}>"
