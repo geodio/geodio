@@ -1,6 +1,6 @@
 import sys
 
-from core.cell import EpochedOptimizer, MSEMultivariate, OptimizationArgs
+from python.geodio.core import EpochedOptimizer, MSEMultivariate, OptimizationArgs
 from examples.node.xor import create_model, get_model_config, get_dataset, \
     train
 

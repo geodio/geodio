@@ -1,13 +1,12 @@
 import sys
 import numpy as np
 
-from core.cell import Linker, b_var
-from core.cell import MSEMultivariate
-from core.cell import OptimizationArgs
-from core.cell import Optimizer
-from core.organism.activation_function import SigmoidActivation
-from core.organism.node import Node
-from core.organism.organism import Organism
+from python.geodio.core import Linker, b_var
+from python.geodio.core import MSEMultivariate
+from python.geodio.core import OptimizationArgs
+from python.geodio.core import Optimizer
+from python.geodio.core import SigmoidActivation
+from python.geodio.core import Node
 
 
 def main(dataset_name=None, optimizer=None):

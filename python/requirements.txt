@@ -1,0 +1,5 @@
+numpy>=1.26.4
+typing_extensions>=4.11.0
+cryptography>=42.0.5
+setuptools>=69.5.1
+cython>=3.0.10

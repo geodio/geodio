@@ -9,10 +9,16 @@ project(geodio VERSION 0.1)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+# Get the parent directory of the source directory
+get_filename_component(PARENT_DIR ${CMAKE_SOURCE_DIR} DIRECTORY)
+
 # Set output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
+# Now this will point to the correct 'python/geodio' folder in the parent directory
+set(PYTHON_BINDINGS_OUTPUT_DIR ${PARENT_DIR}/python/geodio)
 
 # Fetch pybind11 via FetchContent
 include(FetchContent)
@@ -71,31 +77,20 @@ add_executable(geodio_main
 # Link the executable to the core library
 target_link_libraries(geodio_main PRIVATE geodio_core)
 
-# Set the output directory for the bindings
-set(PYTHON_BINDINGS_OUTPUT_DIR ${CMAKE_BINARY_DIR}/python/geodio)
-
 # Add pybind11 bindings module
 pybind11_add_module(geodio_bindings src/bindings/geodio_binding.cpp)
 
 # Link the bindings module to the geodio_core library
 target_link_libraries(geodio_bindings PRIVATE geodio_core pybind11::module Python3::Python)
 
-# Ensure Python bindings are placed in the Python bindings directory
+# Ensure Python bindings are placed in the Python package directory (geodio)
 set_target_properties(geodio_bindings PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PYTHON_BINDINGS_OUTPUT_DIR})
 
 # Add installation rules to install the Python bindings into the 'python' directory
-install(TARGETS geodio_bindings DESTINATION ${CMAKE_BINARY_DIR}/python/geodio)
+install(TARGETS geodio_bindings DESTINATION ${PYTHON_BINDINGS_OUTPUT_DIR})
 install(TARGETS geodio_core DESTINATION ${CMAKE_BINARY_DIR}/lib)
 install(FILES src/tensors/Tensor.h DESTINATION include)
 
 # Add tests
 enable_testing()
 add_test(NAME GeodioTests COMMAND geodio_main)
-
-add_custom_target(
-    create_python_package ALL
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${PYTHON_BINDINGS_OUTPUT_DIR}/geodio
-    COMMAND ${CMAKE_COMMAND} -E copy ${PYTHON_BINDINGS_OUTPUT_DIR}/geodio_bindings${CMAKE_SHARED_LIBRARY_SUFFIX} ${PYTHON_BINDINGS_OUTPUT_DIR}/geodio/
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    COMMENT "Creating geodio Python package"
-)

@@ -2,11 +2,11 @@ import sys
 
 import numpy as np
 
-from core.cell.train.loss import MSEMultivariate
-from core.cell.train.optimization_args import OptimizationArgs
-from core.cell.train.optimizer import Optimizer
-from core.organism.activation_function import SigmoidActivation
-from core.organism.node import Node
+from python.geodio.core.cell.train.loss import MSEMultivariate
+from python.geodio.core.cell.train.optimization_args import OptimizationArgs
+from python.geodio.core.cell.train.optimizer import Optimizer
+from python.geodio.core import SigmoidActivation
+from python.geodio.core import Node
 
 
 def main():

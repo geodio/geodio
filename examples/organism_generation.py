@@ -2,10 +2,10 @@ import sys
 
 import numpy as np
 
-from core.cell import NEURONS
-from core.cell import CheckpointedMSE
-from core.genetic.generator import CellBankGenerator
-from core.genetic.pop_utils import PopulationProperties
+from python.geodio.core import NEURONS
+from python.geodio.core import CheckpointedMSE
+from python.geodio.core.genetic.generator import CellBankGenerator
+from python.geodio.core.genetic.pop_utils import PopulationProperties
 
 
 def main():

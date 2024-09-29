@@ -1,7 +1,7 @@
 import numpy as np
 
-from core.cell import MSE
-from core.genetic.pop import Pop
+from python.geodio.core import MSE
+from python.geodio.core.genetic.pop import Pop
 
 
 def main2():

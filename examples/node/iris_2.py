@@ -5,11 +5,10 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-from core.cell import Linker, MSEMultivariate, OptimizationArgs, Optimizer, \
+from python.geodio.core import MSEMultivariate, OptimizationArgs, Optimizer, \
     b_var
-from core.organism.activation_function import SigmoidActivation
-from core.organism.node import Node
-from core.organism.organism import Organism
+from python.geodio.core import SigmoidActivation
+from python.geodio.core import Organism
 
 
 def load_iris_dataset(filename):

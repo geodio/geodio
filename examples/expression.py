@@ -1,4 +1,4 @@
-from core.cell import Variable, Constant
+from python.geodio.core import Variable, Constant
 
 
 def main():

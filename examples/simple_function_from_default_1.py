@@ -1,8 +1,8 @@
 import numpy as np
 
-from core.cell import BUILTIN_FUNCTORS
-from core.cell import MSE
-from core.genetic.pop import Pop
+from python.geodio.core import BUILTIN_FUNCTORS
+from python.geodio.core import MSE
+from python.geodio.core.genetic.pop import Pop
 
 
 def main():

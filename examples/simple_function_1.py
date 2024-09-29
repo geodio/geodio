@@ -1,7 +1,7 @@
 import numpy as np
 
-from core.main import fitness_mse
-from core.genetic.pop import Pop
+from python.geodio.core import fitness_mse
+from python.geodio.core.genetic.pop import Pop
 
 
 def main():

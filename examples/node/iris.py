@@ -8,13 +8,10 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-from core.cell import b_var, EpochedOptimizer
-from core.cell.train.loss import MSEMultivariate
-from core.cell.train.optimization_args import OptimizationArgs
-from core.cell import SigmoidActivation
-from core.organism.connect import Parasite
-from core.organism.organism import Organism
-from core.parser import yaguar
+from python.geodio.core import EpochedOptimizer
+from python.geodio.core.cell.train.loss import MSEMultivariate
+from python.geodio.core.cell.train.optimization_args import OptimizationArgs
+from python.geodio.core.parser import yaguar
 
 
 def reverse_one_hot(y):
