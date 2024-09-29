@@ -1,13 +1,22 @@
-import geodio_bindings
+
+import core.cpp_wrappers.geodio_bindings
 
 EMPTY_TENSOR = geodio_bindings.AnyTensor()
 tensor = type(EMPTY_TENSOR)
+
+def infer_shape(data):
+    if isinstance(data, list):
+        return [len(data)] + infer_shape(data[0]) if data else []
+    else:
+        return []
 
 class Tensor:
     def __init__(self, data, shape=None):
         """
         High-level constructor for AnyTensor. Automatically infers types.
         """
+        if shape is None and isinstance(data, list):
+            shape = infer_shape(data)
         if isinstance(data, list) and all(isinstance(x, float) for x in data):
             self.tensor = geodio_bindings.AnyTensor(data, shape)
         elif isinstance(data, list) and all(isinstance(x, int) for x in data):
@@ -78,7 +87,7 @@ class Tensor:
             raise TypeError("Unsupported tensor type")
 
     def __str__(self):
-        return f"<Tensor {str(self.tensor)}>"
+        return f"{str(self.tensor)}"
 
     def __repr__(self):
         return f"<Tensor {self.tensor}>"

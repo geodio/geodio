@@ -33,6 +33,7 @@ from typing import Optional, Dict, Any, Callable, Union, List
 import core
 from core.cell.math.derivable import Derivable, WeightDerivable
 from core.cell.math.hashy import Hashable, HashTree, HashNode
+from core.cpp_wrappers import geodio_bindings
 
 GLOBAL_BUILTINS: Dict[
     str,
@@ -70,6 +71,7 @@ class Operand(Derivable, WeightDerivable, Hashable, metaclass=ABCMeta):
            handle.
 
        """
+        self.graph_id = -1
         self.arity = arity
         self.children = []
         self.error = sys.maxsize
@@ -265,6 +267,44 @@ class Operand(Derivable, WeightDerivable, Hashable, metaclass=ABCMeta):
         :return: the list of sub-operand of this operand.
         """
         return self.children
+
+    def subscribe_to_graph(self, graph_wrapper):
+        """
+        Subscribe the operand and its children to the given graph.
+
+        Args:
+            graph_wrapper (GraphWrapper): The graph wrapper where the operand will be added.
+
+        Returns:
+            int: The ID of this operand in the graph.
+        """
+        # Check if the operand is already in the graph (optional)
+        if hasattr(self, "graph_id") and self.graph_id is not None:
+            return self.graph_id
+
+        # Get a new ID for this operand
+        self.graph_id = graph_wrapper.next_id()
+
+        # Convert operand type to OperandType in C++
+        operand_type = self.get_operand_type()
+
+        # Recursively add children to the graph
+        child_ids = [child.subscribe_to_graph(graph_wrapper) for child in
+                     self.children]
+
+        # Add the operand to the C++ graph
+        graph_wrapper.graph.operands[self.graph_id] = geodio_bindings.Operand(
+            operand_type, self.graph_id, child_ids)
+
+        return self.graph_id
+
+    def get_operand_type(self):
+        """
+        Return the operand type for the current operand.
+        Override this method in subclasses to return the correct type.
+        """
+        raise NotImplementedError(
+            "This method should be implemented in subclasses")
 
     def __eq__(self, other: "Operand") -> bool:
         return self == other
