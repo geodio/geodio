@@ -38,7 +38,14 @@ namespace dio{
         Multiply,
         Sigmoid,
         LinearTransformation,
-        Identity
+        Identity,
+        RETURN, //stops the execution of the CG
+        SET, // state = 4, or state[4] = 10
+        ACCESS, // weight[0], or weight[1:2, 3:]
+        Function,
+        FunctionCall,
+        FunctionPtr,
+        String
         // Add more operations as needed
     };
 

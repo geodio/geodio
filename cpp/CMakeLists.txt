@@ -3,7 +3,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
     message(FATAL_ERROR "In-source builds are not allowed. Please run CMake from a separate 'build' directory.")
 endif()
 
-cmake_minimum_required(VERSION 3.29)
+cmake_minimum_required(VERSION 3.5)
 project(geodio VERSION 0.1)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -46,7 +46,6 @@ add_library(geodio_core SHARED
     src/tensors/Tensor.cpp
     src/tensors/TensorDb.cpp
     src/backends/CPUBackend.cpp
-    src/tensors/Tensor_C_API.cpp
     src/operands/OperationRegistry.cpp
     src/operands/ExecutionEngine.cpp
     src/operands/operations.cpp
@@ -55,6 +54,8 @@ add_library(geodio_core SHARED
     src/operands/optimization/LossFunction.cpp
     src/operands/optimization/AdamOptimizer.cpp
     src/operands/OperandType.cpp
+    src/operands/ExecutionContext.cpp
+    src/operands/ExecutionContext.h
 )
 
 target_include_directories(geodio_core PUBLIC src)

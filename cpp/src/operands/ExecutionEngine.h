@@ -19,6 +19,7 @@
 #include "optimization/OptimizationArgs.h"
 #include "Token.h"
 #include "Operation.h"
+#include "ExecutionContext.h"
 
 #ifndef GEODIO_EXECUTIONENGINE_H
 #define GEODIO_EXECUTIONENGINE_H
@@ -38,7 +39,9 @@ public:
     static void optimize(ComputationalGraph &graph, const a_tens &input_data, const a_tens &target_data,
              OptimizationArgs &args);
 
+    static a_tens execute(ComputationalGraph &graph, int output_operand_id, const std::vector<a_tens>& args);
 private:
+
     static void compute_backward(ComputationalGraph& graph, int output_operand_id,
                                        const a_tens& loss_gradient,
                                        std::unordered_map<int, std::unordered_map<int, a_tens>>& forward_cache,
@@ -46,11 +49,7 @@ private:
                                        int* current_time_step,
                                        std::unordered_map<int, std::unordered_map<int, bool>>& execution_path);
 
-    static a_tens compute_forward(ComputationalGraph &graph, int output_operand_id, const std::vector<a_tens> &args,
-                                  std::stack<Token> &token_stack,
-                                  std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
-                                  int* current_time_step,
-                                  std::unordered_map<int, std::unordered_map<int, bool>>& execution_path);
+    static a_tens compute_forward(ExecutionContext& context, int output_operand_id, std::stack<Token>& token_stack);
 
     static void handle_regular(const std::unordered_map<int, std::unordered_map<int, a_tens>> &forward_cache,
                                     const int *current_time_step, std::stack<std::tuple<int, a_tens>> &operand_stack,
@@ -60,34 +59,22 @@ private:
     static  std::vector<a_tens> fill_input_tens(const Operand &operand, const std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
                     int current_time_step);
 
-    static void processOperandToken(ComputationalGraph &graph, const Token &current_token, const std::vector<a_tens> &args,
-                             std::stack<Token> &token_stack,
-                             std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
-                             int *current_time_step);
+    static void processOperandToken(ExecutionContext& context, const Token &current_token, std::stack<Token>& token_stack);
 
-    static void processReturnToken(ComputationalGraph &graph, const Token &current_token,
-                            std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
-                            int current_time_step);
+    static void processReturnToken(ExecutionContext& context,  const Token &current_token,  std::stack<Token>& token_stack);
 
-    static void processConditionReturnToken(ComputationalGraph &graph, const Token &current_token,
-                                     std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
-                                     int current_time_step, std::stack<Token> &token_stack,
-                                     std::unordered_map<int, std::unordered_map<int, bool>> &execution_path);
+    static void processConditionReturnToken(ExecutionContext& context,  const Token &current_token,  std::stack<Token>& token_stack);
 
-    static void processConditionResultToken(ComputationalGraph &graph, const Token &current_token,
-                                     std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
-                                     int current_time_step,
-                                     std::unordered_map<int, std::unordered_map<int, bool>> &execution_path);
+    static void processConditionResultToken(ExecutionContext& context,  const Token &current_token,  std::stack<Token>& token_stack);
 
     static a_tens evaluate_comparison(const Operand &operand, const std::vector<a_tens> &inputs);
 
-    static void processJumpToken(ComputationalGraph &graph, const Token &current_token, std::stack<Token> &token_stack,
-                          std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
-                          int current_time_step);
+    static void processJumpToken(ExecutionContext& context,  const Token &current_token,  std::stack<Token>& token_stack);
 
-    static void processLabelToken(ComputationalGraph &graph, const Token &current_token, std::stack<Token> &token_stack,
-                           std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
-                           int current_time_step);
+    static void processLabelToken(ExecutionContext& context,  const Token &current_token,  std::stack<Token>& token_stack);
+
+
+    static void handle_function_call();
 };
 } // namespace dio
 

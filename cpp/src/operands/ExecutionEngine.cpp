@@ -20,48 +20,57 @@
 #include "optimization/AdamOptimizer.h"
 #include "optimization/LossFunction.h"
 #include "Token.h"
+#include "ExecutionContext.h"
 
 namespace dio {
 
-    a_tens get_tensor(ComputationalGraph& graph,
-                      int tensor_id,
-                      int current_time_step,
-                      std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
-                      const std::vector<a_tens>& args) {
-        auto operand = graph.operands.at(tensor_id);
-        switch (operand.op_type) {
-            case OperandType::Constant:
-                return graph.constants.at(tensor_id);
-
-            case OperandType::Weight:
-                return graph.weights.at(tensor_id);
-
-            case OperandType::Variable:
-                return args[graph.var_map.at(tensor_id)];
-
-            default:
-                return time_aware_cache[current_time_step][tensor_id];
+    // Process function calls
+    void handleFunctionOperand(ExecutionContext& context, Operand& operand, std::stack<Token>& token_stack) {
+        std::vector<int> arg_operand_ids(operand.inputs.begin() + 1, operand.inputs.end());
+        for (auto it = arg_operand_ids.rbegin(); it != arg_operand_ids.rend(); ++it) {
+            token_stack.emplace(TokenType::Operand, *it);
         }
+
+//        int function_graph_id = operand.inputs[0];
+//        ComputationalGraph* function_graph = getGraphById(function_graph_id);
+//
+//        token_stack.emplace(TokenType::FunctionEnd, operand.id);
+//
+//        ExecutionContext function_context(function_graph, {}, context.caching_mode, &context);
+//        size_t param_index = 0;
+//        for (const auto& [param_operand_id, _] : function_graph->var_map) {
+//            if (param_index < arg_operand_ids.size()) {
+//                int arg_operand_id = arg_operand_ids[param_index];
+//                a_tens arg_value = context.get(arg_operand_id);
+//                function_context.set(param_operand_id, arg_value);
+//                param_index++;
+//            } else {
+//                throw std::runtime_error("Not enough arguments provided to function");
+//            }
+//        }
+//
+//        context_stack.push(function_context);
+//        token_stack.emplace(TokenType::FunctionStart, operand.id);
+//        token_stack.emplace(TokenType::Operand, function_graph->root_id);
+    }
+
+     a_tens ExecutionEngine::execute(ComputationalGraph& graph, int output_operand_id, const std::vector<a_tens>& args = {}) {
+        ExecutionContext context {&graph, args, CachingMode::CacheMinimal};
+        std::stack<Token> token_stack;
+        return compute_forward(context, output_operand_id, token_stack);
     }
 
     a_tens ExecutionEngine::forward(ComputationalGraph& graph, int output_operand_id, const std::vector<a_tens>& args) {
+        ExecutionContext context {&graph, args, CachingMode::CacheAll};
         std::stack<Token> token_stack;
-        std::unordered_map<int, a_tens> return_stack;
-        std::unordered_map<int, std::unordered_map<int, a_tens>> time_aware_cache;
-        std::unordered_map<int, std::unordered_map<int, bool>> execution_path;
-        int current_time_step = 0;
-
-        return compute_forward(graph, output_operand_id, args, token_stack,
-                               time_aware_cache, &current_time_step, execution_path);
-
+        return compute_forward(context, output_operand_id, token_stack);
     }
 
-    a_tens ExecutionEngine::compute_forward(ComputationalGraph &graph, int output_operand_id, const std::vector<a_tens> &args,
-                                  std::stack<Token> &token_stack,
-                                  std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
-                                  int* current_time_step,
-                                  std::unordered_map<int, std::unordered_map<int, bool>>& execution_path) {
 
+    // Main forward computation that uses ExecutionContext
+    a_tens ExecutionEngine::compute_forward(ExecutionContext& context, int output_operand_id,  std::stack<Token>& token_stack) {
+
+        token_stack.emplace(TokenType::START);
         token_stack.emplace(TokenType::Operand, output_operand_id);
 
         while (!token_stack.empty()) {
@@ -69,28 +78,35 @@ namespace dio {
             token_stack.pop();
 
             switch (current_token.type) {
+                case TokenType::START:
+                    break;
+
+                case TokenType::END:
+                    context.clean_cache(); // Clean cache when we return to start
+                    break;
+
                 case TokenType::Operand:
-                    processOperandToken(graph, current_token, args, token_stack, time_aware_cache, current_time_step);
+                    processOperandToken(context, current_token, token_stack);
                     break;
 
                 case TokenType::Return:
-                    processReturnToken(graph, current_token, time_aware_cache, *current_time_step);
+                    processReturnToken(context, current_token, token_stack);
                     break;
 
                 case TokenType::Jump:
-                    processJumpToken(graph, current_token, token_stack, time_aware_cache, *current_time_step);
+                    processJumpToken(context, current_token, token_stack);
                     break;
 
                 case TokenType::Label:
-                    processLabelToken(graph, current_token, token_stack, time_aware_cache, *current_time_step);
+                    processLabelToken(context, current_token, token_stack);
                     break;
 
                 case TokenType::ConditionReturn:
-                    processConditionReturnToken(graph, current_token, time_aware_cache, *current_time_step, token_stack, execution_path);
+                    processConditionReturnToken(context, current_token, token_stack);
                     break;
 
                 case TokenType::ConditionResult:
-                    processConditionResultToken(graph, current_token, time_aware_cache, *current_time_step, execution_path);
+                    processConditionResultToken(context, current_token, token_stack);
                     break;
 
                 default:
@@ -98,35 +114,30 @@ namespace dio {
             }
         }
 
-        // Return the final result at the last time step
-        return time_aware_cache[*current_time_step][output_operand_id];
+        return context.get(output_operand_id);
     }
 
 
-    void ExecutionEngine::processOperandToken(ComputationalGraph &graph,
-                                              const Token &current_token,
-                                              const std::vector<a_tens> &args,
-                                              std::stack<Token> &token_stack,
-                                              std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
-                                              int* current_time_step) {
-        Operand &operand = graph.operands[current_token.operand_id];
+
+    void ExecutionEngine::processOperandToken(ExecutionContext& context, const Token &current_token, std::stack<Token>& token_stack) {
+        Operand& operand = context.graph->operands[current_token.operand_id];
 
         // Check if result is already cached for this time step
-        if (time_aware_cache[*current_time_step].find(current_token.operand_id) != time_aware_cache[*current_time_step].end()) {
-            return;  // Skip if already computed
+         if (context.has_operand_result(current_token.operand_id)) {
+            return;  // Operand is already cached, skip
         }
 
         switch (operand.op_type) {
             case OperandType::Constant:
-                time_aware_cache[*current_time_step][current_token.operand_id] = graph.constants.at(current_token.operand_id);
-                break;
-
-            case OperandType::Weight:
-                time_aware_cache[*current_time_step][current_token.operand_id] = graph.weights.at(current_token.operand_id);
+                context.set(current_token.operand_id, context.graph->constants.at(current_token.operand_id));
                 break;
 
             case OperandType::Variable:
-                time_aware_cache[*current_time_step][current_token.operand_id] = args[graph.var_map.at(current_token.operand_id)];
+                context.set(current_token.operand_id, context.args[context.graph->var_map.at(current_token.operand_id)]);
+                break;
+
+            case OperandType::Weight:
+                context.set(current_token.operand_id, context.graph->weights.at(current_token.operand_id));
                 break;
 
             case OperandType::Seq:
@@ -137,11 +148,11 @@ namespace dio {
                 break;
 
             case OperandType::Tick:
-                (*current_time_step)++;  // Increment time step
+                context.current_time_step++;  // Increment time step
                 break;
 
             case OperandType::getTime:
-                time_aware_cache[*current_time_step][current_token.operand_id] = a_tens(static_cast<int>(*current_time_step));
+                context.set(current_token.operand_id, a_tens(static_cast<int>(context.current_time_step)));
                 break;
 
             case OperandType::Jump: {
@@ -159,7 +170,7 @@ namespace dio {
 
             case OperandType::Identity:
                 token_stack.emplace(TokenType::Return, current_token.operand_id);
-                token_stack.emplace(TokenType::Operand, graph.operands[current_token.operand_id].inputs[0]);
+                token_stack.emplace(TokenType::Operand, context.get_op(current_token.operand_id).inputs[0]);
                 break;
 
             case OperandType::Condition:
@@ -183,7 +194,27 @@ namespace dio {
                     token_stack.emplace(TokenType::Operand, *it);
                 }
                 break;
+            case OperandType::FunctionCall:
+                //TODO
+                 break;
+            case OperandType::FunctionPtr:
+                //TODO
+                 break;
+            case OperandType::Function:
+                handleFunctionOperand(context, operand, token_stack);
+                break;
+            case OperandType::String:
+                //TODO
+                break;
+            case OperandType::RETURN:
+                token_stack.emplace(TokenType::END, current_token.operand_id);
+                token_stack.emplace(TokenType::Return, current_token.operand_id);
 
+                // Push operand returned onto the stack if exists
+                if (!operand.inputs.empty()) {
+                    token_stack.emplace(TokenType::Operand, operand.inputs[0]);
+                }
+                break;
             default:
                 // For other operations, push a Return token and operands
                 token_stack.emplace(TokenType::Return, current_token.operand_id);
@@ -196,12 +227,7 @@ namespace dio {
         }
     }
 
-    void ExecutionEngine::processJumpToken(ComputationalGraph &graph,
-                                           const Token &current_token,
-                                           std::stack<Token> &token_stack,
-                                           std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
-                                           int current_time_step) {
-        Operand &jump_operand = graph.operands[current_token.operand_id];
+    void ExecutionEngine::processJumpToken(ExecutionContext& context,  const Token &current_token,  std::stack<Token>& token_stack) {
         // The target label ID is stored in jump_label
         int label_id = current_token.jump_label;
 
@@ -215,12 +241,8 @@ namespace dio {
 
     }
 
-    void ExecutionEngine::processLabelToken(ComputationalGraph &graph,
-                                            const Token &current_token,
-                                            std::stack<Token> &token_stack,
-                                            std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
-                                            int current_time_step) {
-        Operand &label_operand = graph.operands[current_token.operand_id];
+    void ExecutionEngine::processLabelToken(ExecutionContext& context,  const Token &current_token,  std::stack<Token>& token_stack) {
+        Operand &label_operand = context.graph->operands[current_token.operand_id];
 
         // Push a Return token to process the label after its contents are computed
         token_stack.emplace(TokenType::Return, current_token.operand_id);
@@ -232,15 +254,14 @@ namespace dio {
     }
 
 
-    void ExecutionEngine::processReturnToken(ComputationalGraph &graph,
-                                             const Token &current_token,
-                                             std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
-                                             int current_time_step) {
+    void ExecutionEngine::processReturnToken(ExecutionContext& context,  const Token &current_token,  std::stack<Token>& token_stack) {
         // Process the function or operation by retrieving inputs from cache
-        Operand &operand = graph.operands[current_token.operand_id];
+        Operand &operand = context.graph->operands[current_token.operand_id];
 
         // Retrieve inputs for the current time step
-        std::vector<a_tens> input_tensors = fill_input_tens(operand, time_aware_cache, current_time_step);
+        std::vector<a_tens> input_tensors = fill_input_tens(operand,
+                                                            context.operand_cache,
+                                                            context.current_time_step);
 
         a_tens result;
 
@@ -261,6 +282,53 @@ namespace dio {
                 result = evaluate_comparison(operand, input_tensors);
                 break;
 
+            case OperandType::SET:
+            {
+                // Inputs: target ID (input 0), value (input 1)
+                int target_id = operand.inputs[0];
+                const a_tens& value = input_tensors[0]; // value to set
+                Operand& target_operand = context.graph->operands[target_id];
+
+                // Set the value
+                switch (target_operand.op_type) {
+                    case OperandType::Weight:
+                        // Update weights
+                        context.graph->weights[target_id] = value;
+                        break;
+                    default:
+                        // Handle other cases
+                        context.set(target_id, value);
+                        break;
+                }
+
+                result = value; // Result of SET can be the value set
+            }
+                break;
+            case OperandType::ACCESS:
+            {
+                // Inputs: tensor (input 0), indices (input 1..)
+                const a_tens& tensor = input_tensors[0];
+                std::vector<Slice> slices;
+                for (size_t i = 1; i < input_tensors.size(); ++i) {
+                    // Assume indices are integers
+                    int index = input_tensors[i].get<int>().get_data()[0];
+                    slices.emplace_back(index);
+                }
+                // Access the tensor with slices
+                a_tens accessed = tensor.slice(slices);
+                result = accessed;
+            }
+                break;
+            case OperandType::RETURN:
+            {
+                if (!input_tensors.empty()) {
+                    result = input_tensors[0];
+                } else {
+                    result = a_tens(); // Empty tensor
+                }
+            }
+                break;
+
             default: {
                 // Retrieve the operation and compute the result
                 OperationRegistry &registry = OperationRegistry::get_instance();
@@ -271,26 +339,21 @@ namespace dio {
         }
 
         // Cache the result of the operation
-        time_aware_cache[current_time_step][current_token.operand_id] = result;
+        context.set(current_token.operand_id, result);
     }
 
-    void ExecutionEngine::processConditionReturnToken(ComputationalGraph &graph,
-                                                      const Token &current_token,
-                                                      std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
-                                                      int current_time_step,
-                                                      std::stack<Token> &token_stack,
-                                                      std::unordered_map<int, std::unordered_map<int, bool>>& execution_path) {
+    void ExecutionEngine::processConditionReturnToken(ExecutionContext& context,  const Token &current_token,  std::stack<Token>& token_stack) {
         // Process the condition
-        Operand &condition_operand = graph.operands[current_token.operand_id];
+        Operand &condition_operand = context.graph->operands[current_token.operand_id];
 
         // The condition result is in the cache (after processing the condition expression)
-        a_tens condition_result_tensor = time_aware_cache[current_time_step][condition_operand.inputs[0]];
+        a_tens condition_result_tensor = context.get(condition_operand.inputs[0]);
 
         // Evaluate the condition result tensor to a boolean value
         bool cond_met = condition_result_tensor.get<int>().get_data().at(0);
 
         // Record the result of the condition in the execution path
-        execution_path[current_time_step][condition_operand.id] = cond_met;
+        context.execution_path[context.current_time_step][condition_operand.id] = cond_met;
 
         // Push the ConditionResult token
         token_stack.emplace(TokenType::ConditionResult, current_token.operand_id);
@@ -307,33 +370,29 @@ namespace dio {
         }
     }
 
-    void ExecutionEngine::processConditionResultToken(ComputationalGraph &graph,
-                                                      const Token &current_token,
-                                                      std::unordered_map<int, std::unordered_map<int, a_tens>> &time_aware_cache,
-                                                      int current_time_step,
-                                                      std::unordered_map<int, std::unordered_map<int, bool>>& execution_path) {
+    void ExecutionEngine::processConditionResultToken(ExecutionContext& context,  const Token &current_token,  std::stack<Token>& token_stack) {
         // Process the condition result
-        Operand &condition_operand = graph.operands[current_token.operand_id];
-        bool cond_met = execution_path[current_time_step][condition_operand.id];
+        Operand &condition_operand = context.graph->operands[current_token.operand_id];
+        bool cond_met = context.execution_path[context.current_time_step][condition_operand.id];
 
         // Cache the result of the true or false branch
         if (cond_met) {
-            time_aware_cache[current_time_step][current_token.operand_id] =
-                time_aware_cache[current_time_step][condition_operand.inputs[1]];
+            context.set(current_token.operand_id,
+                        context.get(condition_operand.inputs[1]));
         } else if (condition_operand.inputs.size() > 2) {
-            time_aware_cache[current_time_step][current_token.operand_id] =
-                time_aware_cache[current_time_step][condition_operand.inputs[2]];
+            context.set(current_token.operand_id,
+                        context.get(condition_operand.inputs[2]));
         } else {
             // Handle the case where there's no false branch
             throw std::runtime_error("Condition has no false branch");
         }
 
         // Uncache the condition inputs after use
-        time_aware_cache[current_time_step].erase(condition_operand.inputs[0]);
+        context.operand_cache[context.current_time_step].erase(condition_operand.inputs[0]);
 
         // Uncache the true or false branch inputs if not needed
         int branch_input = cond_met ? condition_operand.inputs[1] : condition_operand.inputs[2];
-        time_aware_cache[current_time_step].erase(branch_input);
+        context.operand_cache[context.current_time_step].erase(branch_input);
 
     }
 
@@ -459,18 +518,17 @@ namespace dio {
                                       const std::vector<a_tens>& args) {
         std::stack<Token> token_stack;
         std::unordered_map<int, a_tens> return_stack;
-        std::unordered_map<int, std::unordered_map<int, a_tens>> forward_cache;
         std::unordered_map<int, std::unordered_map<int, a_tens>> gradient_cache;
         int current_time_step = 0;
-        std::unordered_map<int, std::unordered_map<int, bool>> execution_path;
 
         // Ensure forward pass is computed
-        compute_forward(graph, output_operand_id, args, token_stack, forward_cache, &current_time_step, execution_path);
+        ExecutionContext context = ExecutionContext(&graph, args, CachingMode::CacheAll);
+        compute_forward(context, output_operand_id, token_stack);
 
         // Start backward pass
-        compute_backward(graph, output_operand_id,
-                         loss_gradient, forward_cache,
-                         gradient_cache, &current_time_step, execution_path);
+        compute_backward(*context.graph, output_operand_id,
+                         loss_gradient, context.operand_cache,
+                         gradient_cache, &current_time_step, context.execution_path);
 
         // Store gradients in the graph's gradients map
         for (const auto& [time_step, gradients_at_time] : gradient_cache) {
@@ -518,7 +576,7 @@ namespace dio {
                 operand_stack.emplace(jump_target, upstream_gradient);
             } else if (operand.op_type == OperandType::Seq) {
                 // Process operands sequentially
-                for (auto it = operand.inputs.rbegin(); it != operand.inputs.rend(); ++it) {
+                for (auto it = operand.inputs.rbegin(); it != operand.  inputs.rend(); ++it) {
                     operand_stack.emplace(*it, upstream_gradient);
                 }
             } else if (operand.op_type == OperandType::Tick) {
@@ -536,6 +594,9 @@ namespace dio {
                     // If a false branch exists, propagate gradient to the false branch
                     operand_stack.emplace(operand.inputs[3], upstream_gradient);
             } else
+                if (operand.op_type == OperandType::FunctionCall)
+                    handle_function_call();
+                else
                 handle_regular(forward_cache,
                                current_time_step, operand_stack, operand_id,
                                upstream_gradient, operand);
@@ -606,6 +667,10 @@ namespace dio {
             }
             std::cout << std::endl;
         }
+    }
+
+    void ExecutionEngine::handle_function_call() {
+
     }
 
 } // namespace dio
