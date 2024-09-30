@@ -4,7 +4,7 @@ tokens { INDENT, DEDENT }
 
 @lexer::header{
 from antlr_denter.DenterHelper import DenterHelper
-from core.parser.tmp.YaguarParser import YaguarParser
+from geodio.core.parser.tmp.YaguarParser import YaguarParser
 }
 @lexer::members {
 class YaguarDenter(DenterHelper):
@@ -42,6 +42,8 @@ NO     :
 OP    :
     'yay';
 
+JUMP: 'jmp';
+
 // Parser rules
 
 prog: ( statement )* ;
@@ -51,7 +53,8 @@ statement:
     | ID '=' expr NL                  # AssignmentStatement
     | OP ID '(' params? ')' ':' block # FunctionDeclaration
     | if_statement                    # IfStatement
-    // | micro                           # MicroStatement
+    | JUMP ID NL                      # MicroJumpStmt
+    | ID ':' block                    # LabelDefinition
     ;
 
 if_statement:
@@ -123,42 +126,18 @@ ID     : [a-zA-Z_][a-zA-Z_0-9]* ;
 
 
 // RULES FOR MICRO
-//LABEL: ':' ID;
-//POINTER: '*' ID;
-//TYPE: 'int' | 'float' | 'char' | 'double' | 'bool' | 'void'; // Add other types as needed
-//JUMP: 'jump';
-//DEREF: '@'; // Dereferencing operator
-//
+
+
 //micro:
-//    typedVarDecl           # MicroTypedVarDecl
-//    | assignment           # MicroAssignment
-//    | pointerAssignment    # MicroPointerAssignment
-//    | dereferenceAssignment # MicroDereferenceAssignment
-//    | jumpStmt             # MicroJump
-//    | label                # MicroLabel
-//    ;
-//
-//typedVarDecl:
-//    TYPE ID            # TypedVarDeclaration  // e.g., int x;
-//    | TYPE POINTER      # PointerDeclaration  // e.g., int *ptr;
-//    ;
-//
-//assignment:
-//    ID '=' expr
-//    ;
-//
-//pointerAssignment:
-//    POINTER '=' expr
-//    ;
-//
-//dereferenceAssignment:
-//    DEREF POINTER '=' expr
+//    jumpStmt
+//    | label
 //    ;
 //
 //jumpStmt:
-//    JUMP LABEL          # MicroJumpStmt // e.g., jump :label;
+//    JUMP ID # MicroJumpStmt  // `jmp label_name` (Jump statement)
 //    ;
 //
 //label:
-//    LABEL                  # LabelDefinition // e.g., :label;
+//    ID ':' block # LabelDefinition  // `label_name:` (Label definition)
 //    ;
+

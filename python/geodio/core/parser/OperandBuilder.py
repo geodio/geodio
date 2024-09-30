@@ -2,7 +2,7 @@ from geodio.core.cell import MetaVariable, MetaArgumented, \
     MetaAssignment, MetaCall, If
 from geodio.core.cell.operands import Add, Sub, Prod, Div, Power, Constant, And, Or, \
     GreaterThan, SmallerThan, GreaterThanOrEqual, SmallerThanOrEqual, \
-    Seq, Equals, Operand
+    Seq, Equals, Operand, Label, Jump
 from geodio.core.parser.builtins import handle_reserved
 from geodio.core.parser import YaguarParser, YaguarListener
 
@@ -19,6 +19,18 @@ NULL = Constant(None)
 class OperandBuilder(YaguarListener):
     def __init__(self):
         pass
+
+    def visitMicroJumpStmt(self, ctx: YaguarParser.MicroJumpStmtContext):
+        label = ctx.ID().getText()
+        return Jump(label)
+
+    def visitLabelDefinition(self, ctx: YaguarParser.LabelDefinitionContext):
+        label = ctx.ID().getText()
+        block = ctx.block()
+        children = [self.visit(stmt) for stmt in block.statement()]
+        return Label(label, children)
+
+
 
     def visitChainExpr(self, ctx: YaguarParser.ChainExprContext):
         child = ctx.expr(0)

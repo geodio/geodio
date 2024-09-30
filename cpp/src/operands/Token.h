@@ -23,7 +23,9 @@ namespace dio {
         Jump,           // Represents a jump instruction, with condition
         Label,          // Represents a conditional jump
         ConditionReturn,
-        ConditionResult
+        ConditionResult,
+        END,
+        START
     };
 
     class Token {

@@ -84,18 +84,38 @@ print("AFTER TRAINING",
     nn([0, 10])
 )
 
-!> some take on a while loop.
-yay while(stop, body, i):
-    stop(i)? 0
-    ?? while(stop, body, body(i))
+yay while_loop(max, body):
+    print("WHILE LOOP CALLED")
+    state = 0
 
-yay body(i):
-    print(i)
-    i + 1
+    while:
+        state < max ?
+            body(state)
+            state = state + 1
+            jmp while
+        jmp outside
+    !>jmp while
 
-stop = (i) => i >= 20  !> This is a lambda!
 
-while(stop, body, 0)
+body = (i) => print(i)
+
+while_loop(3, body)
+
+outside:
+    print("Hello!")
+
+i = 0
+sum = 0
+
+while:
+    i < 4 ?
+        sum = sum + i ^ 2
+        i = i + 1
+        jmp while
+print(sum)
+
+
+
 !> This file, when interpreted, will return a function.
 !> This function, when called, will return 3.
 _ = 3

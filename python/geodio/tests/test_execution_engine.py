@@ -5,7 +5,6 @@ from geodio import geodio_bindings
 from geodio.core.cell.operands import Add, Prod, Constant, Variable, \
     SigmoidActivation, LinearTransformation
 
-#TODO
 # Helper function to convert AnyTensor to a Python Tensor
 def tensor_from_anytensor(anytensor):
     return Tensor(anytensor)

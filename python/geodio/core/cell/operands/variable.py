@@ -186,7 +186,10 @@ class MetaAssignment(MetaOperand):
         return MetaAssignment(self.key, self.value.clone())
 
     def __call__(self, args, meta_args=None):
-        meta_args[self.key] = self.value
+        if self.key in meta_args and isinstance(self.value, Operand):
+            meta_args[self.key] = self.value(args, meta_args)
+        else:
+            meta_args[self.key] = self.value
         return self.value
 
     def __invert__(self):
