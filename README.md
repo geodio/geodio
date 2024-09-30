@@ -1,5 +1,4 @@
 # Geodio Framework: A Readme Overview
-
 ## Introduction
 
 The **Geodio** framework began as an exploration into **Gene Expression Programming (GEP)** for creating neural network architectures. Over time, it evolved into a powerful framework for designing, optimizing, and managing complex neural networks, where every part is an independent entity called an **Operand**.
@@ -110,7 +109,7 @@ print(sum)  !> Prints 144
 
 ## Contributing
 
-Geodio is in its early stages of development, and there's a lot of room for growth. Contributions are highly welcome! However, due to the project's complexity and infancy, contributors are encouraged to email me to discuss potential contributions and the project's direction.
+Geodio is in its early stages of development, and there's a lot of room for growth. Contributions are highly welcome! However, due to the project's complexity and infancy, contributors are encouraged to [email me](mailto:polenciucrares%40gmail.com?subject=Geodio%20Contributing) to discuss potential contributions and the project's direction.
 
 ---
 
@@ -121,3 +120,4 @@ The vision for Geodio is to provide a framework capable of **self-building** neu
 ---
 
 For more examples and usage, see the `/examples` folder.
+**THIS README IS WORK IN PROGRESS**
