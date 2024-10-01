@@ -28,7 +28,7 @@ With the move to C++, a **transpiler** _will_ be introduced, enabling Geodio to 
 
 ## Yaguar: The Language for Geodio
 
-**Yaguar** was born out of the need to design Operands more easily. Python had limitations in how it handled the exact nature of Geodio’s operations, especially when dealing with gene expression, derivation, and backpropagation.
+**Yaguar** was born out of the need to design Operands more easily. Python had limitations in the way it handled the exact nature of Geodio’s operations, especially when dealing with gene expression, derivation, and backpropagation.
 
 Yaguar addresses this by offering a flexible syntax designed specifically for Geodio’s needs. It simplifies the process of creating complex operands, managing recursive functions, and controlling dynamic execution flows through jumps, labels, and conditionals.
 
