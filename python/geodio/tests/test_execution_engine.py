@@ -1,111 +1,78 @@
+from unittest import TestCase
+
 import numpy as np
-from geodio import geodio_bindings
 
-# Import operands from your Python implementation
-from geodio.core.cell.operands import Add, Prod, Constant, Variable, \
-    SigmoidActivation, LinearTransformation
-
-# Helper function to convert AnyTensor to a Python Tensor
-def tensor_from_anytensor(anytensor):
-    return Tensor(anytensor)
+from geodio.core import (LinearTransformation, b_var, GraphWrapper, Tensor,
+                         const, Add)
+import geodio.geodio_bindings as geodio_bindings
 
 
-def run_python_graph(graph):
-    """
-    Executes the Python graph using numpy operations.
-    """
-    return graph()
+class TestExecutionEngine(TestCase):
 
+    def test_forward(self):
+        dim_in = 1
+        dim_out = 1
+        input_data = np.array([[1.0]])
+        constant = const(input_data)
+        linear_transformation = LinearTransformation(dim_in, dim_out,
+                                                     [constant])
+        geodio_bindings.initialize_operations()
+        # in_tens = Tensor(input_data)
+        graph = GraphWrapper()
+        t_r_py = Tensor(linear_transformation([input_data]))
+        linear_transformation.subscribe_to_graph(graph)
 
-def run_cpp_graph(graph_wrapper, output_id):
-    """
-    Executes the graph using the C++ execution engine.
-    """
-    engine = geodio_bindings.ExecutionEngine()
-    result = engine.forward(graph_wrapper.graph, output_id)
-    return tensor_from_anytensor(result)
+        result = geodio_bindings.ExecutionEngine.forward(graph.graph, 0,
+                                                         [])
+        self.assertEqual(str(t_r_py), str(result))
 
+    def test_forward_bvar(self):
+        dim_in = 2
+        dim_out = 2
+        input_data = np.array([[1.0, 0.0], [3.0, 2.0]])
+        linear_transformation = LinearTransformation(dim_in, dim_out,
+                                                     [b_var()])
+        geodio_bindings.initialize_operations()
+        in_tens = Tensor(input_data)
+        graph = GraphWrapper()
+        t_r_py = Tensor(linear_transformation([input_data]))
+        linear_transformation.subscribe_to_graph(graph)
 
-def compare_results(py_result, cpp_result):
-    """
-    Compare Python and C++ results numerically.
-    Converts C++ result (AnyTensor) to numpy array if necessary.
-    """
-    py_data = py_result.data() if isinstance(py_result, Tensor) else py_result
-    cpp_data = cpp_result.data() if isinstance(cpp_result,
-                                               Tensor) else cpp_result
+        result = geodio_bindings.ExecutionEngine.forward(graph.graph, 0,
+                                                         [in_tens.tensor])
+        self.assertEqual(str(t_r_py), str(result))
 
-    # Convert to numpy arrays for comparison
-    py_np = np.array(py_data)
-    cpp_np = np.array(cpp_data)
+    def test_add(self):
+        input_data = np.array([1.0, 2.0])
+        constant = const(np.array([5.0, 4.0]))
+        addition = Add([constant, b_var()], 2)
+        geodio_bindings.initialize_operations()
+        in_tens = Tensor(input_data)
+        graph = GraphWrapper()
+        t_r_py = Tensor(addition([input_data]))
+        addition.subscribe_to_graph(graph)
 
-    # Ensure that the arrays are numerically similar
-    assert np.allclose(py_np, cpp_np,
-                       atol=1e-6), f"Mismatch! Python: {py_np}, C++: {cpp_np}"
+        result = geodio_bindings.ExecutionEngine.forward(graph.graph, 0,
+                                                         [in_tens.tensor])
 
+        self.assertEqual(str(t_r_py), str(result))
 
-def test_graph_execution():
-    """
-    Comprehensive test that builds and compares Python and C++ graph execution results.
-    """
+    def test_constant(self):
 
-    # Step 1: Create variables, constants, and weights
-    x = Variable(0)
-    W = Constant([[2.0, 1.0], [1.0, 2.0]])  # Weight matrix
-    b = Constant([1.0, 2.0])  # Bias
+        constant = const(69.0)
+        graph = GraphWrapper()
+        result_python = constant([])
+        constant.subscribe_to_graph(graph)
+        result_cpp = geodio_bindings.ExecutionEngine.forward(graph.graph, 0,
+                                                             [])
+        tensor_result_python = Tensor(result_python)
+        self.assertEqual(str(tensor_result_python), str(result_cpp))
 
-    # Step 2: Create a simple computation graph in Python
-    graph = Add(LinearTransformation(W, x),
-                b)  # Linear transformation W * x + b
-    graph = SigmoidActivation(graph)  # Apply sigmoid
-
-    # Provide input for the variable x
-    x_value = np.array([3.0, 5.0])
-
-    # Step 3: Execute the Python graph
-    py_result = run_python_graph(lambda: graph([x_value]))
-
-    # Step 4: Create a corresponding C++ computational graph
-    graph_wrapper = geodio_bindings.ComputationalGraph()
-
-    # Add operands to the graph
-    x_operand = geodio_bindings.Operand(geodio_bindings.OperandType.Variable,
-                                        0, [])
-    W_operand = geodio_bindings.Operand(geodio_bindings.OperandType.Constant,
-                                        1, [])
-    b_operand = geodio_bindings.Operand(geodio_bindings.OperandType.Constant,
-                                        2, [])
-
-    # Add constants to the C++ graph
-    graph_wrapper.constants[1] = Tensor(
-        [[2.0, 1.0], [1.0, 2.0]]).tensor  # W matrix
-    graph_wrapper.constants[2] = Tensor([1.0, 2.0]).tensor  # Bias
-    graph_wrapper.constants[3] = Tensor(x_value).tensor  # Input for x
-
-    # Create a computation graph in C++
-    graph_wrapper.operands[0] = x_operand
-    graph_wrapper.operands[1] = W_operand
-    graph_wrapper.operands[2] = b_operand
-    linear_transformation = geodio_bindings.Operand(
-        geodio_bindings.OperandType.LinearTransformation, 3, [0, 1])
-    addition = geodio_bindings.Operand(geodio_bindings.OperandType.Add, 4,
-                                       [3, 2])
-    sigmoid = geodio_bindings.Operand(geodio_bindings.OperandType.Sigmoid, 5,
-                                      [4])
-
-    # Add the operands to the graph
-    graph_wrapper.operands[3] = linear_transformation
-    graph_wrapper.operands[4] = addition
-    graph_wrapper.operands[5] = sigmoid
-
-    # Step 5: Execute the C++ graph
-    cpp_result = run_cpp_graph(graph_wrapper, 5)
-
-    # Step 6: Compare Python and C++ results
-    compare_results(py_result, cpp_result)
-
-    print("Python and C++ execution results are numerically identical!")
-
-
-if __name__ == "__main__":
-    test_graph_execution()
+        constant = const([69.0, 213123.0])
+        graph = GraphWrapper()
+        result_python = constant([])
+        constant.subscribe_to_graph(graph)
+        result_cpp = geodio_bindings.ExecutionEngine.forward(graph.graph, 0,
+                                                             [])
+        tensor_result_python = Tensor(result_python)
+        self.assertEqual(str(tensor_result_python), str(result_cpp))

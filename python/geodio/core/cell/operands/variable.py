@@ -9,6 +9,8 @@ from geodio.core.cell.math.hashy import HashLeaf
 from geodio.core.cell.math.backpropagation import Backpropagatable
 from geodio.core.cell.operands.weight import AbsWeight
 
+import geodio
+
 
 class BaseVariable(Operand, metaclass=ABCMeta):
     def __init__(self, value):
@@ -42,8 +44,8 @@ class BaseVariable(Operand, metaclass=ABCMeta):
     def hash_tree(self):
         return HashLeaf(self.value)
 
-    def subscribe_to_graph(self, graph_wrapper):
-        super().subscribe_to_graph(graph_wrapper)
+    def subscribe_to_graph(self, graph_wrapper, operand_type=None):
+        super().subscribe_to_graph(graph_wrapper, self.get_operand_type())
         graph_wrapper.add_var_map(self.graph_id, self.value)
         return self.graph_id
 

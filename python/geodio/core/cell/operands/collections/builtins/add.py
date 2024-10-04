@@ -3,6 +3,7 @@ Module containing built-in addition operation.
 """
 from geodio.core.cell.operands.collections.builtins.builtinbase import \
     BuiltinBaseFunction, clean_number
+import geodio
 
 
 class Add(BuiltinBaseFunction):

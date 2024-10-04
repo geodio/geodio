@@ -6,6 +6,9 @@ from typing_extensions import TypeVar
 
 from geodio.core.cell.operands.constant import ONE, ZERO
 from geodio.core.cell.operands.operand import Operand
+from geodio.core.cpp_wrappers.tensor_wrapper import Tensor
+
+import geodio
 
 
 def adapt_shape_and_apply(_w, *args):
@@ -123,8 +126,8 @@ class AbsWeight(Operand, metaclass=ABCMeta):
                     other.get() and self._locked == other._locked and
                     self.adapted == other.adapted)
 
-    def subscribe_to_graph(self, graph_wrapper):
-        super().subscribe_to_graph(graph_wrapper)
+    def subscribe_to_graph(self, graph_wrapper, operand_type=None):
+        super().subscribe_to_graph(graph_wrapper, self.get_operand_type())
         graph_wrapper.add_weight(self.graph_id, Tensor(self.get()))
         return self.graph_id
 

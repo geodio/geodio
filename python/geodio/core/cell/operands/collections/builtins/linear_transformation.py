@@ -4,6 +4,7 @@ from geodio.core.cell.operands.function import Function
 from geodio.core.cell.operands.constant import Constant
 from geodio.core.cell.operands.weight import ShapedWeight
 from geodio.core.cell.train import BOO
+import geodio
 
 
 def xavier_init(dim_out, dim_in):
@@ -17,15 +18,15 @@ class LinearTransformation(BOO):
         self.dim_in = dim_in
         self.dim_out = dim_out
         self.in_data = None
-        self.weight = ShapedWeight((dim_out, dim_in),
-                                   np.random.randn(dim_out, dim_in))
-        self.bias = ShapedWeight((dim_out,), np.zeros(dim_out, ))
+        self.weight = ShapedWeight((dim_in, dim_out),
+                                   np.random.randn(dim_in, dim_out))
+        self.bias = ShapedWeight((dim_out,), np.zeros((dim_out,), float))
         self.dw = None
         self.db = None
 
     def forward(self, in_data, meta_args=None):
         self.in_data = in_data
-        z = np.matmul(self.weight.get(), in_data)
+        z = np.matmul(in_data, self.weight.get())
         try:
             r = z + self.bias.get()
         except ValueError:
@@ -77,11 +78,15 @@ class LinearTransformation(BOO):
         dz = dx
         dr = dz.copy()
         if np.ndim(dz) == 2:
-            self.db = - np.sum(dz, axis=1).reshape(-1, )
+            self.db = - np.sum(dz, axis=0).reshape(-1, )
         else:
             self.db = - dz
-        self.dw = - np.matmul(dr, self.in_data.T)
-        dx = np.matmul(self.weight.get().T, dr)
+        if np.ndim(self.in_data) == 1:
+            self.in_data = self.in_data[np.newaxis, :]
+        if np.ndim(dr) == 1:
+            dr = dr[:, np.newaxis]
+        self.dw = - np.matmul(self.in_data.T, dr)
+        dx = np.matmul(dr, self.weight.get().T)
         dx = self.children[0].backpropagation(dx)
         return dx
 
@@ -90,3 +95,24 @@ class LinearTransformation(BOO):
 
     def get_operand_type(self):
         return geodio.geodio_bindings.OperandType.LinearTransformation
+
+    def subscribe_to_graph(self, graph_wrapper, operand_type=None):
+        if (hasattr(self, "graph_id") and self.graph_id is not None and
+                self.graph_id != -1):
+            return self.graph_id
+
+        # Get a new ID for this operand
+        self.graph_id = graph_wrapper.next_id()
+        # Convert operand type to OperandType in C++
+        operand_type = operand_type or self.get_operand_type()
+
+        # Recursively add children to the graph
+        x_id = self.children[0].subscribe_to_graph(graph_wrapper)
+        w_id = self.weight.subscribe_to_graph(graph_wrapper)
+        b_id = self.bias.subscribe_to_graph(graph_wrapper)
+        child_ids = [x_id, w_id, b_id]
+
+        # Add the operand to the C++ graph
+        graph_wrapper.add_operand(operand_type, self.graph_id, child_ids)
+
+        return self.graph_id

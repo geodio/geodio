@@ -4,6 +4,7 @@ import numpy as np
 
 from geodio.core.cell.operands.operand import Operand
 from geodio.core.cpp_wrappers.tensor_wrapper import Tensor
+import geodio
 
 
 class Constant(Operand):
@@ -46,8 +47,8 @@ class Constant(Operand):
         if isinstance(other, Constant):
             return self.__value == other.__value
 
-    def subscribe_to_graph(self, graph_wrapper):
-        super().subscribe_to_graph(graph_wrapper)
+    def subscribe_to_graph(self, graph_wrapper, operand_type=None):
+        super().subscribe_to_graph(graph_wrapper, self.get_operand_type())
         graph_wrapper.add_constant(self.graph_id, Tensor(self.__value))
         return self.graph_id
 

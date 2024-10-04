@@ -17,7 +17,10 @@ class Tensor:
         """
         if isinstance(data, np.ndarray):
             # Convert numpy array to list and infer shape
-            shape = data.shape if shape is None else shape
+            if len(data.shape) == 1:
+                shape = [data.shape[0]] if shape is None else shape
+            else:
+                shape = list(data.shape) if shape is None else shape
             data = data.flatten().tolist()
         if shape is None and isinstance(data, list):
             shape = infer_shape(data)

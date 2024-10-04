@@ -1,6 +1,6 @@
 from geodio import geodio_bindings
 from geodio.core.cpp_wrappers.tensor_wrapper import Tensor
-
+from geodio.geodio_bindings import Operand
 
 class GraphWrapper:
     def __init__(self):
@@ -9,19 +9,22 @@ class GraphWrapper:
         and keeps track of the max ID for operands.
         """
         self.graph = geodio_bindings.ComputationalGraph()
-        self.max_id = 0
+        self.max_id = -1  # so the root gets always id 0
 
-    def add_operand(self, operand):
+    def add_operand(self, operand_type, graph_id, children):
         """
         Add an operand and its children to the graph.
 
         Args:
-            operand (Operand): The operand to add to the graph.
+            operand_type (OperandType):
+            graph_id (int):
+            children (List[int]):
 
         Returns:
-            int: The ID of the root operand added to the graph.
+            None
         """
-        return operand.subscribe_to_graph(self)
+        operand = Operand(operand_type, graph_id, children)
+        self.graph.add_operand(graph_id, operand)
 
     def add_constant(self, graph_id, tensor: Tensor):
         self.graph.add_constant(graph_id, tensor.tensor)
@@ -30,7 +33,7 @@ class GraphWrapper:
         self.graph.add_weight(graph_id, tensor.tensor)
 
     def add_var_map(self, graph_id, value: int):
-        self.graph.add_weight(graph_id, value)
+        self.graph.add_var_map(graph_id, value)
 
     def next_id(self):
         """

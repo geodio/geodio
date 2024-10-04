@@ -16,10 +16,12 @@ y = x * x
 print("is 4 negative?", is_negative(4))
 
 yay sum(start, end):
-    yay qwerty(current, total):
+
+    yay recursion(current, total):
         current >= end ? total
-        ?? qwerty(current + 1, current + total)
-    qwerty(start, 0)
+        ?? recursion(current + 1, current + total)
+
+    recursion(start, 0)
 
 
 print(sum(1, 10)) !> prints 45
@@ -48,41 +50,35 @@ Sigmoid()
 nn([1, 0])
 
 in = [
-    [[10, 10]],
-        [[10, 10]], !> This syntax is simply to see things better
-    [[10, 0]],
-        [[10, 0]],
-    [[0, 10]],
-        [[0, 10]],
-    [[0, 0]],
-        [[0, 0]]
+    [[10, 10]], [[10, 10]],
+    [[10, 0]],  [[10, 0]],
+    [[0, 10]],  [[0, 10]],
+    [[0, 0]],   [[0, 0]]
 ]
-
+!>in = [
+!>    [[[10, 10], [10, 0], [0, 10], [0, 0]]]
+!>]
 out = [
-    [[0]],
-        [[0]],
-    [[1]],
-        [[1]],
-    [[1]],
-        [[1]],
-    [[0]],
-        [[0]]
+    [[0]], [[0]],
+    [[1]], [[1]],
+    [[1]], [[1]],
+    [[0]], [[0]]
 ]
+!>out = [
+!>    [[[0], [1], [1], [0]]]
+!>]
 
-print("BEFORE TRAINING",
-    nn([10, 10]), nn([10, 0]),
-    nn([0, 0]),
-    nn([0, 10])
-)
+!>we use [[10, 10]] instead of the more intuitive [10, 10]
+!>because each Operand receives a list of arguments.
+!>Activation functions and Linear Transformations have arity 1,
+!>which means that they expect a single argument. and they expect
+!>that argument to be a vector, and thus we arrive at [[10, 10]].
+
+print("BEFORE TRAINING", nn([10, 10]), nn([10, 0]), nn([0, 0]), nn([0, 10]))
 
 train(nn, in, out) !> This function is built-in, just like 'print'
 
-print("AFTER TRAINING",
-    nn([10, 10]),
-    nn([10, 0]),
-    nn([0, 0]),
-    nn([0, 10])
-)
+print("AFTER TRAINING", nn([10, 10]), nn([10, 0]), nn([0, 0]), nn([0, 10]))
 
 yay while_loop(max, body):
     print("WHILE LOOP CALLED")
@@ -94,15 +90,14 @@ yay while_loop(max, body):
             state = state + 1
             jmp while
         jmp outside
-    !>jmp while
 
 
 body = (i) => print(i)
 
-while_loop(3, body)
+while_loop(3, body)  !> Will print "0.0", "1.0", "2.0" and then "Hello from outside label!"
 
 outside:
-    print("Hello!")
+    print("Hello from outside label!")
 
 i = 0
 sum = 0
@@ -112,7 +107,7 @@ while:
         sum = sum + i ^ 2
         i = i + 1
         jmp while
-print(sum)
+print(sum)  !> Prints 144.0
 
 
 

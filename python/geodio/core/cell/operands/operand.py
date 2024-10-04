@@ -268,34 +268,34 @@ class Operand(Derivable, WeightDerivable, Hashable, metaclass=ABCMeta):
         """
         return self.children
 
-    def subscribe_to_graph(self, graph_wrapper):
+    def subscribe_to_graph(self, graph_wrapper, operand_type=None):
         """
         Subscribe the operand and its children to the given graph.
 
         Args:
             graph_wrapper (GraphWrapper): The graph wrapper where the operand will be added.
+            operand_type (OperandType): the type of operand, that can be
+            provided by the superclasses when calling via super.
 
         Returns:
             int: The ID of this operand in the graph.
         """
         # Check if the operand is already in the graph (optional)
-        if hasattr(self, "graph_id") and self.graph_id is not None:
+        if (hasattr(self, "graph_id") and self.graph_id is not None and
+                self.graph_id!= -1):
             return self.graph_id
 
         # Get a new ID for this operand
         self.graph_id = graph_wrapper.next_id()
-
         # Convert operand type to OperandType in C++
-        operand_type = self.get_operand_type()
+        operand_type = operand_type or self.get_operand_type()
 
         # Recursively add children to the graph
         child_ids = [child.subscribe_to_graph(graph_wrapper) for child in
                      self.children]
 
         # Add the operand to the C++ graph
-        graph_wrapper.graph.operands[self.graph_id] = geodio_bindings.Operand(
-            operand_type, self.graph_id, child_ids)
-
+        graph_wrapper.add_operand(operand_type, self.graph_id, child_ids)
         return self.graph_id
 
     def get_operand_type(self):

@@ -17,10 +17,23 @@
 #include "OperationRegistry.h"
 #include "operations.h"
 #include <cmath>
-
+#include <cassert>
 
 
 namespace dio {
+
+    std::string vector_to_string(const std::vector<size_t>& vec) {
+        std::stringstream ss;
+        ss << "[";
+        for (size_t i = 0; i < vec.size(); ++i) {
+            ss << vec[i];
+            if (i != vec.size() - 1) {
+                ss << ", ";
+            }
+        }
+        ss << "]";
+        return ss.str();
+    }
 
 a_tens add_forward (const std::vector<a_tens>& inputs) {
     auto tensor_result = (inputs[0].add(inputs[1]));
@@ -78,12 +91,36 @@ std::vector<a_tens> sigmoid_backward(
 
 a_tens linear_forward(
     const std::vector<a_tens>& inputs) {
+     // Ensure there are at least 3 inputs (input, weights, bias)
+    assert(inputs.size() >= 3 && "Expected at least 3 inputs (input, weights, bias)");
+
     const auto& input = inputs[0];
     const auto& weights = inputs[1];
     const auto& bias = inputs[2];
 
+    // Debug: Print shapes of the tensors involved
+    //    std::cout << "Input shape: " << vector_to_string(input.shape()) << std::endl;
+    //    std::cout << "Weights shape: " << vector_to_string(weights.shape()) << std::endl;
+    //    std::cout << "Bias shape: " << vector_to_string(bias.shape()) << std::endl;
+
+    // Debug: Check if input, weights, and bias are valid float types
+    //    std::cout << "Input type: " << input.type().name() << std::endl;
+    //    std::cout << "Weights type: " << weights.type().name() << std::endl;
+    //    std::cout << "Bias type: " << bias.type().name() << std::endl;
+
+    // Perform matrix multiplication
     auto weighted_input = input.matmul(weights); // Matrix multiplication
-    auto output = weighted_input.add(bias);      // Add bias
+
+    // Debug: Check the result of matrix multiplication
+    //    std::cout << "Weighted input shape: " << vector_to_string(weighted_input.shape()) << std::endl;
+    //    std::cout << "Weighted input type: " << weighted_input.type().name() << std::endl;
+
+    // Perform addition with bias
+    auto output = weighted_input.add(bias); // Add bias
+
+    // Debug: Check the result of the addition
+    //    std::cout << "Output shape: " << vector_to_string(output.shape()) << std::endl;
+    //    std::cout << "Output type: " << output.type().name() << std::endl;
 
     return {output};
 }
